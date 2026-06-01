@@ -1,4 +1,12 @@
 # Competition reference documents kept outside the public repository
-/request.md
-/FA_Accel_IP_Product_Spec.md
-/FA_Accel_IP_Project_Plan.md
+/docs/request.md
+/docs/FA_Accel_IP_Product_Spec.md
+/docs/FA_Accel_IP_Project_Plan.md
+
+# Python local cache
+__pycache__/
+*.pyc
+
+# Local simulator work libraries
+work_tmp/
+work_lint/
