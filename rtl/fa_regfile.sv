@@ -26,6 +26,7 @@ module fa_regfile (
 
   output logic         start_pulse,
   output logic         soft_reset_pulse,
+  output logic         done_clear_pulse,
   output logic         irq_en,
   output logic         causal_en,
   output logic [63:0]  q_base,
@@ -44,6 +45,22 @@ module fa_regfile (
   logic write_fire;
   logic read_fire;
 
+  function automatic logic [31:0] apply_wstrb(
+    input logic [31:0] old_value,
+    input logic [31:0] new_value,
+    input logic [3:0]  strobe
+  );
+    logic [31:0] merged;
+    begin
+      merged = old_value;
+      if (strobe[0]) merged[7:0]   = new_value[7:0];
+      if (strobe[1]) merged[15:8]  = new_value[15:8];
+      if (strobe[2]) merged[23:16] = new_value[23:16];
+      if (strobe[3]) merged[31:24] = new_value[31:24];
+      return merged;
+    end
+  endfunction
+
   assign write_fire = s_axil_awvalid & s_axil_wvalid & s_axil_awready & s_axil_wready;
   assign read_fire  = s_axil_arvalid & s_axil_arready;
 
@@ -56,6 +73,7 @@ module fa_regfile (
       s_axil_rdata     <= 32'h0;
       start_pulse      <= 1'b0;
       soft_reset_pulse <= 1'b0;
+      done_clear_pulse <= 1'b0;
       irq_en           <= 1'b0;
       causal_en        <= 1'b1;
       q_base           <= 64'h0;
@@ -68,6 +86,7 @@ module fa_regfile (
     end else begin
       start_pulse      <= 1'b0;
       soft_reset_pulse <= 1'b0;
+      done_clear_pulse <= 1'b0;
 
       if (s_axil_bvalid & s_axil_bready) begin
         s_axil_bvalid <= 1'b0;
@@ -81,22 +100,35 @@ module fa_regfile (
         s_axil_bvalid <= 1'b1;
         unique case (s_axil_awaddr)
           REG_CTRL: begin
-            start_pulse      <= s_axil_wdata[0];
-            soft_reset_pulse <= s_axil_wdata[1];
-            irq_en           <= s_axil_wdata[2];
+            if (s_axil_wstrb[0]) begin
+              start_pulse      <= s_axil_wdata[0];
+              soft_reset_pulse <= s_axil_wdata[1];
+              irq_en           <= s_axil_wdata[2];
+            end
           end
-          REG_CFG:          causal_en        <= s_axil_wdata[0];
-          REG_Q_BASE_L:     q_base[31:0]     <= s_axil_wdata;
-          REG_Q_BASE_H:     q_base[63:32]    <= s_axil_wdata;
-          REG_K_BASE_L:     k_base[31:0]     <= s_axil_wdata;
-          REG_K_BASE_H:     k_base[63:32]    <= s_axil_wdata;
-          REG_V_BASE_L:     v_base[31:0]     <= s_axil_wdata;
-          REG_V_BASE_H:     v_base[63:32]    <= s_axil_wdata;
-          REG_O_BASE_L:     o_base[31:0]     <= s_axil_wdata;
-          REG_O_BASE_H:     o_base[63:32]    <= s_axil_wdata;
-          REG_STRIDE_BYTES: stride_bytes     <= s_axil_wdata;
-          REG_NEG_LARGE:    neg_large        <= s_axil_wdata[15:0];
-          REG_SCALE:        scale            <= s_axil_wdata[15:0];
+          REG_STATUS: begin
+            if (s_axil_wstrb[0] && s_axil_wdata[1]) begin
+              done_clear_pulse <= 1'b1;
+            end
+          end
+          REG_CFG: begin
+            if (s_axil_wstrb[0]) causal_en <= s_axil_wdata[0];
+          end
+          REG_Q_BASE_L:     q_base[31:0]  <= apply_wstrb(q_base[31:0], s_axil_wdata, s_axil_wstrb);
+          REG_Q_BASE_H:     q_base[63:32] <= apply_wstrb(q_base[63:32], s_axil_wdata, s_axil_wstrb);
+          REG_K_BASE_L:     k_base[31:0]  <= apply_wstrb(k_base[31:0], s_axil_wdata, s_axil_wstrb);
+          REG_K_BASE_H:     k_base[63:32] <= apply_wstrb(k_base[63:32], s_axil_wdata, s_axil_wstrb);
+          REG_V_BASE_L:     v_base[31:0]  <= apply_wstrb(v_base[31:0], s_axil_wdata, s_axil_wstrb);
+          REG_V_BASE_H:     v_base[63:32] <= apply_wstrb(v_base[63:32], s_axil_wdata, s_axil_wstrb);
+          REG_O_BASE_L:     o_base[31:0]  <= apply_wstrb(o_base[31:0], s_axil_wdata, s_axil_wstrb);
+          REG_O_BASE_H:     o_base[63:32] <= apply_wstrb(o_base[63:32], s_axil_wdata, s_axil_wstrb);
+          REG_STRIDE_BYTES: stride_bytes  <= apply_wstrb(stride_bytes, s_axil_wdata, s_axil_wstrb);
+          REG_NEG_LARGE: begin
+            neg_large <= apply_wstrb({16'h0, neg_large}, s_axil_wdata, s_axil_wstrb)[15:0];
+          end
+          REG_SCALE: begin
+            scale <= apply_wstrb({16'h0, scale}, s_axil_wdata, s_axil_wstrb)[15:0];
+          end
           default: begin
           end
         endcase

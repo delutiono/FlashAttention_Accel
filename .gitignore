@@ -10,3 +10,8 @@ __pycache__/
 # Local simulator work libraries
 work_tmp/
 work_lint/
+work_red*/
+work_tdd*/
+work_green*/
+work_commit*/
+transcript

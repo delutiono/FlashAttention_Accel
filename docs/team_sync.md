@@ -18,15 +18,15 @@
 | Baseline 范围 | 已冻结 | `S=256, d=64, batch=1, head=1, Q8.8 I/O, causal` |
 | Golden model | 进行中 | 已有 FP32 / FlashAttention / Q8.8 simulated 初版；仍缺严格 RTL-friendly 定点口径 |
 | 测试向量 | 进行中 | 已有 10 组 full-size causal random vectors |
-| RTL 骨架 | 进行中 | 已建 `rtl/ sim/ cocotb/ synth/ model/`，`rtl/filelist.f`，首批模块空壳 |
-| 语法检查 | 已完成 | `vlog -lint -sv -work work_lint -f rtl/filelist.f`：0 errors，0 compile warnings |
+| RTL 骨架 | 进行中 | `fa_regfile` 与 `fa_scheduler` 已有 smoke test 覆盖 |
+| 语法检查 | 已完成 | `vlog -lint -sv -work work_green_lint -f rtl/filelist.f`：0 errors，0 warnings |
 | 综合脚本 | 进行中 | 已有最小 `synth/run_genus.tcl` 与 `constraints.sdc`，未在 Cadence 环境验证 |
 
 ## 3. 分工焦点
 
 | 成员 | 当前焦点 | 下一步 |
 |---|---|---|
-| A：RTL / 验证 / 综合 | RTL 骨架、寄存器、scheduler、验证框架 | 完善 `fa_regfile` 和 register smoke test |
+| A：RTL / 验证 / 综合 | RTL 骨架、寄存器、scheduler、验证框架 | 下一步做简化 memory/compute core dot 对齐 |
 | B：算法 / 定点建模 | golden、定点规格、测试向量、误差分析 | 补齐 fixed-point spec、vector format、debug dump |
 
 ## 4. 开放对接请求
@@ -52,6 +52,11 @@
 
 ### 2026-06-01 A
 
+- 完成前三项：补实 `fa_regfile` 基础行为、添加 `sim/tb_regfile.sv`、扩展 `fa_scheduler` 阶段骨架并添加 `sim/tb_scheduler.sv`。
+- 验证通过：`tb_regfile PASS`、`tb_scheduler PASS`、全 RTL filelist lint 0 errors/0 warnings。
+
+### 2026-06-01 A
+
 - 按“精简、及时清理”的原则重整本文档，并把该原则写入维护规则。
 - 保留当前仍需对接的 5 个请求；压缩 fixed/vector/dump 的详细清单为验收颗粒度。
 
@@ -70,7 +75,7 @@
 
 | 成员 | 下一步 |
 |---|---|
-| A | 完善 `fa_regfile` 行为；建立 register smoke test；等待 REQ-001/002 后继续数值模块 |
+| A | 开始简化 memory/compute core；先对齐 `fa_dot_pe`，等待 REQ-001/002 后继续 softmax 数值模块 |
 | B | 优先交付 REQ-001、REQ-002、REQ-003；同时修复 REQ-005 |
 
 ## 8. 文档索引

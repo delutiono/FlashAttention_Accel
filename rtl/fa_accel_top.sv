@@ -67,6 +67,7 @@ module fa_accel_top (
   logic [31:0] cycles;
   logic        busy;
   logic        done;
+  logic        done_clear;
   logic        error;
 
   fa_regfile u_regfile (
@@ -91,6 +92,7 @@ module fa_accel_top (
     .s_axil_rready    (s_axil_rready),
     .start_pulse      (start_pulse),
     .soft_reset_pulse (soft_reset_pulse),
+    .done_clear_pulse (done_clear),
     .irq_en           (irq_en),
     .causal_en        (causal_en),
     .q_base           (q_base),
@@ -111,6 +113,7 @@ module fa_accel_top (
     .rst_n            (rst_n),
     .start_i          (start_pulse),
     .soft_reset_i     (soft_reset_pulse),
+    .done_clear_i     (done_clear),
     .causal_en_i      (causal_en),
     .q_base_i         (q_base),
     .k_base_i         (k_base),
@@ -122,7 +125,10 @@ module fa_accel_top (
     .busy_o           (busy),
     .done_o           (done),
     .error_o          (error),
-    .cycles_o         (cycles)
+    .cycles_o         (cycles),
+    .state_o          (),
+    .q_index_o        (),
+    .kv_tile_o        ()
   );
 
   assign irq = irq_en & done;
