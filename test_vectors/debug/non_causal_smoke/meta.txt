@@ -1,0 +1,36 @@
+case=non_causal_smoke
+S=256
+D=64
+BK=32
+causal=0
+score_format=S32.16
+exp_format=U1.23
+l_format=U9.23
+acc_format=S17.31
+contains=score_tile.hex,mask_valid.hex,m_l_after_tile.hex,acc_after_tile.hex
+subset=q_index=00 first_tile only
+subset_note=debug skeleton for non-causal q=0 tile 0; full-vector outputs remain in test_vectors/cases
+exp_mode=python_math_exp_skeleton_for_non_equal_k00_only
+equal_score_assumption=k01_and_k02_score_equal_m_after_k01
+first_valid_k=00
+first_valid_score=FFFFFFFF0000
+first_valid_m=FFFFFFFF0000
+first_valid_l=00800000
+first_valid_acc_dim00=FFFD00000000
+first_valid_rule=m=scaled_score,l=1<<23,acc=V<<23
+equal_score_first_k=01
+equal_score_first_score=000000000000
+equal_score_first_m=000000000000
+equal_score_first_l=00AF16AC
+equal_score_first_acc_dim00=FFFEE577F800
+second_equal_score_k=02
+second_equal_score_score=000000000000
+second_equal_score_m=000000000000
+second_equal_score_p=00800000
+second_equal_score_alpha=00800000
+second_equal_score_l_delta=00800000
+second_equal_score_l=012F16AC
+second_equal_score_acc_delta_dim00=000000000000
+second_equal_score_acc_dim00=FFFEE577F800
+second_equal_score_rule=when score==m,p=1,alpha=1,l+=1<<23,acc+=V<<23
+note=acc_after_tile is first-tile skeleton state; non-equal k00 uses python math exp and is not a frozen LUT contract

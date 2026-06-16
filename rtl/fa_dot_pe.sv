@@ -13,13 +13,28 @@ module fa_dot_pe #(
   output logic                         valid_o,
   output logic signed [ACC_W-1:0]      dot_o
 );
+  localparam int unsigned PROD_W = ELEM_W * 2;
+
+  function automatic logic signed [ACC_W-1:0] dot_sum;
+    logic signed [ACC_W-1:0] acc;
+    logic signed [PROD_W-1:0] prod;
+    begin
+      acc = '0;
+      for (int i = 0; i < D; i++) begin
+        prod = $signed(q_i[i]) * $signed(k_i[i]);
+        acc += {{(ACC_W-PROD_W){prod[PROD_W-1]}}, prod};
+      end
+      return acc;
+    end
+  endfunction
+
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       valid_o <= 1'b0;
       dot_o   <= '0;
     end else begin
       valid_o <= valid_i;
-      dot_o   <= '0;
+      dot_o   <= valid_i ? dot_sum() : '0;
     end
   end
 endmodule

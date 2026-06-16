@@ -128,7 +128,9 @@ module fa_accel_top (
     .cycles_o         (cycles),
     .state_o          (),
     .q_index_o        (),
-    .kv_tile_o        ()
+    .kv_tile_o        (),
+    .k_index_o        (),
+    .score_valid_o    ()
   );
 
   assign irq = irq_en & done;

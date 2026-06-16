@@ -25,6 +25,8 @@ module tb_scheduler;
   fa_state_e state;
   logic [7:0] q_index;
   logic [7:0] kv_tile;
+  logic [7:0] k_index;
+  logic score_valid;
 
   fa_scheduler #(
     .BK(BK)
@@ -48,7 +50,9 @@ module tb_scheduler;
     .cycles_o(cycles),
     .state_o(state),
     .q_index_o(q_index),
-    .kv_tile_o(kv_tile)
+    .kv_tile_o(kv_tile),
+    .k_index_o(k_index),
+    .score_valid_o(score_valid)
   );
 
   initial clk = 1'b0;
@@ -94,7 +98,7 @@ module tb_scheduler;
       $fatal(1, "q_index advanced too early: %0d", q_index);
     end
 
-    repeat (6000) begin
+    repeat (80000) begin
       if (done || error) begin
         break;
       end

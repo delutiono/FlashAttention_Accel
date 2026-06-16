@@ -1,0 +1,46 @@
+case=softmax_raise_by_one
+purpose=manual bring-up expected values for second valid score higher by 1.0
+format=ASCII key/value, integers are decimal plus fixed-width uppercase hex
+score_format=S32.16
+exp_input_format=clamp_to_S8.8_from_S*.16
+exp_format=U1.23
+l_format=U9.23
+acc_format=S17.31
+note=temporary bring-up constants only; not final exp LUT contents
+
+initial_score_s32_16_dec=0
+initial_score_s32_16_hex=000000000000
+initial_m_s32_16_dec=0
+initial_m_s32_16_hex=000000000000
+initial_l_u9_23_dec=8388608
+initial_l_u9_23_hex=00800000
+v0_q88_dec=256
+v0_q88_hex=0100
+v1_q88_dec=512
+v1_q88_hex=0200
+acc_old_s17_31_dec=2147483648
+acc_old_s17_31_hex=000080000000
+
+second_score_s32_16_dec=65536
+second_score_s32_16_hex=000000010000
+m_new_s32_16_dec=65536
+m_new_s32_16_hex=000000010000
+alpha_exp_neg1_u1_23_dec=3085996
+alpha_exp_neg1_u1_23_hex=002F16AC
+p_exp0_u1_23_dec=8388608
+p_exp0_u1_23_hex=00800000
+l_old_times_alpha_shifted_u9_23_dec=3085996
+l_old_times_alpha_shifted_u9_23_hex=002F16AC
+l_new_u9_23_dec=11474604
+l_new_u9_23_hex=00AF16AC
+acc_old_rescaled_s17_31_dec=790014976
+acc_old_rescaled_s17_31_hex=00002F16AC00
+acc_new_contrib_v1_times_p_s17_31_dec=4294967296
+acc_new_contrib_v1_times_p_s17_31_hex=000100000000
+acc_new_s17_31_dec=5084982272
+acc_new_s17_31_hex=00012F16AC00
+
+formula_alpha=round(exp(-1)*2^23)
+formula_p=1<<23
+formula_l_new=((1<<23)*alpha >> 23) + (1<<23)
+formula_acc_new=(((V0_q88<<23)*alpha) >> 23) + (V1_q88<<23)

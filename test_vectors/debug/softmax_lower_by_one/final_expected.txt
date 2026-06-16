@@ -1,0 +1,29 @@
+case=softmax_lower_by_one
+purpose=finalization_smoke_expected_l_expneg1_single_lane_to_recip_out_quant_o_q88
+format=ASCII key/value, integers are decimal plus fixed-width uppercase hex
+source=test_vectors/debug/softmax_lower_by_one/expected.txt
+D=1
+l_format=U9.23
+acc_format=S17.31
+recip_format=U1.31
+o_format=S8.8
+rounding_tie_rule=half_away_from_zero
+l_u9_23_dec=11474604
+l_u9_23_hex=00AF16AC
+recip_formula=round((2^31*2^23)/l_u9_23)
+recip_u1_31_dec=1569936401
+recip_u1_31_hex=5D935411
+input_acc_formula=acc=(V0_q88<<23)+V1_q88*round(exp(-1)*2^23)
+formula=O_q88=round_half_away_from_zero((acc*recip_l)>>54)
+note=final datapath smoke for l=1+exp(-1); not a full reciprocal or row-level softmax golden
+
+lane00_acc_s17_31_dec=3727513600
+lane00_acc_s17_31_hex=0000DE2D5800
+lane00_product_s48_62_dec=5851959285862553600
+lane00_product_s48_62_hex=513655F729E2D800
+lane00_shift54_floor_dec=324
+lane00_shift54_remainder_hex=3655F729E2D800
+lane00_shift54_half_hex=20000000000000
+lane00_rounding_note=remainder_gt_half_so_half_away_from_zero_matches_round_to_nearest_up
+lane00_o_q88_dec=325
+lane00_o_q88_hex=0145

@@ -1,0 +1,31 @@
+case=causal_i0
+S=256
+D=64
+BK=32
+causal=1
+score_format=S32.16
+l_format=U9.23
+acc_format=S17.31
+contains=score_tile.hex,mask_valid.hex,m_l_after_tile.hex
+subset=q_index=00 only
+subset_note=causal_i0 first debug subset covers all 256 K positions for q=0
+pipeline_scalar_dim=00
+first_valid_score=000000000000
+first_valid_m=000000000000
+first_valid_l=00800000
+first_valid_acc_dim00=000080000000
+first_valid_acc_dim01=FFFF80000000
+first_valid_acc_dim02=000040000000
+first_valid_rule=m=scaled_score,l=1<<23,acc=V<<23
+expected_after_k0_score=000000000000
+expected_after_k0_m=000000000000
+expected_after_k0_l=00800000
+expected_after_k0_acc_dim00=000080000000
+expected_after_k0_rule=score=0,l=1<<23,acc_dim0=V[0][0]<<23
+expected_after_k1_masked_valid=0
+expected_after_k1_masked_score=000000000000
+expected_after_k1_masked_m=000000000000
+expected_after_k1_masked_l=00800000
+expected_after_k1_masked_acc_dim00=000080000000
+expected_after_k1_masked_rule=no_update_from_after_k0
+note=m_l_after_tile is a skeleton for q=00 after each K/V tile; masked scores do not update state

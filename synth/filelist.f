@@ -2,9 +2,14 @@
 ../rtl/fa_regfile.sv
 ../rtl/fa_scheduler.sv
 ../rtl/fa_dot_pe.sv
+../rtl/fa_score_scale.sv
+../rtl/fa_score_pipe.sv
+../rtl/fa_compute_core.sv
 ../rtl/fa_exp_approx.sv
 ../rtl/fa_recip_approx.sv
 ../rtl/fa_softmax_online.sv
+../rtl/fa_softmax_online_vec.sv
+../rtl/fa_finalize_vec.sv
 ../rtl/fa_out_quant.sv
 ../rtl/fa_dma_rd.sv
 ../rtl/fa_dma_wr.sv

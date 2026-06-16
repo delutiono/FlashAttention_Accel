@@ -1,0 +1,6 @@
+case=causal_i255
+S=256
+D=64
+causal=1
+contains=mask_valid.hex
+note=debug skeleton only; m/l/acc dumps are intentionally omitted

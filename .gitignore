@@ -8,10 +8,22 @@ __pycache__/
 *.pyc
 
 # Local simulator work libraries
+build/
+work/
 work_tmp/
 work_lint/
+work_lint*/
 work_red*/
 work_tdd*/
+work_tb*/
 work_green*/
 work_commit*/
+work_final*/
+work_vec*/
+work_check*/
+work_verify*/
+work_q*/
+work_red_score/
+work_green_score/
+work_green_sched_score/
 transcript

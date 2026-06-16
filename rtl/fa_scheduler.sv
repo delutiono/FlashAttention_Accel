@@ -3,6 +3,7 @@
 import fa_pkg::*;
 
 module fa_scheduler #(
+  parameter int unsigned S_PARAM = FA_S,
   parameter int unsigned BQ = 1,
   parameter int unsigned BK = 32
 ) (
@@ -25,20 +26,32 @@ module fa_scheduler #(
   output logic [31:0] cycles_o,
   output fa_state_e   state_o,
   output logic [7:0]  q_index_o,
-  output logic [7:0]  kv_tile_o
+  output logic [7:0]  kv_tile_o,
+  output logic [7:0]  k_index_o,
+  output logic        score_valid_o
 );
-  localparam int unsigned Q_BLOCKS = FA_S / BQ;
-  localparam int unsigned KV_TILES = FA_S / BK;
+  localparam int unsigned Q_BLOCKS = S_PARAM / BQ;
+  localparam int unsigned KV_TILES = (S_PARAM + BK - 1) / BK;
 
   fa_state_e state_q;
   logic [7:0] q_index_q;
   logic [7:0] kv_tile_q;
+  logic [7:0] k_offset_q;
+  logic [15:0] k_index_w;
+  logic       last_k_in_tile_w;
+  logic       last_kv_tile_w;
+
+  assign k_index_w = (16'(kv_tile_q) * 16'(BK)) + 16'(k_offset_q);
+  assign last_k_in_tile_w = (16'(k_offset_q) == 16'(BK - 1)) ||
+                            (k_index_w == 16'(S_PARAM - 1));
+  assign last_kv_tile_w = (16'(kv_tile_q) == 16'(KV_TILES - 1));
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state_q   <= FA_ST_IDLE;
       q_index_q <= 8'h0;
       kv_tile_q <= 8'h0;
+      k_offset_q <= 8'h0;
       busy_o    <= 1'b0;
       done_o    <= 1'b0;
       error_o   <= 1'b0;
@@ -47,6 +60,7 @@ module fa_scheduler #(
       state_q   <= FA_ST_IDLE;
       q_index_q <= 8'h0;
       kv_tile_q <= 8'h0;
+      k_offset_q <= 8'h0;
       busy_o    <= 1'b0;
       done_o    <= 1'b0;
       error_o   <= 1'b0;
@@ -67,6 +81,7 @@ module fa_scheduler #(
             state_q   <= FA_ST_CHECK_CFG;
             q_index_q <= 8'h0;
             kv_tile_q <= 8'h0;
+            k_offset_q <= 8'h0;
             busy_o    <= 1'b1;
             done_o    <= 1'b0;
             error_o   <= 1'b0;
@@ -85,27 +100,35 @@ module fa_scheduler #(
         end
         FA_ST_INIT_ROW: begin
           kv_tile_q <= 8'h0;
+          k_offset_q <= 8'h0;
           state_q   <= FA_ST_LOAD_KV;
         end
         FA_ST_LOAD_KV: begin
+          k_offset_q <= 8'h0;
           state_q <= FA_ST_COMPUTE_TILE;
         end
         FA_ST_COMPUTE_TILE: begin
-          if (kv_tile_q == KV_TILES[7:0] - 8'd1) begin
-            state_q <= FA_ST_FINALIZE;
+          if (last_k_in_tile_w) begin
+            if (last_kv_tile_w) begin
+              state_q <= FA_ST_FINALIZE;
+            end else begin
+              kv_tile_q <= kv_tile_q + 8'd1;
+              state_q   <= FA_ST_LOAD_KV;
+            end
           end else begin
-            kv_tile_q <= kv_tile_q + 8'd1;
-            state_q   <= FA_ST_LOAD_KV;
+            k_offset_q <= k_offset_q + 8'd1;
           end
         end
         FA_ST_FINALIZE: begin
           state_q <= FA_ST_WRITE_O;
         end
         FA_ST_WRITE_O: begin
-          if (q_index_q == Q_BLOCKS[7:0] - 8'd1) begin
+          if (16'(q_index_q) == 16'(Q_BLOCKS - 1)) begin
             state_q <= FA_ST_DONE;
           end else begin
             q_index_q <= q_index_q + 8'd1;
+            kv_tile_q <= 8'h0;
+            k_offset_q <= 8'h0;
             state_q   <= FA_ST_LOAD_Q;
           end
         end
@@ -129,6 +152,10 @@ module fa_scheduler #(
   assign state_o    = state_q;
   assign q_index_o  = q_index_q;
   assign kv_tile_o  = kv_tile_q;
+  assign k_index_o  = k_index_w[7:0];
+  assign score_valid_o = (state_q == FA_ST_COMPUTE_TILE) &&
+                         (k_index_w < 16'(S_PARAM)) &&
+                         (!causal_en_i || (k_index_w <= 16'(q_index_q)));
 
   // Keep configuration inputs visible to lint until the real scheduler uses them.
   logic unused_cfg;

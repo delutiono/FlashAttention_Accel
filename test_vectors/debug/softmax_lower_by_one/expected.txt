@@ -1,0 +1,36 @@
+case=softmax_lower_by_one
+purpose=manual bring-up expected values for second valid score lower by 1.0
+format=ASCII key/value, integers are decimal plus fixed-width uppercase hex
+score_format=S32.16
+exp_format=U1.23
+l_format=U9.23
+acc_format=S17.31
+note=temporary bring-up constants only; not final exp LUT contents
+
+initial_m_s32_16_dec=0
+initial_m_s32_16_hex=000000000000
+initial_l_u9_23_dec=8388608
+initial_l_u9_23_hex=00800000
+v0_q88_dec=256
+v0_q88_hex=0100
+v1_q88_dec=512
+v1_q88_hex=0200
+acc_old_s17_31_dec=2147483648
+acc_old_s17_31_hex=000080000000
+
+second_score_s32_16_dec=-65536
+second_score_s32_16_hex=FFFFFFFF0000
+p_exp_neg1_u1_23_dec=3085996
+p_exp_neg1_u1_23_hex=002F16AC
+alpha_exp0_u1_23_dec=8388608
+alpha_exp0_u1_23_hex=00800000
+l_new_u9_23_dec=11474604
+l_new_u9_23_hex=00AF16AC
+acc_delta_v1_times_p_s17_31_dec=1580029952
+acc_delta_v1_times_p_s17_31_hex=00005E2D5800
+acc_new_s17_31_dec=3727513600
+acc_new_s17_31_hex=0000DE2D5800
+
+formula_p=round(exp(-1)*2^23)
+formula_l_new=(1<<23)+p
+formula_acc_new=(V0_q88<<23)+V1_q88*p
