@@ -1,27 +1,27 @@
 package fa_pkg;
-  localparam int unsigned FA_S = 256;
-  localparam int unsigned FA_D = 64;
-  localparam int unsigned FA_ELEM_W = 16;
-  localparam int unsigned FA_ADDR_W = 64;
-  localparam int unsigned FA_AXI_DATA_W = 64;
-  localparam int unsigned FA_AXI_STRB_W = FA_AXI_DATA_W / 8;
-  localparam int unsigned FA_STRIDE_DEFAULT = FA_D * (FA_ELEM_W / 8);
+  localparam FA_S = 256;
+  localparam FA_D = 64;
+  localparam FA_ELEM_W = 16;
+  localparam FA_ADDR_W = 64;
+  localparam FA_AXI_DATA_W = 64;
+  localparam FA_AXI_STRB_W = FA_AXI_DATA_W / 8;
+  localparam FA_STRIDE_DEFAULT = FA_D * (FA_ELEM_W / 8);
 
-  localparam logic [11:0] REG_CTRL         = 12'h000;
-  localparam logic [11:0] REG_STATUS       = 12'h004;
-  localparam logic [11:0] REG_CFG          = 12'h008;
-  localparam logic [11:0] REG_Q_BASE_L     = 12'h014;
-  localparam logic [11:0] REG_Q_BASE_H     = 12'h018;
-  localparam logic [11:0] REG_K_BASE_L     = 12'h01c;
-  localparam logic [11:0] REG_K_BASE_H     = 12'h020;
-  localparam logic [11:0] REG_V_BASE_L     = 12'h024;
-  localparam logic [11:0] REG_V_BASE_H     = 12'h028;
-  localparam logic [11:0] REG_O_BASE_L     = 12'h02c;
-  localparam logic [11:0] REG_O_BASE_H     = 12'h030;
-  localparam logic [11:0] REG_STRIDE_BYTES = 12'h034;
-  localparam logic [11:0] REG_NEG_LARGE    = 12'h038;
-  localparam logic [11:0] REG_SCALE        = 12'h03c;
-  localparam logic [11:0] REG_CYCLES       = 12'h040;
+  localparam [11:0] REG_CTRL         = 12'h000;
+  localparam [11:0] REG_STATUS       = 12'h004;
+  localparam [11:0] REG_CFG          = 12'h008;
+  localparam [11:0] REG_Q_BASE_L     = 12'h014;
+  localparam [11:0] REG_Q_BASE_H     = 12'h018;
+  localparam [11:0] REG_K_BASE_L     = 12'h01c;
+  localparam [11:0] REG_K_BASE_H     = 12'h020;
+  localparam [11:0] REG_V_BASE_L     = 12'h024;
+  localparam [11:0] REG_V_BASE_H     = 12'h028;
+  localparam [11:0] REG_O_BASE_L     = 12'h02c;
+  localparam [11:0] REG_O_BASE_H     = 12'h030;
+  localparam [11:0] REG_STRIDE_BYTES = 12'h034;
+  localparam [11:0] REG_NEG_LARGE    = 12'h038;
+  localparam [11:0] REG_SCALE        = 12'h03c;
+  localparam [11:0] REG_CYCLES       = 12'h040;
 
   typedef enum logic [3:0] {
     FA_ST_IDLE,
