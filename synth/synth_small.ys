@@ -1,0 +1,43 @@
+# Yosys synthesis script — reduced parameters for memory-constrained env
+# S=64 (was 256), BK=8 (was 32)
+
+# Read RTL
+read_verilog -sv -I rtl_yosys \
+  rtl_yosys/fa_defines.vh \
+  rtl_yosys/fa_exp_approx.sv \
+  rtl_yosys/fa_recip_approx.sv \
+  rtl_yosys/fa_dot_pe.sv \
+  rtl_yosys/fa_out_quant.sv \
+  rtl_yosys/fa_regfile.sv \
+  rtl_yosys/fa_q_buffer.sv \
+  rtl_yosys/fa_kv_buffer.sv \
+  rtl_yosys/fa_softmax_online.sv \
+  rtl_yosys/fa_scheduler.sv \
+  rtl_yosys/fa_dma_rd.sv \
+  rtl_yosys/fa_dma_wr.sv \
+  rtl_yosys/fa_accel_top.sv
+
+# Override parameters for smaller design
+chparam -set S 64  fa_accel_top
+chparam -set BK 8  fa_scheduler
+chparam -set S  64 fa_scheduler
+
+# Hierarchy check
+hierarchy -check -top fa_accel_top
+
+# Generic synthesis flow (no technology library)
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+
+# Reports
+stat
+stat -width
+
+# Write generic gate-level netlist
+write_verilog -noattr -noexpr synth/fa_accel_top_netlist_small.v

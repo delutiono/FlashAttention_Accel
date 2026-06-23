@@ -1,0 +1,43 @@
+# Yosys synthesis — minimal parameters (S=8, BK=2) for flow validation
+
+# Read RTL
+read_verilog -sv -I rtl_yosys \
+  rtl_yosys/fa_defines.vh \
+  rtl_yosys/fa_exp_approx.sv \
+  rtl_yosys/fa_recip_approx.sv \
+  rtl_yosys/fa_dot_pe.sv \
+  rtl_yosys/fa_out_quant.sv \
+  rtl_yosys/fa_regfile.sv \
+  rtl_yosys/fa_q_buffer.sv \
+  rtl_yosys/fa_kv_buffer.sv \
+  rtl_yosys/fa_softmax_online.sv \
+  rtl_yosys/fa_scheduler.sv \
+  rtl_yosys/fa_dma_rd.sv \
+  rtl_yosys/fa_dma_wr.sv \
+  rtl_yosys/fa_accel_top.sv
+
+# Override all size parameters to minimal values
+chparam -set S  8 fa_accel_top
+chparam -set S  8 fa_scheduler
+chparam -set BK 2 fa_scheduler
+chparam -set BQ 1 fa_q_buffer
+
+# Hierarchy check
+hierarchy -check -top fa_accel_top
+
+# Generic synthesis
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+
+# Reports
+stat
+stat -width
+
+# Write netlist
+write_verilog -noattr -noexpr synth/fa_accel_top_netlist_small.v

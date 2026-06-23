@@ -1,0 +1,222 @@
+`timescale 1ns/1ps
+
+`include "fa_defines.vh"
+
+module tb_fa_top_gate;
+
+  localparam S = 256;
+  localparam D = 64;
+  localparam ELEM_W = 16;
+
+  logic clk, rst_n;
+
+  // AXI4-Lite
+  logic [11:0]  s_axil_awaddr;
+  logic         s_axil_awvalid, s_axil_awready;
+  logic [31:0]  s_axil_wdata;
+  logic [3:0]   s_axil_wstrb;
+  logic         s_axil_wvalid, s_axil_wready;
+  logic [1:0]   s_axil_bresp;
+  logic         s_axil_bvalid, s_axil_bready;
+  logic [11:0]  s_axil_araddr;
+  logic         s_axil_arvalid, s_axil_arready;
+  logic [31:0]  s_axil_rdata;
+  logic [1:0]   s_axil_rresp;
+  logic         s_axil_rvalid, s_axil_rready;
+
+  // AXI4 Master (unused)
+  logic [`FA_ADDR_W-1:0]     m_axi_araddr;
+  logic [7:0]                m_axi_arlen;
+  logic [2:0]                m_axi_arsize;
+  logic [1:0]                m_axi_arburst;
+  logic                      m_axi_arvalid, m_axi_arready;
+  logic [`FA_AXI_DATA_W-1:0] m_axi_rdata;
+  logic [1:0]                m_axi_rresp;
+  logic                      m_axi_rlast, m_axi_rvalid, m_axi_rready;
+  logic [`FA_ADDR_W-1:0]     m_axi_awaddr;
+  logic [7:0]                m_axi_awlen;
+  logic [2:0]                m_axi_awsize;
+  logic [1:0]                m_axi_awburst;
+  logic                      m_axi_awvalid, m_axi_awready;
+  logic [`FA_AXI_DATA_W-1:0] m_axi_wdata;
+  logic [`FA_AXI_STRB_W-1:0] m_axi_wstrb;
+  logic                      m_axi_wlast, m_axi_wvalid, m_axi_wready;
+  logic [1:0]                m_axi_bresp;
+  logic                      m_axi_bvalid, m_axi_bready;
+  logic                      irq;
+
+  // Packed data ports (matching Yosys-compatible RTL)
+  logic signed [S*D*ELEM_W-1:0] q_data_i;
+  logic signed [S*D*ELEM_W-1:0] k_data_i;
+  logic signed [S*D*ELEM_W-1:0] v_data_i;
+  logic signed [S*D*ELEM_W-1:0] o_data_o;
+  logic signed [S*D*ELEM_W-1:0] o_flat_o;
+
+  // Flat arrays for $readmemh
+  logic [ELEM_W-1:0] q_flat [0:S*D-1];
+  logic [ELEM_W-1:0] k_flat [0:S*D-1];
+  logic [ELEM_W-1:0] v_flat [0:S*D-1];
+
+  // Unpacked intermediate arrays for loading test vectors
+  logic signed [ELEM_W-1:0] q_data_u [S][D];
+  logic signed [ELEM_W-1:0] k_data_u [S][D];
+  logic signed [ELEM_W-1:0] v_data_u [S][D];
+
+  // Pack/unpack
+  always_comb begin
+    for (int r = 0; r < S; r++)
+      for (int c = 0; c < D; c++) begin
+        q_data_i[(r*D + c)*ELEM_W +: ELEM_W] = q_data_u[r][c];
+        k_data_i[(r*D + c)*ELEM_W +: ELEM_W] = k_data_u[r][c];
+        v_data_i[(r*D + c)*ELEM_W +: ELEM_W] = v_data_u[r][c];
+      end
+  end
+
+  fa_accel_top #(.S(S), .D(D), .ELEM_W(ELEM_W)) u_dut (
+    .clk, .rst_n,
+    .s_axil_awaddr,  .s_axil_awvalid, .s_axil_awready,
+    .s_axil_wdata,   .s_axil_wstrb,   .s_axil_wvalid, .s_axil_wready,
+    .s_axil_bresp,   .s_axil_bvalid,  .s_axil_bready,
+    .s_axil_araddr,  .s_axil_arvalid, .s_axil_arready,
+    .s_axil_rdata,   .s_axil_rresp,   .s_axil_rvalid, .s_axil_rready,
+    .m_axi_araddr, .m_axi_arlen, .m_axi_arsize, .m_axi_arburst,
+    .m_axi_arvalid, .m_axi_arready, .m_axi_rdata, .m_axi_rresp,
+    .m_axi_rlast, .m_axi_rvalid, .m_axi_rready,
+    .m_axi_awaddr, .m_axi_awlen, .m_axi_awsize, .m_axi_awburst,
+    .m_axi_awvalid, .m_axi_awready, .m_axi_wdata, .m_axi_wstrb,
+    .m_axi_wlast, .m_axi_wvalid, .m_axi_wready,
+    .m_axi_bresp, .m_axi_bvalid, .m_axi_bready,
+    .irq,
+    .q_data_i, .k_data_i, .v_data_i,
+    .o_data_o,
+    .o_flat_o
+  );
+
+  // =============================================================
+  //  Clock & reset
+  // =============================================================
+  initial clk = 0;
+  always #5 clk = ~clk;
+
+  initial begin
+    rst_n = 0;
+    #20 rst_n = 1;
+  end
+
+  // =============================================================
+  //  Load test vectors from hex files
+  // =============================================================
+  initial begin
+    $readmemh("sim/q_tb.hex", q_flat);
+    $readmemh("sim/k_tb.hex", k_flat);
+    $readmemh("sim/v_tb.hex", v_flat);
+    for (int i = 0; i < S; i++)
+      for (int j = 0; j < D; j++) begin
+        q_data_u[i][j] = q_flat[i * D + j];
+        k_data_u[i][j] = k_flat[i * D + j];
+        v_data_u[i][j] = v_flat[i * D + j];
+      end
+  end
+
+  // =============================================================
+  //  AXI4-Lite driver
+  // =============================================================
+  task axi_write(input logic [11:0] addr, input logic [31:0] data);
+    s_axil_awaddr  <= addr;
+    s_axil_awvalid <= 1'b1;
+    s_axil_wdata   <= data;
+    s_axil_wstrb   <= 4'hF;
+    s_axil_wvalid  <= 1'b1;
+    s_axil_bready  <= 1'b1;
+    @(posedge clk);
+    while (!(s_axil_awready && s_axil_wready)) @(posedge clk);
+    s_axil_awvalid <= 1'b0;
+    s_axil_wvalid  <= 1'b0;
+    while (!s_axil_bvalid) @(posedge clk);
+    s_axil_bready  <= 1'b0;
+    @(posedge clk);
+  endtask
+
+  task axi_read(input logic [11:0] addr, output logic [31:0] data);
+    s_axil_araddr  <= addr;
+    s_axil_arvalid <= 1'b1;
+    s_axil_rready  <= 1'b1;
+    @(posedge clk);
+    while (!s_axil_arready) @(posedge clk);
+    s_axil_arvalid <= 1'b0;
+    while (!s_axil_rvalid) @(posedge clk);
+    data = s_axil_rdata;
+    s_axil_rready  <= 1'b0;
+    @(posedge clk);
+  endtask
+
+  // =============================================================
+  //  Main test sequence
+  // =============================================================
+  logic [31:0] rdata;
+  integer      start_cycle, end_cycle, fd, i, j;
+
+  initial begin
+    s_axil_awaddr  = 12'h0;
+    s_axil_awvalid = 1'b0;
+    s_axil_wdata   = 32'h0;
+    s_axil_wstrb   = 4'h0;
+    s_axil_wvalid  = 1'b0;
+    s_axil_bready  = 1'b0;
+    s_axil_araddr  = 12'h0;
+    s_axil_arvalid = 1'b0;
+    s_axil_rready  = 1'b0;
+
+    // Wait for reset
+    repeat (5) @(posedge clk);
+
+    // Configure: CAUSAL_EN = 1
+    axi_write(`REG_CFG, 32'h1);
+
+    // Write START
+    $display("[%0t] Starting FlashAttention (gate-level)...", $time);
+    start_cycle = $time / 10;
+    axi_write(`REG_CTRL, 32'h1);  // START=1
+
+    // Wait for DONE
+    repeat (2) @(posedge clk);
+    do begin
+      axi_read(`REG_STATUS, rdata);
+    end while (!rdata[1]);  // DONE bit
+
+    end_cycle = $time / 10;
+    $display("[%0t] DONE!  Cycles: %0d", $time, end_cycle - start_cycle);
+
+    // Read CYCLES
+    axi_read(`REG_CYCLES, rdata);
+    $display("  Hardware cycles: %0d", rdata);
+
+    // Dump O to hex file for Python comparison
+    $display("  Dumping O output to sim/o_tb.hex...");
+    $display("  o_flat_o[0..3] = %h %h %h %h",
+      o_flat_o[0*ELEM_W +: ELEM_W], o_flat_o[1*ELEM_W +: ELEM_W],
+      o_flat_o[2*ELEM_W +: ELEM_W], o_flat_o[3*ELEM_W +: ELEM_W]);
+    fd = $fopen("sim/o_tb.hex", "w");
+    if (fd) begin
+      for (i = 0; i < S * D; i++)
+        $fwrite(fd, "%04h\n", o_flat_o[i*ELEM_W +: ELEM_W]);
+      $fclose(fd);
+      $display("  o_tb.hex written (%0d entries).", S * D);
+    end else begin
+      $display("  ERROR: Cannot open o_tb.hex for writing.");
+    end
+
+    $display("[%0t] Test complete.", $time);
+    $finish;
+  end
+
+  // =============================================================
+  //  Timeout & finish
+  // =============================================================
+  initial begin
+    #100000000;  // 10ms timeout
+    $display("TIMEOUT");
+    $finish;
+  end
+
+endmodule

@@ -1,0 +1,471 @@
+library ("sky130_fd_sc_hs__tt_025C_1v80") {
+    technology("cmos");
+    delay_model : "table_lookup";
+    bus_naming_style : "%s[%d]";
+    time_unit : "1ns";
+    voltage_unit : "1V";
+    leakage_power_unit : "1nW";
+    current_unit : "1mA";
+    pulling_resistance_unit : "1kohm";
+    capacitive_load_unit(1.0000000000, "pf");
+    revision : 1.0000000000;
+    default_cell_leakage_power : 0.0000000000;
+    default_fanout_load : 1.0000000000;
+    default_inout_pin_cap : 0.0000000000;
+    default_input_pin_cap : 0.0000000000;
+    default_max_transition : 1.0000000000;
+    default_output_pin_cap : 0.0000000000;
+    default_leakage_power_density : 0.0000000000;
+    default_operating_conditions : "typ";
+    operating_conditions ("typ") {
+        voltage : 1.8000000000;
+        process : 1.0000000000;
+        temperature : 25.000000000;
+        tree_type : "balanced_tree";
+    }
+    /* Wire load tables */
+
+    wire_load("Small") {
+      capacitance : 1.42e-05;
+      resistance : 0.0745;
+      slope : 8.3631;
+      fanout_length( 1, 23.2746);
+      fanout_length( 2, 32.1136);
+      fanout_length( 3, 48.4862);
+      fanout_length( 4, 64.0974);
+      fanout_length( 5, 86.2649);
+      fanout_length( 6, 84.2649);
+    }
+
+    wire_load("Medium") {
+      capacitance : 1.42e-05;
+      resistance : 0.0745;
+      slope : 8.3631;
+      fanout_length( 1, 23.2746);
+      fanout_length( 2, 32.1136);
+      fanout_length( 3, 48.4862);
+      fanout_length( 4, 64.0974);
+      fanout_length( 5, 86.2649);
+      fanout_length( 6, 84.2649);
+    }
+
+    wire_load("Large") {
+      capacitance : 1.42e-05;
+      resistance : 0.0745;
+      slope : 8.3631;
+      fanout_length( 1, 23.2746);
+      fanout_length( 2, 32.1136);
+      fanout_length( 3, 48.4862);
+      fanout_length( 4, 64.0974);
+      fanout_length( 5, 86.2649);
+      fanout_length( 6, 84.2649);
+    }
+
+    wire_load("Huge") {
+      capacitance : 1.42e-05;
+      resistance : 0.0745;
+      slope : 8.3631;
+      fanout_length( 1, 23.2746);
+      fanout_length( 2, 32.1136);
+      fanout_length( 3, 48.4862);
+      fanout_length( 4, 64.0974);
+      fanout_length( 5, 86.2649);
+      fanout_length( 6, 84.2649);
+    }
+
+    default_wire_load : "Small" ;
+    default_wire_load_mode : top;
+
+    power_lut_template ("hidden_pwr_template13") {
+        variable_1 : "input_transition_time";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+    }
+    power_lut_template ("pwr_template13x7") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7");
+    }
+    power_lut_template ("pwr_template13x10") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+    }
+    power_lut_template ("pwr_template13x11") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11");
+    }
+    power_lut_template ("pwr_template13x12") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12");
+    }
+    power_lut_template ("pwr_template13x13") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+    }
+    power_lut_template ("pwr_template13x14") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14");
+    }
+    power_lut_template ("pwr_template13x15") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15");
+    }
+    power_lut_template ("pwr_template13x16") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16");
+    }
+    power_lut_template ("pwr_template13x17") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17");
+    }
+    power_lut_template ("pwr_template13x18") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18");
+    }
+    power_lut_template ("pwr_template13x19") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19");
+    }
+    power_lut_template ("pwr_template13x20") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20");
+    }
+    power_lut_template ("pwr_template13x21") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21");
+    }
+    power_lut_template ("pwr_template13x22") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22");
+    }
+    power_lut_template ("pwr_template13x23") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23");
+    }
+    power_lut_template ("pwr_template13x24") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24");
+    }
+    power_lut_template ("pwr_template13x25") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25");
+    }
+    power_lut_template ("pwr_template13x26") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26");
+    }
+    power_lut_template ("pwr_template13x27") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27");
+    }
+    power_lut_template ("pwr_template13x28") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28");
+    }
+    power_lut_template ("pwr_template13x29") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29");
+    }
+    power_lut_template ("pwr_template13x31") {
+        variable_1 : "input_transition_time";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31");
+    }
+    lu_table_template ("delay_template13x7") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7");
+    }
+    lu_table_template ("delay_template13x10") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+    }
+    lu_table_template ("delay_template13x11") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11");
+    }
+    lu_table_template ("delay_template13x12") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12");
+    }
+    lu_table_template ("delay_template13x13") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+    }
+    lu_table_template ("delay_template13x14") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14");
+    }
+    lu_table_template ("delay_template13x15") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15");
+    }
+    lu_table_template ("delay_template13x16") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16");
+    }
+    lu_table_template ("delay_template13x17") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17");
+    }
+    lu_table_template ("delay_template13x18") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18");
+    }
+    lu_table_template ("delay_template13x19") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19");
+    }
+    lu_table_template ("delay_template13x20") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20");
+    }
+    lu_table_template ("delay_template13x21") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21");
+    }
+    lu_table_template ("delay_template13x22") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22");
+    }
+    lu_table_template ("delay_template13x23") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23");
+    }
+    lu_table_template ("delay_template13x24") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24");
+    }
+    lu_table_template ("delay_template13x25") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25");
+    }
+    lu_table_template ("delay_template13x26") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26");
+    }
+    lu_table_template ("delay_template13x27") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27");
+    }
+    lu_table_template ("delay_template13x28") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28");
+    }
+    lu_table_template ("delay_template13x29") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29");
+    }
+    lu_table_template ("delay_template13x31") {
+        variable_1 : "input_net_transition";
+        variable_2 : "total_output_net_capacitance";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31");
+    }
+    lu_table_template ("pulse_width_template13") {
+        variable_1 : "related_pin_transition";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13");
+    }
+    lu_table_template ("rr_template10x10") {
+        variable_1 : "constrained_pin_transition";
+        variable_2 : "related_pin_transition";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+    }
+    lu_table_template ("sethold_template_fall10x10") {
+        variable_1 : "constrained_pin_transition";
+        variable_2 : "related_pin_transition";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+    }
+    lu_table_template ("sethold_template_rise10x10") {
+        variable_1 : "constrained_pin_transition";
+        variable_2 : "related_pin_transition";
+        index_1("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+        index_2("1, 2, 3, 4, 5, 6, 7, 8, 9, 10");
+    }
+    library_features("report_delay_calculation");
+    voltage_map("VPWR", 1.8000000000);
+    voltage_map("VPB", 1.8000000000);
+    voltage_map("VNB", 0.0000000000);
+    voltage_map("VGND", 0.0000000000);
+    voltage_map("KAPWR", 1.8000000000);
+    voltage_map("KAGND", 0.0000000000);
+    in_place_swap_mode : "match_footprint";
+    input_threshold_pct_fall : 50.000000000;
+    input_threshold_pct_rise : 50.000000000;
+    nom_process : 1.0000000000;
+    nom_temperature : 25.000000000;
+    nom_voltage : 1.8000000000;
+    output_threshold_pct_fall : 50.000000000;
+    output_threshold_pct_rise : 50.000000000;
+    simulation : "true";
+    slew_derate_from_library : 1.0000000000;
+    slew_lower_threshold_pct_fall : 20.000000000;
+    slew_lower_threshold_pct_rise : 20.000000000;
+    slew_upper_threshold_pct_fall :  80.00000000;
+    slew_upper_threshold_pct_rise :  80.00000000;
+
+sky130_fd_sc_hs__dfbbn_1
+
+sky130_fd_sc_hs__dfbbn_2
+
+sky130_fd_sc_hs__dfbbp_1
+
+sky130_fd_sc_hs__dfrbp_1
+
+sky130_fd_sc_hs__dfrbp_2
+
+sky130_fd_sc_hs__dfrtn_1
+
+sky130_fd_sc_hs__dfrtp_1
+
+sky130_fd_sc_hs__dfrtp_2
+
+sky130_fd_sc_hs__dfrtp_4
+
+sky130_fd_sc_hs__dfsbp_1
+
+sky130_fd_sc_hs__dfsbp_2
+
+sky130_fd_sc_hs__dfstp_1
+
+sky130_fd_sc_hs__dfstp_2
+
+sky130_fd_sc_hs__dfstp_4
+
+sky130_fd_sc_hs__dfxbp_1
+
+sky130_fd_sc_hs__dfxbp_2
+
+sky130_fd_sc_hs__dfxtp_1
+
+sky130_fd_sc_hs__dfxtp_2
+
+sky130_fd_sc_hs__dfxtp_4
+
+sky130_fd_sc_hs__edfxbp_1
+
+sky130_fd_sc_hs__edfxtp_1
+
+sky130_fd_sc_hs__sdfbbn_1
+
+sky130_fd_sc_hs__sdfbbn_2
+
+sky130_fd_sc_hs__sdfbbp_1
+
+sky130_fd_sc_hs__sdfrbp_1
+
+sky130_fd_sc_hs__sdfrbp_2
+
+sky130_fd_sc_hs__sdfrtn_1
+
+sky130_fd_sc_hs__sdfrtp_1
+
+sky130_fd_sc_hs__sdfrtp_2
+
+sky130_fd_sc_hs__sdfrtp_4
+
+sky130_fd_sc_hs__sdfsbp_1
+
+sky130_fd_sc_hs__sdfsbp_2
+
+sky130_fd_sc_hs__sdfstp_1
+
+sky130_fd_sc_hs__sdfstp_2
+
+sky130_fd_sc_hs__sdfstp_4
+
+sky130_fd_sc_hs__sdfxbp_1
+
+sky130_fd_sc_hs__sdfxbp_2
+
+sky130_fd_sc_hs__sdfxtp_1
+
+sky130_fd_sc_hs__sdfxtp_2
+
+sky130_fd_sc_hs__sdfxtp_4
+
+}

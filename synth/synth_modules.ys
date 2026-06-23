@@ -1,0 +1,91 @@
+# Yosys synthesis — synthesize leaf modules individually to control memory
+
+# ==========================================
+# Module 1: fa_exp_approx
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_exp_approx.sv
+hierarchy -top fa_exp_approx
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_exp_approx_netlist.v
+design -reset
+
+# ==========================================
+# Module 2: fa_recip_approx
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_recip_approx.sv
+hierarchy -top fa_recip_approx
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_recip_approx_netlist.v
+design -reset
+
+# ==========================================
+# Module 3: fa_dot_pe
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_dot_pe.sv
+hierarchy -top fa_dot_pe
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_dot_pe_netlist.v
+design -reset
+
+# ==========================================
+# Module 4: fa_out_quant
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_out_quant.sv
+hierarchy -top fa_out_quant
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_out_quant_netlist.v
+design -reset
+
+# ==========================================
+# Module 5: fa_regfile
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_defines.vh rtl_yosys/fa_regfile.sv
+hierarchy -top fa_regfile
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_regfile_netlist.v
+design -reset
+
+# ==========================================
+# Module 6: fa_q_buffer
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_q_buffer.sv
+hierarchy -top fa_q_buffer
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_q_buffer_netlist.v
+design -reset
+
+# ==========================================
+# Module 7: fa_kv_buffer
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_kv_buffer.sv
+hierarchy -top fa_kv_buffer
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_kv_buffer_netlist.v
+design -reset
+
+# ==========================================
+# Module 8: fa_softmax_online (includes fa_exp_approx)
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_exp_approx.sv rtl_yosys/fa_softmax_online.sv
+hierarchy -top fa_softmax_online
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_softmax_online_netlist.v
+design -reset
+
+# ==========================================
+# Module 9: fa_dma_rd
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_dma_rd.sv
+hierarchy -top fa_dma_rd
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_dma_rd_netlist.v
+design -reset
+
+# ==========================================
+# Module 10: fa_dma_wr
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_dma_wr.sv
+hierarchy -top fa_dma_wr
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_dma_wr_netlist.v
+design -reset

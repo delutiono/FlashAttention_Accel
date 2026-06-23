@@ -1,213 +1,116 @@
-# FA-Accel-IP
+# FlashAttention Accelerator — Backend Flow
 
-FA-Accel-IP 是一个面向 Transformer 推理中 Scaled Dot-Product Attention 的可综合硬件加速器 IP。
+## 项目概述
 
-该 IP 聚焦固定 Baseline 规模：`S=256`、`d=64`、单 batch、单 head。系统通过 AXI4-Lite 接收主机配置，通过 AXI4 Master DMA 从外部内存读取 Q/K/V，采用 K/V tiling 与 online softmax 完成 FlashAttention-style attention 计算，并将输出 O 写回外部内存。
+FlashAttention 硬件加速器，基于 SkyWater 130nm HS 标准单元库（TT corner, 25°C, 1.80V）。
 
-FA-Accel-IP 不是完整 Transformer 加速器，也不是通用矩阵乘法 IP。它的产品边界是一个 attention 算子级硬件 IP，重点覆盖数据搬运、控制寄存器、定点计算、RTL 实现、验证闭环与 PPA 分析。
+**设计参数**: S=256, D=64, ELEM_W=16, BK=32
 
-## 产品目标
+## 已完成
 
-FA-Accel-IP 的 Baseline 版本目标包括：
+### 1. RTL 功能仿真 ✅
+- 与 Python 参考模型 100% 匹配（0/16384 像素错误）
+- 修复 8 个 RTL bug（乘法位宽截断溢出等）
+- 测试平台: `sim/tb_fa_top.sv`
 
-- 提供可综合 RTL IP。
-- 支持 `batch=1`、`head=1`、`S=256`、`d=64`。
-- 输入 Q/K/V 使用 16-bit signed Q8.8 定点格式。
-- 输出 O 使用 16-bit signed Q8.8 定点格式。
-- 支持 causal 与 non-causal attention 配置。
-- 使用 online softmax，不显式存储完整 score 矩阵。
-- 使用 K/V tiling，不显式存储完整 softmax probability 矩阵。
-- 通过 AXI4-Lite 暴露控制、状态与统计寄存器。
-- 通过 AXI4 Master DMA 读取 Q/K/V 并写回 O。
-- 提供 cycles、读写字节数、误差、面积、时序与功耗等分析入口。
-- 配套 Python golden model、测试向量、仿真验证、综合脚本与报告流程。
+### 2. Yosys 逻辑综合 — 叶子模块 ✅
+- 10 个叶子模块全部综合完成（D=64 参数）:
+  - `fa_exp_approx` (168KB), `fa_recip_approx` (591KB)
+  - `fa_dot_pe` (3.4MB), `fa_out_quant` (11.2MB)
+  - `fa_regfile` (99KB), `fa_q_buffer` (203KB)
+  - `fa_softmax_online` (31MB)
+  - `fa_dma_rd` (792B, stub), `fa_dma_wr` (792B, stub)
+- `fa_kv_buffer` 网表 136MB，超过 GitHub 100MB 限制，不在此仓库
+- 小参数版本 (D=8) 全部综合完成，网表大幅缩小
+- 综合脚本: `synth/synth_modules.ys`, `synth/synth_small_params.ys`
 
-## Baseline 范围
+### 3. 门级仿真流程验证 ✅
+- 小参数 (S=4, D=8, BK=2) 门级仿真通过
+- 编译: iverilog + Yosys simlib + 网表 + RTL scheduler
+- 运行: 1分28秒，201周期，error=0
+- 大参数 (S=256, D=64) 门级仿真因 vvp 性能限制无法运行（网表 31MB，百万门级）
 
-Baseline 配置有意保持收敛，目标是在明确输入规模下完成端到端硬件闭环。
+### 4. Innovus 物理综合脚本 ✅
+- 完整 Tcl 脚本: `innovus/run_phys.tcl`
+- MMMC 时序视图: `innovus/mmmc.tcl`
+- SDC 时序约束 (200MHz): `innovus/constraints.sdc`
+- 已针对 Innovus v25.12 适配
 
-| 项目 | Baseline |
-|---|---:|
-| Batch | 1 |
-| Head | 1 |
-| Sequence length | `S = 256` |
-| Head dimension | `d = 64` |
-| Q/K/V shape | `[256, 64]` |
-| O shape | `[256, 64]` |
-| 输入格式 | signed Q8.8, 16-bit |
-| 输出格式 | signed Q8.8, 16-bit |
-| 控制接口 | AXI4-Lite slave |
-| 数据接口 | AXI4 Master read/write |
-| Mask | causal mask |
-| 数据流 | online softmax + K/V tiling |
+### 5. RTL 适配 Yosys ✅
+- Yosys 兼容 RTL 在 `rtl_yosys/` 目录
+- 端口打包、`include "fa_defines.vh"` 替换 `import fa_pkg::*`
+- fa_scheduler 已优化：移除 always_comb 大规模解包，改用直接 packed 端口访问
 
-Baseline 不强制支持多 batch、多 head、可变序列长度、BF16/FP16、INT8/FP8、dropout、padding mask、AXI4-Stream、多任务队列或完整 Transformer block。
+## 待完成
 
-## Attention 数据流
+### 1. 顶层完整综合（高优先级）
+- **问题**: `fa_scheduler` 在 Yosys 中 read_verilog 阶段极慢（单线程，262K-bit 宽端口位切片 AST 展开）
+- **现状**: WSL 23GB 爆 OOM；512GB Windows 机器上 Yosys 单核跑极慢
+- **可能方案**:
+  - 分层综合：叶子模块先综合，scheduler 单独综合，顶层黑盒连线
+  - 将 ST_LOAD_Q/KV 大循环拆成多周期串行
+  - 换用商业综合工具（Design Compiler / Genus）
+- **脚本**: `synth/synth_full.ys`
 
-对于每个 query 位置 `i`，IP 计算：
+### 2. 物理综合（高优先级）
+- 需要完整顶层网表后才能跑 Innovus
+- 云服务器: `/apps/DDI251/25.12.000/bin/innovus -batch -file innovus/run_phys.tcl`
+- 输出: 面积、功耗、时序报告
 
-```text
-score(i,j) = dot(Q[i], K[j]) * SCALE + mask(i,j)
-P(i,:)     = softmax(score(i,:))
-O[i]       = sum_j P(i,j) * V[j]
+### 3. DMA 实现（中优先级）
+- `fa_dma_rd.sv` / `fa_dma_wr.sv` 目前是空 stub
+- AXI Master 接口全部 tie-off，当前数据通路走 SRAM 宽并行端口
+
+## 已知问题
+
+### Yosys 内存/性能
+- **根因**: Yosys 单线程开源工具，处理 >100K-bit 宽端口上的位切片展开成巨大 AST
+- **影响**: fa_scheduler（S=256, D=64）综合缓慢，23GB 机器 OOM
+- **规避**: 商业工具（DC/Genus）无此问题；或将大循环拆成多周期
+
+### 网表尺寸
+- `fa_kv_buffer_netlist.v`: 136MB（BK=32, D=64 → 2048 个 16-bit 寄存器展开为触发器）
+- `fa_softmax_online_netlist.v`: 31MB
+- 门级仿真器 vvp 无法处理此规模
+
+### DMA / Top-Level
+- fa_dma_rd / fa_dma_wr 为空 stub（792B 网表）
+- 顶层 AXI Master 全部 tie-off
+- 当前芯片接口是宽并行 SRAM 端口（非标准 AXI）
+
+## 目录结构
+
+```
+competition/
+├── rtl/                    # 原始 RTL（使用 fa_pkg）
+├── rtl_yosys/              # Yosys 兼容 RTL
+├── synth/                  # Yosys 综合脚本和网表
+│   ├── synth_full.ys       # 完整顶层综合
+│   ├── synth_modules.ys    # 叶子模块综合
+│   └── *_netlist.v         # 综合网表
+├── sim/                    # 仿真
+│   ├── tb_fa_top.sv        # RTL testbench
+│   ├── tb_scheduler_gate*.sv  # 门级 testbench
+│   └── run_gate_sim*.sh    # 门级仿真脚本
+├── innovus/                # Innovus 物理综合
+│   ├── run_phys.tcl
+│   ├── mmmc.tcl
+│   └── constraints.sdc
+├── test_vectors/           # Python 测试向量
+├── cocotb/                 # Cocotb 验证
+├── backend_flow.md         # 后端流程操作说明
+└── *.lef, *.v              # SkyWater 130nm HS PDK
 ```
 
-设计不生成完整 `S x S` score 矩阵，也不生成完整 `S x S` probability 矩阵。K/V 以 tile 为单位进入片上 buffer，每个 query 行或 query block 维护 online softmax 状态：
+## 快速开始
 
-- `m`：当前行最大值。
-- `l`：当前归一化分母。
-- `acc[64]`：当前加权累加向量。
-
-推荐的 online softmax 更新形式为：
-
-```text
-m_new   = max(m_old, score)
-alpha   = exp(m_old - m_new)
-beta    = exp(score - m_new)
-l_new   = l_old * alpha + beta
-acc_new = acc_old * alpha + beta * V[j]
+**门级仿真（小参数）**:
+```bash
+yosys synth/synth_small_params.ys
+bash sim/run_gate_sim_small.sh
 ```
 
-遍历所有 K/V tile 后，IP 将 `acc / l` 量化为 Q8.8 输出。
-
-## 数据规格
-
-Q、K、V、O 默认采用 row-major 内存布局：
-
-```text
-addr(tensor[i][k]) = BASE + i * STRIDE_BYTES + k * 2
+**物理综合**（需完整顶层网表）:
+```bash
+/apps/DDI251/25.12.000/bin/innovus -batch -file innovus/run_phys.tcl
 ```
-
-Baseline 默认约束：
-
-- `i` 范围为 `0..255`。
-- `k` 范围为 `0..63`。
-- 每个元素为 16-bit signed Q8.8。
-- 默认 `STRIDE_BYTES = 128`。
-- 每个 tensor 大小为 `32 KB`。
-
-## 接口概览
-
-顶层 IP 包含：
-
-- `clk` 与 `rst_n`。
-- AXI4-Lite slave 控制接口。
-- AXI4 Master read 接口，用于读取 Q/K/V。
-- AXI4 Master write 接口，用于写回 O。
-- `irq` 完成中断输出。
-
-核心寄存器包括：
-
-| Offset | Name | Purpose |
-|---:|---|---|
-| `0x00` | `CTRL` | START, SOFT_RESET, IRQ_EN |
-| `0x04` | `STATUS` | BUSY, DONE, ERROR |
-| `0x08` | `CFG` | CAUSAL_EN |
-| `0x14` - `0x30` | Base address registers | Q/K/V/O base addresses |
-| `0x34` | `STRIDE_BYTES` | Tensor row stride |
-| `0x38` | `NEG_LARGE` | Mask value for invalid scores |
-| `0x3C` | `SCALE` | Attention scale constant |
-| `0x40` | `CYCLES` | Execution cycle count |
-
-建议扩展寄存器用于报告 RD_BYTES、WR_BYTES、错误码、版本号和实现参数。
-
-## 微架构
-
-推荐 RTL 层次如下：
-
-```text
-fa_accel_top
-├── fa_regfile
-├── fa_dma_rd
-├── fa_dma_wr
-├── fa_scheduler
-├── fa_q_buffer
-├── fa_kv_buffer
-├── fa_dot_pe
-├── fa_softmax_online
-├── fa_exp_approx
-├── fa_recip_approx
-└── fa_out_quant
-```
-
-模块职责：
-
-- `fa_regfile` 管理控制寄存器、状态寄存器和统计计数器。
-- `fa_dma_rd` 负责 Q/K/V DMA 读取。
-- `fa_dma_wr` 负责 O DMA 写回。
-- `fa_scheduler` 管理 Q block、K/V tile、causal 边界和任务状态。
-- `fa_q_buffer` 与 `fa_kv_buffer` 缓存当前计算窗口所需数据。
-- `fa_dot_pe` 执行 Q/K dot-product，可采用 16 或 32 lane MAC。
-- `fa_softmax_online` 更新 `m/l/acc` 状态。
-- `fa_exp_approx` 与 `fa_recip_approx` 提供硬件友好的数值近似。
-- `fa_out_quant` 完成 Q8.8 输出舍入与饱和。
-
-推荐 Baseline 参数包括 `BQ=4/8`、`BK=16/32`、`DOT_PE_LANES=32`、`V_ACC_LANES=16/32`。最终参数需要根据误差、面积、频率、周期数和带宽权衡确定。
-
-## 正确性与 PPA 目标
-
-| 指标 | 目标 |
-|---|---:|
-| mean_abs_error | `<= 0.03` |
-| max_abs_error | `<= 0.10` |
-| 单次 causal attention cycles | `< 300k cycles` |
-| 等效逻辑门数 | `<= 2,000,000 gates` |
-| 带宽统计 | RD_BYTES / WR_BYTES |
-
-正确性以 FP32 golden model 为最终参考，fixed-point golden model 用于对齐 RTL 定点行为，并解释 dot-product 截断、缩放、exp 近似、reciprocal 近似、累加缩放和输出量化带来的误差。
-
-## 验证策略
-
-验证流程以 golden 对比为核心：
-
-- Python FP32 SDPA golden model。
-- Python fixed-point golden model。
-- Q8.8 量化与反量化工具。
-- 随机测试向量与 corner case 测试向量生成。
-- cocotb 端到端验证。
-- SystemVerilog testbench 或轻量 UVM smoke test 作为补充。
-- scoreboard 逐元素对比 RTL 输出与 golden 输出，并统计 MAE、MaxAE 和失败位置。
-
-必测内容包括 AXI4-Lite 寄存器读写、START/BUSY/DONE/ERROR 流程、SOFT_RESET、IRQ、DMA read/write、随机 Q/K/V、causal mask、`i=0`、`i=255`、tile 跨 causal 边界、默认 stride、非默认 stride、非零 base address 和 full-size `S=256,d=64` 回归。
-
-## 计划目录结构
-
-```text
-.
-├── rtl/
-├── sim/
-├── cocotb/
-├── model/
-├── vectors/
-├── synth/
-├── doc/
-└── README.md
-```
-
-目录用途：
-
-- `rtl/`：SystemVerilog RTL 源码与 filelist。
-- `sim/`：SystemVerilog testbench、memory model 和仿真脚本。
-- `cocotb/`：Python 端到端验证环境。
-- `model/`：FP32 golden、fixed-point golden、量化、近似、cycle 和 bandwidth model。
-- `vectors/`：Q/K/V 输入和 golden O 输出。
-- `synth/`：Genus 脚本、约束、日志和报告。
-- `doc/`：架构、定点、验证、误差、PPA 和最终设计文档。
-
-## 当前状态
-
-仓库当前处于产品定义与工程初始化阶段。已建立基础版本控制和产品导向 README。后续将逐步加入 RTL、模型、验证环境、综合脚本、测试向量和分析报告。
-
-## Roadmap
-
-1. 建立 FP32 与 fixed-point golden model。
-2. 实现简化 memory 接口的 functional compute core。
-3. 实现并对齐 online softmax RTL。
-4. 集成 AXI4-Lite 控制接口与 AXI4 Master DMA。
-5. 跑通 full-size 端到端回归与误差分析。
-6. 优化 PE 并行度、tiling、流水线、cycles 和带宽。
-7. 完成综合并生成面积、时序、功耗和 QoR 报告。
-8. 固化 Baseline IP 包、脚本和文档。
-
-后续扩展方向可包括 padding mask、更多定点格式、AXI4-Stream 接口和 multi-head 执行。

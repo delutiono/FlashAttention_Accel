@@ -1,0 +1,132 @@
+`timescale 1ns/1ps
+
+`include "fa_defines.vh"
+
+module fa_regfile (
+  input  logic         clk,
+  input  logic         rst_n,
+
+  input  logic [11:0]  s_axil_awaddr,
+  input  logic         s_axil_awvalid,
+  output logic         s_axil_awready,
+  input  logic [31:0]  s_axil_wdata,
+  input  logic [3:0]   s_axil_wstrb,
+  input  logic         s_axil_wvalid,
+  output logic         s_axil_wready,
+  output logic [1:0]   s_axil_bresp,
+  output logic         s_axil_bvalid,
+  input  logic         s_axil_bready,
+  input  logic [11:0]  s_axil_araddr,
+  input  logic         s_axil_arvalid,
+  output logic         s_axil_arready,
+  output logic [31:0]  s_axil_rdata,
+  output logic [1:0]   s_axil_rresp,
+  output logic         s_axil_rvalid,
+  input  logic         s_axil_rready,
+
+  output logic         start_pulse,
+  output logic         soft_reset_pulse,
+  output logic         irq_en,
+  output logic         causal_en,
+  output logic [63:0]  q_base,
+  output logic [63:0]  k_base,
+  output logic [63:0]  v_base,
+  output logic [63:0]  o_base,
+  output logic [31:0]  stride_bytes,
+  output logic [15:0]  neg_large,
+  output logic [15:0]  scale,
+
+  input  logic [31:0]  cycles_i,
+  input  logic         busy_i,
+  input  logic         done_i,
+  input  logic         error_i
+);
+  logic write_fire;
+  logic read_fire;
+
+  assign write_fire = s_axil_awvalid & s_axil_wvalid & s_axil_awready & s_axil_wready;
+  assign read_fire  = s_axil_arvalid & s_axil_arready;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      s_axil_bvalid    <= 1'b0;
+      s_axil_bresp     <= 2'b00;
+      s_axil_rvalid    <= 1'b0;
+      s_axil_rresp     <= 2'b00;
+      s_axil_rdata     <= 32'h0;
+      start_pulse      <= 1'b0;
+      soft_reset_pulse <= 1'b0;
+      irq_en           <= 1'b0;
+      causal_en        <= 1'b1;
+      q_base           <= 64'h0;
+      k_base           <= 64'h0;
+      v_base           <= 64'h0;
+      o_base           <= 64'h0;
+      stride_bytes     <= 32'(`FA_STRIDE_DEFAULT);
+      neg_large        <= 16'h8000;
+      scale            <= 16'd32;
+    end else begin
+      start_pulse      <= 1'b0;
+      soft_reset_pulse <= 1'b0;
+
+      if (s_axil_bvalid & s_axil_bready) begin
+        s_axil_bvalid <= 1'b0;
+      end
+
+      if (s_axil_rvalid & s_axil_rready) begin
+        s_axil_rvalid <= 1'b0;
+      end
+
+      if (write_fire) begin
+        s_axil_bvalid <= 1'b1;
+        unique case (s_axil_awaddr)
+          `REG_CTRL: begin
+            start_pulse      <= s_axil_wdata[0];
+            soft_reset_pulse <= s_axil_wdata[1];
+            irq_en           <= s_axil_wdata[2];
+          end
+          `REG_CFG:          causal_en        <= s_axil_wdata[0];
+          `REG_Q_BASE_L:     q_base[31:0]     <= s_axil_wdata;
+          `REG_Q_BASE_H:     q_base[63:32]    <= s_axil_wdata;
+          `REG_K_BASE_L:     k_base[31:0]     <= s_axil_wdata;
+          `REG_K_BASE_H:     k_base[63:32]    <= s_axil_wdata;
+          `REG_V_BASE_L:     v_base[31:0]     <= s_axil_wdata;
+          `REG_V_BASE_H:     v_base[63:32]    <= s_axil_wdata;
+          `REG_O_BASE_L:     o_base[31:0]     <= s_axil_wdata;
+          `REG_O_BASE_H:     o_base[63:32]    <= s_axil_wdata;
+          `REG_STRIDE_BYTES: stride_bytes     <= s_axil_wdata;
+          `REG_NEG_LARGE:    neg_large        <= s_axil_wdata[15:0];
+          `REG_SCALE:        scale            <= s_axil_wdata[15:0];
+          default: begin
+          end
+        endcase
+      end
+
+      if (read_fire) begin
+        s_axil_rvalid <= 1'b1;
+        unique case (s_axil_araddr)
+          `REG_CTRL:         s_axil_rdata <= {29'h0, irq_en, 2'b00};
+          `REG_STATUS:       s_axil_rdata <= {29'h0, error_i, done_i, busy_i};
+          `REG_CFG:          s_axil_rdata <= {31'h0, causal_en};
+          `REG_Q_BASE_L:     s_axil_rdata <= q_base[31:0];
+          `REG_Q_BASE_H:     s_axil_rdata <= q_base[63:32];
+          `REG_K_BASE_L:     s_axil_rdata <= k_base[31:0];
+          `REG_K_BASE_H:     s_axil_rdata <= k_base[63:32];
+          `REG_V_BASE_L:     s_axil_rdata <= v_base[31:0];
+          `REG_V_BASE_H:     s_axil_rdata <= v_base[63:32];
+          `REG_O_BASE_L:     s_axil_rdata <= o_base[31:0];
+          `REG_O_BASE_H:     s_axil_rdata <= o_base[63:32];
+          `REG_STRIDE_BYTES: s_axil_rdata <= stride_bytes;
+          `REG_NEG_LARGE:    s_axil_rdata <= {16'h0, neg_large};
+          `REG_SCALE:        s_axil_rdata <= {16'h0, scale};
+          `REG_CYCLES:       s_axil_rdata <= cycles_i;
+          default:          s_axil_rdata <= 32'h0;
+        endcase
+      end
+    end
+  end
+
+  assign s_axil_awready = !s_axil_bvalid;
+  assign s_axil_wready  = !s_axil_bvalid;
+  assign s_axil_arready = !s_axil_rvalid;
+endmodule

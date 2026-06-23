@@ -1,0 +1,29 @@
+# Yosys synthesis — remaining modules 8, 9, 10
+# These were not completed in the previous run
+
+# ==========================================
+# Module 8: fa_softmax_online (includes fa_exp_approx)
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_exp_approx.sv rtl_yosys/fa_softmax_online.sv
+hierarchy -top fa_softmax_online
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_softmax_online_netlist.v
+design -reset
+
+# ==========================================
+# Module 9: fa_dma_rd
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_dma_rd.sv
+hierarchy -top fa_dma_rd
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_dma_rd_netlist.v
+design -reset
+
+# ==========================================
+# Module 10: fa_dma_wr
+# ==========================================
+read_verilog -sv -I rtl_yosys rtl_yosys/fa_dma_wr.sv
+hierarchy -top fa_dma_wr
+proc; opt; fsm; opt; memory; opt; techmap; opt
+write_verilog -noattr synth/fa_dma_wr_netlist.v
+design -reset
