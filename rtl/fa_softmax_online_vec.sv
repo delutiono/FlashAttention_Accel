@@ -58,12 +58,10 @@ module fa_softmax_online_vec #(
   assign score_delta_up = score_i - m_q;
   assign lower_by_one = (score_i < m_q) && (score_delta == SCORE_ONE);
   assign higher_by_one = (score_i > m_q) && (score_delta_up == SCORE_ONE);
-  // Bring-up LUT v0.2: exact lower-delta points route through fa_exp_approx.
+  // Generic lower-delta path routes through fa_exp_approx; -1 keeps the
+  // single-cycle fast path used by the existing bring-up checkpoints.
   assign lower_exp_supported =
-      (score_i < m_q) &&
-      ((score_delta == SCORE_HALF) ||
-       (score_delta == SCORE_TWO) ||
-       (score_delta == SCORE_FOUR));
+      (score_i < m_q) && (score_delta != SCORE_ONE);
   assign exp_lower_pop = exp_lower_valid_o && (exp_lower_count_q != 0);
   assign exp_lower_can_push =
       (exp_lower_count_q < 2'd2) || exp_lower_pop;

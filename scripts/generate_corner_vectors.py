@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import random
 import sys
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, NamedTuple, Sequence, Tuple
@@ -22,6 +23,8 @@ Q88_SCALE = 256
 Q88_MIN = -32768
 Q88_MAX = 32767
 SCALE = 1.0 / 8.0
+RANDOM_FULL_ROW_SEED = 20240623
+RANDOM_FULL_ROW_CASE = f"random_full_row_seed{RANDOM_FULL_ROW_SEED}"
 
 Matrix = List[List[int]]
 GeneratedMap = Dict[str, Tuple[Path, Path, Path, Path, Path]]
@@ -135,12 +138,55 @@ def _case_non_causal_smoke() -> Tuple[Matrix, Matrix, Matrix]:
     return q, k, v
 
 
+def _case_random_full_row() -> Tuple[Matrix, Matrix, Matrix]:
+    rng = random.Random(RANDOM_FULL_ROW_SEED)
+
+    def matrix(lo: int, hi: int) -> Matrix:
+        return [[rng.randint(lo, hi) for _ in range(D)] for _ in range(S)]
+
+    # Keep Q/K near +/-1.0 so rows exercise real softmax mixing instead of
+    # collapsing almost entirely to argmax V selection.
+    q = matrix(-256, 256)
+    k = matrix(-256, 256)
+    v = matrix(-512, 512)
+    return q, k, v
+
+
 def _to_float(matrix: Matrix) -> List[List[float]]:
     return [[value / Q88_SCALE for value in row] for row in matrix]
 
 
 def _float_to_q88_matrix(matrix: Sequence[Sequence[float]]) -> Matrix:
     return [[_q88(value) for value in row] for row in matrix]
+
+
+def _exp_lut_lookup(value: float, x_min: float = -16.0, n_entries: int = 4096) -> float:
+    value = max(x_min, min(0.0, value))
+    step = -x_min / (n_entries - 1)
+    idx = (value - x_min) / step
+    lo = int(math.floor(idx))
+    hi = min(lo + 1, n_entries - 1)
+    frac = idx - lo
+    x_lo = x_min + lo * step
+    x_hi = x_min + hi * step
+    y_lo = math.exp(x_lo)
+    y_hi = math.exp(x_hi)
+    return y_lo + frac * (y_hi - y_lo)
+
+
+def _recip_lut_lookup(value: float, x_min: float = 0.5, x_max: float = 260.0, n_entries: int = 1024) -> float:
+    value = max(x_min, min(x_max, value))
+    step = (x_max - x_min) / (n_entries - 1)
+    idx = (value - x_min) / step
+    lo = int(math.floor(idx))
+    hi = min(lo + 1, n_entries - 1)
+    frac = idx - lo
+    x_lo = x_min + lo * step
+    x_hi = x_min + hi * step
+    y_lo = 1.0 / x_lo
+    y_hi = 1.0 / x_hi
+    y = y_lo + frac * (y_hi - y_lo)
+    return y * (2.0 - value * y)
 
 
 def _attention_fp32_fallback(q_int: Matrix, k_int: Matrix, v_int: Matrix, causal: bool) -> List[List[float]]:
@@ -172,6 +218,94 @@ def _attention_fp32_fallback(q_int: Matrix, k_int: Matrix, v_int: Matrix, causal
         out.append(out_row)
 
     return out
+
+
+def _flash_attention_q88_fallback(q_int: Matrix, k_int: Matrix, v_int: Matrix, causal: bool) -> List[List[float]]:
+    q = _to_float(q_int)
+    k = _to_float(k_int)
+    v = _to_float(v_int)
+    m = [-math.inf for _ in range(S)]
+    l = [0.0 for _ in range(S)]
+    acc = [[0.0 for _ in range(D)] for _ in range(S)]
+
+    for j_start in range(0, S, BK):
+        j_end = min(j_start + BK, S)
+        for i in range(S):
+            scores: List[float | None] = []
+            row_max = -math.inf
+            for j in range(j_start, j_end):
+                if causal and j > i:
+                    scores.append(None)
+                    continue
+                score = 0.0
+                q_row = q[i]
+                k_row = k[j]
+                for dim in range(D):
+                    score += q_row[dim] * k_row[dim]
+                score *= SCALE
+                scores.append(score)
+                if score > row_max:
+                    row_max = score
+
+            m_new = max(m[i], row_max)
+            if m_new == -math.inf:
+                continue
+
+            alpha = _exp_lut_lookup(m[i] - m_new) if m[i] != -math.inf else 0.0
+            p_values = [0.0 if score is None else _exp_lut_lookup(score - m_new) for score in scores]
+            l_new = l[i] * alpha + sum(p_values)
+
+            for dim in range(D):
+                pv = 0.0
+                for offset, p_value in enumerate(p_values):
+                    if p_value:
+                        pv += p_value * v[j_start + offset][dim]
+                acc[i][dim] = acc[i][dim] * alpha + pv
+            m[i] = m_new
+            l[i] = l_new
+
+    out: List[List[float]] = []
+    for i in range(S):
+        inv_l = _recip_lut_lookup(l[i])
+        out.append([_q88(acc[i][dim] * inv_l) / Q88_SCALE for dim in range(D)])
+    return out
+
+
+def _error_stats(o_ref: Sequence[Sequence[float]], o_test: Sequence[Sequence[float]]) -> Dict[str, float | int]:
+    total = 0.0
+    max_ae = 0.0
+    worst_row = 0
+    row_mae_min = math.inf
+    row_mae_max = 0.0
+    row_max_min = math.inf
+    row_max_max = 0.0
+
+    for row, (ref_row, test_row) in enumerate(zip(o_ref, o_test)):
+        row_total = 0.0
+        row_max = 0.0
+        for ref_value, test_value in zip(ref_row, test_row):
+            abs_err = abs(ref_value - test_value)
+            total += abs_err
+            row_total += abs_err
+            if abs_err > max_ae:
+                max_ae = abs_err
+                worst_row = row
+            row_max = max(row_max, abs_err)
+        row_mae = row_total / D
+        row_mae_min = min(row_mae_min, row_mae)
+        row_mae_max = max(row_mae_max, row_mae)
+        row_max_min = min(row_max_min, row_max)
+        row_max_max = max(row_max_max, row_max)
+
+    return {
+        "mae": total / (S * D),
+        "max_ae": max_ae,
+        "worst_row": worst_row,
+        "row_mae_min": row_mae_min,
+        "row_mae_max": row_mae_max,
+        "row_max_min": row_max_min,
+        "row_max_max": row_max_max,
+    }
 
 
 def _flatten_hex(matrix: Matrix) -> Iterable[str]:
@@ -220,6 +354,12 @@ def _fallback_outputs(q: Matrix, k: Matrix, v: Matrix, causal: bool) -> Tuple[Ma
     return o_ref, [row[:] for row in o_ref]
 
 
+def _random_full_row_outputs(q: Matrix, k: Matrix, v: Matrix, causal: bool) -> Tuple[Matrix, Matrix, Dict[str, float | int]]:
+    o_ref_f = _attention_fp32_fallback(q, k, v, causal)
+    o_q88_f = _flash_attention_q88_fallback(q, k, v, causal)
+    return _float_to_q88_matrix(o_ref_f), _float_to_q88_matrix(o_q88_f), _error_stats(o_ref_f, o_q88_f)
+
+
 def _case_builders():
     return {
         "zero": CaseSpec(_case_zero, True),
@@ -227,6 +367,7 @@ def _case_builders():
         "causal_i255": CaseSpec(_case_causal_i255, True),
         "tile_boundary": CaseSpec(_case_tile_boundary, True),
         "non_causal_smoke": CaseSpec(_case_non_causal_smoke, False),
+        RANDOM_FULL_ROW_CASE: CaseSpec(_case_random_full_row, True),
     }
 
 
@@ -378,6 +519,59 @@ def _write_non_causal_smoke_debug_skeleton(debug_root: Path, q: Matrix, k: Matri
     (case_dir / "acc_after_tile.hex").write_text("\n".join(acc_lines) + "\n", encoding="ascii")
 
 
+def _write_random_full_row_meta(out_dir: Path, stats: Dict[str, float | int]) -> None:
+    lines = [
+        f"case={RANDOM_FULL_ROW_CASE}",
+        f"seed={RANDOM_FULL_ROW_SEED}",
+        f"S={S}",
+        f"D={D}",
+        f"BK={BK}",
+        "batch=1",
+        "head=1",
+        "causal=1",
+        "scale=1/8",
+        "q_format=S8.8",
+        "k_format=S8.8",
+        "v_format=S8.8",
+        "o_format=S8.8",
+        "layout=row_major",
+        "elements_per_tensor=16384",
+        "o_ref=fp32_sdpa_quantized_q88",
+        "o_q88=q88_flash_attention_sim_quantized_q88",
+        "backend=pure_python_reproducible",
+        "exp_mode=golden_model_default_lut_shape_python_math",
+        "recip_mode=golden_model_default_lut_nr_shape_python_math",
+        f"mae_vs_fp32={stats['mae']:.6f}",
+        f"max_ae_vs_fp32={stats['max_ae']:.6f}",
+        f"worst_row={stats['worst_row']}",
+        f"row_mae_min={stats['row_mae_min']:.6f}",
+        f"row_mae_max={stats['row_mae_max']:.6f}",
+        f"row_max_ae_min={stats['row_max_min']:.6f}",
+        f"row_max_ae_max={stats['row_max_max']:.6f}",
+        "note=full S=256 D=64 causal random baseline for scoreboard/golden plumbing; exp/recip v1.0 bit-exact contract remains open",
+    ]
+    (out_dir / f"{RANDOM_FULL_ROW_CASE}_meta.txt").write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
+def _write_random_full_row_row000_expected(debug_root: Path, o_q88: Matrix) -> None:
+    case_dir = debug_root / RANDOM_FULL_ROW_CASE
+    case_dir.mkdir(parents=True, exist_ok=True)
+
+    lines = [
+        f"case={RANDOM_FULL_ROW_CASE}",
+        "purpose=rtl_scoreboard_row000_expected_from_python_full_row_vector",
+        "q_index=00",
+        f"source_o_q88=test_vectors/cases/{RANDOM_FULL_ROW_CASE}_O_q88.hex",
+        "source_kind=python_full_row_vector",
+        "not_rtl_pass_evidence=1",
+        f"D={D}",
+        "lane_count=64",
+        "o_format=S8.8",
+    ]
+    lines.extend(f"lane{lane:02d}_o_q88_hex={value & 0xFFFF:04X}" for lane, value in enumerate(o_q88[0]))
+    (case_dir / "row000_expected.txt").write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
 def generate_all(output_dir: Path | str = _repo_root() / "test_vectors" / "cases") -> GeneratedMap:
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -390,7 +584,10 @@ def generate_all(output_dir: Path | str = _repo_root() / "test_vectors" / "cases
     generated: GeneratedMap = {}
     for case_name, case_spec in _case_builders().items():
         q, k, v = case_spec.build()
-        if golden_model is None:
+        random_stats = None
+        if case_name == RANDOM_FULL_ROW_CASE:
+            o_ref, o_q88, random_stats = _random_full_row_outputs(q, k, v, case_spec.causal)
+        elif golden_model is None:
             o_ref, o_q88 = _fallback_outputs(q, k, v, case_spec.causal)
         else:
             o_ref, o_q88 = _numpy_outputs(golden_model, q, k, v, case_spec.causal)
@@ -398,6 +595,9 @@ def generate_all(output_dir: Path | str = _repo_root() / "test_vectors" / "cases
         paths = tuple(out_dir / f"{case_name}_{tensor}.hex" for tensor in ("Q", "K", "V", "O_ref", "O_q88"))
         for path, matrix in zip(paths, (q, k, v, o_ref, o_q88)):
             _write_hex(path, matrix)
+        if random_stats is not None:
+            _write_random_full_row_meta(out_dir, random_stats)
+            _write_random_full_row_row000_expected(debug_root, o_q88)
         generated[case_name] = paths  # type: ignore[assignment]
 
     q, k, v = _case_causal_i0()
@@ -423,6 +623,9 @@ def main() -> int:
         print(f"{case_name}:")
         for path in paths:
             print(f"  {path}")
+    generated_files = sum(len(paths) for paths in generated.values())
+    print(f"SUMMARY generated_cases={len(generated)} generated_files={generated_files}")
+    print("RESULT=PASS")
     return 0
 
 

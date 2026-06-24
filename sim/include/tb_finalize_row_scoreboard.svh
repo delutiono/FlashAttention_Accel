@@ -97,3 +97,69 @@
       end
     end
   endtask
+
+  task automatic check_expected_row_from_flat_hex(
+    input string tag,
+    input string flat_hex_path,
+    input int unsigned row_index
+  );
+    int fd;
+    int scan_count;
+    int unsigned value_index;
+    int unsigned row_start;
+    int unsigned row_stop;
+    int lane;
+    int unsigned loaded_count;
+    int unsigned mismatch_count;
+    logic [OUT_W-1:0] lane_value;
+    string line;
+    begin
+      fd = $fopen(flat_hex_path, "r");
+      if (fd == 0) begin
+        $fatal(1, "could not open flat O hex file '%s'", flat_hex_path);
+      end
+
+      value_index = 0;
+      row_start = row_index * D;
+      row_stop = row_start + D;
+      loaded_count = 0;
+      mismatch_count = 0;
+
+      while ($fgets(line, fd)) begin
+        lane_value = '0;
+        scan_count = $sscanf(line, "%h", lane_value);
+
+        if (scan_count == 1) begin
+          if (value_index >= row_start && value_index < row_stop) begin
+            lane = value_index - row_start;
+
+            if (!expected_row_loaded[lane]) begin
+              $fatal(1, "%s expected lane%0d was not loaded before flat hex compare",
+                     tag, lane);
+            end
+
+            loaded_count++;
+            if ($signed(lane_value) !== expected_row[lane]) begin
+              mismatch_count++;
+              $display("%s lane%0d flat_hex=0x%04h expected=0x%04h",
+                       tag, lane, lane_value, expected_row[lane]);
+            end
+          end
+
+          value_index++;
+        end
+      end
+
+      $fclose(fd);
+
+      if (loaded_count != D) begin
+        $fatal(1, "%s flat O hex file '%s' loaded %0d/%0d row%0d lanes",
+               tag, flat_hex_path, loaded_count, D, row_index);
+      end
+
+      if (mismatch_count != 0) begin
+        $fatal(1, "%s flat O hex compare failed with %0d mismatched lanes",
+               tag, mismatch_count);
+      end
+    end
+  endtask

@@ -61,10 +61,12 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
   string k_file;
   string v_file;
   string expected_file;
+  string source_o_file;
   int target_q;
   int target_finalize_index;
   int expected_score_count;
   int guard_limit;
+  bit parser_smoke_only;
   logic signed [SCORE_PIPE_W-1:0] expected_k1_score;
   logic signed [SOFTMAX_SCORE_W-1:0] expected_k1_softmax_score;
 
@@ -285,10 +287,12 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
       q_file = "";
       k_file = "";
       v_file = "";
+      source_o_file = "";
       target_q = 1;
       target_finalize_index = 2;
       expected_score_count = 2;
       guard_limit = 5000;
+      parser_smoke_only = 1'b0;
       expected_k1_score = -48'sd262144;
       expected_k1_softmax_score = -24'sd262144;
       expected_file = "test_vectors/debug/q1_delta_neg4/pipeline_final_expected.txt";
@@ -297,6 +301,10 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
         expected_k1_score = -48'sd131072;
         expected_k1_softmax_score = -24'sd131072;
         expected_file = "test_vectors/debug/q1_delta_neg2/pipeline_final_expected.txt";
+      end else if (case_name == "q1_neg1p5") begin
+        expected_k1_score = -48'sd98304;
+        expected_k1_softmax_score = -24'sd98304;
+        expected_file = "test_vectors/debug/q1_delta_neg1p5/pipeline_final_expected.txt";
       end else if (case_name == "q1_neg4") begin
         expected_k1_score = -48'sd262144;
         expected_k1_softmax_score = -24'sd262144;
@@ -311,12 +319,19 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
         expected_file = "test_vectors/debug/causal_i0/pipeline_final_expected.txt";
       end else if (case_name == "row_scoreboard_s4_det") begin
         target_q = 3;
-        target_finalize_index = 3;
+        target_finalize_index = 4;
         expected_score_count = 4;
         q_file = "test_vectors/cases/row_scoreboard_s4_det_Q.hex";
         k_file = "test_vectors/cases/row_scoreboard_s4_det_K.hex";
         v_file = "test_vectors/cases/row_scoreboard_s4_det_V.hex";
         expected_file = "test_vectors/debug/row_scoreboard_s4_det/expected.txt";
+      end else if (case_name == "random_full_row_seed20240623") begin
+        target_q = 0;
+        target_finalize_index = 1;
+        expected_score_count = 1;
+        parser_smoke_only = 1'b1;
+        expected_file = "test_vectors/debug/random_full_row_seed20240623/row000_expected.txt";
+        source_o_file = "test_vectors/cases/random_full_row_seed20240623_O_q88.hex";
       end else begin
         $fatal(1, "unsupported CASE='%s'", case_name);
       end
@@ -325,6 +340,7 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
       void'($value$plusargs("K_FILE=%s", k_file));
       void'($value$plusargs("V_FILE=%s", v_file));
       void'($value$plusargs("EXPECTED=%s", expected_file));
+      void'($value$plusargs("SOURCE_O=%s", source_o_file));
       void'($value$plusargs("TARGET_Q=%d", target_q));
       void'($value$plusargs("TARGET_FINALIZE_INDEX=%d", target_finalize_index));
       void'($value$plusargs("EXPECTED_SCORE_COUNT=%d", expected_score_count));
@@ -361,7 +377,13 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
       end else if (q_file.len() == 0 && k_file.len() == 0 && v_file.len() == 0) begin
         q_mem[1 * D + 0] = 16'sh0100;
         k_mem[0 * D + 0] = 16'sh0000;
-        k_mem[1 * D + 0] = (case_name == "q1_neg2") ? 16'shf000 : 16'she000;
+        if (case_name == "q1_neg1p5") begin
+          k_mem[1 * D + 0] = 16'shf400;
+        end else if (case_name == "q1_neg2") begin
+          k_mem[1 * D + 0] = 16'shf000;
+        end else begin
+          k_mem[1 * D + 0] = 16'she000;
+        end
 
         v_mem[0 * D + 0] = 16'sh0100;
         v_mem[1 * D + 0] = 16'sh0200;
@@ -409,6 +431,15 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
 
   initial begin
     configure_case();
+    if (parser_smoke_only) begin
+      load_expected_row(expected_file);
+      check_expected_row_from_flat_hex(case_name, source_o_file, target_q);
+      $display("tb_scheduler_softmax_finalize_row_scoreboard PASS case=%s parser_smoke_only=1 q=%0d lanes=%0d expected=%s source_o=%s not_rtl_pass_evidence=1",
+               case_name, target_q, expected_row_count, expected_file,
+               source_o_file);
+      $finish;
+    end
+
     init_case_vectors();
     load_expected_row(expected_file);
     check_case_preconditions();

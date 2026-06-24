@@ -6,16 +6,50 @@ from __future__ import annotations
 import importlib.util
 import math
 import re
-import tempfile
+import shutil
+import subprocess
+import sys
 import unittest
+import uuid
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "generate_corner_vectors.py"
+TMP_TEST_ROOT = REPO_ROOT / ".tmp_test_vectors"
+
+
+def _prepare_tmp_cases(name: str) -> tuple[Path, Path]:
+    root = TMP_TEST_ROOT / f"{name}_{uuid.uuid4().hex}"
+    cases = root / "cases"
+    cases.mkdir(parents=True, exist_ok=True)
+    return root, cases
+
+
+def _cleanup_tmp_root(root: Path) -> None:
+    if root.exists():
+        try:
+            shutil.rmtree(root)
+        except PermissionError as exc:
+            print(f"WARNING: could not remove temporary test directory {root}: {exc}")
 
 
 class CornerVectorGenerationTest(unittest.TestCase):
+    def test_cli_reports_explicit_pass_marker(self) -> None:
+        tmp_root, tmpdir = _prepare_tmp_cases("cli_pass_marker")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT_PATH), "--out-dir", str(tmpdir)],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("RESULT=PASS", result.stdout)
+        finally:
+            _cleanup_tmp_root(tmp_root)
+
     def test_exp_lut_v02_expected_file_constants(self) -> None:
         expected_path = REPO_ROOT / "test_vectors" / "debug" / "exp_lut_v02" / "expected.txt"
         self.assertTrue(expected_path.exists(), str(expected_path))
@@ -753,22 +787,23 @@ class CornerVectorGenerationTest(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generated = module.generate_all(Path(tmpdir))
+        tmp_root, tmpdir = _prepare_tmp_cases("corner_generation")
+        try:
+            generated = module.generate_all(tmpdir)
 
             self.assertEqual(
-                {"zero", "causal_i0", "causal_i255", "tile_boundary", "non_causal_smoke"},
+                {"zero", "causal_i0", "causal_i255", "tile_boundary", "non_causal_smoke", "random_full_row_seed20240623"},
                 set(generated),
             )
             for case_name in generated:
                 for tensor in ("Q", "K", "V", "O_ref", "O_q88"):
-                    path = Path(tmpdir) / f"{case_name}_{tensor}.hex"
+                    path = tmpdir / f"{case_name}_{tensor}.hex"
                     self.assertTrue(path.exists(), str(path))
                     lines = path.read_text(encoding="ascii").splitlines()
                     self.assertEqual(256 * 64, len(lines), str(path))
                     self.assertTrue(all(re.fullmatch(r"[0-9A-F]{4}", line) for line in lines), str(path))
 
-            debug_dir = Path(tmpdir) / ".." / "debug" / "causal_i0"
+            debug_dir = tmpdir / ".." / "debug" / "causal_i0"
             meta_path = debug_dir / "meta.txt"
             score_path = debug_dir / "score_tile.hex"
             mask_path = debug_dir / "mask_valid.hex"
@@ -810,7 +845,7 @@ class CornerVectorGenerationTest(unittest.TestCase):
             self.assertTrue(all(re.fullmatch(r"00 [0-7][0-9A-F] [0-9A-F]{12} [0-9A-F]{8}", line) for line in ml_lines))
             self.assertEqual("00 00 000000000000 00800000", ml_lines[0])
 
-            non_causal_debug_dir = Path(tmpdir) / ".." / "debug" / "non_causal_smoke"
+            non_causal_debug_dir = tmpdir / ".." / "debug" / "non_causal_smoke"
             non_causal_meta_path = non_causal_debug_dir / "meta.txt"
             non_causal_acc_path = non_causal_debug_dir / "acc_after_tile.hex"
             self.assertTrue(non_causal_meta_path.exists(), str(non_causal_meta_path))
@@ -830,6 +865,101 @@ class CornerVectorGenerationTest(unittest.TestCase):
                 all(re.fullmatch(r"00 00 [0-3][0-9A-F] [0-9A-F]{12}", line) for line in acc_lines),
                 str(non_causal_acc_path),
             )
+        finally:
+            _cleanup_tmp_root(tmp_root)
+
+    def test_generates_reproducible_random_full_row_baseline_case(self) -> None:
+        spec = importlib.util.spec_from_file_location("generate_corner_vectors", SCRIPT_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        first_root, first_tmpdir = _prepare_tmp_cases("random_full_row_first")
+        second_root, second_tmpdir = _prepare_tmp_cases("random_full_row_second")
+        try:
+            first_generated = module.generate_all(first_tmpdir)
+            second_generated = module.generate_all(second_tmpdir)
+
+            case_name = "random_full_row_seed20240623"
+            self.assertIn(case_name, first_generated)
+            self.assertIn(case_name, second_generated)
+
+            for tensor in ("Q", "K", "V", "O_ref", "O_q88"):
+                first_path = first_tmpdir / f"{case_name}_{tensor}.hex"
+                second_path = second_tmpdir / f"{case_name}_{tensor}.hex"
+                self.assertTrue(first_path.exists(), str(first_path))
+                self.assertTrue(second_path.exists(), str(second_path))
+                first_lines = first_path.read_text(encoding="ascii").splitlines()
+                self.assertEqual(256 * 64, len(first_lines), str(first_path))
+                self.assertTrue(all(re.fullmatch(r"[0-9A-F]{4}", line) for line in first_lines), str(first_path))
+                self.assertEqual(first_path.read_bytes(), second_path.read_bytes(), tensor)
+
+            meta_path = first_tmpdir / f"{case_name}_meta.txt"
+            self.assertTrue(meta_path.exists(), str(meta_path))
+            meta_text = meta_path.read_text(encoding="ascii")
+            required_lines = [
+                "case=random_full_row_seed20240623",
+                "seed=20240623",
+                "S=256",
+                "D=64",
+                "BK=32",
+                "causal=1",
+                "q_format=S8.8",
+                "o_ref=fp32_sdpa_quantized_q88",
+                "o_q88=q88_flash_attention_sim_quantized_q88",
+            ]
+            for line in required_lines:
+                self.assertIn(line, meta_text)
+            self.assertRegex(meta_text, r"mae_vs_fp32=[0-9]+\.[0-9]{6}")
+            self.assertRegex(meta_text, r"max_ae_vs_fp32=[0-9]+\.[0-9]{6}")
+        finally:
+            _cleanup_tmp_root(first_root)
+            _cleanup_tmp_root(second_root)
+
+    def test_generates_random_full_row_row000_scoreboard_expected(self) -> None:
+        spec = importlib.util.spec_from_file_location("generate_corner_vectors", SCRIPT_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        tmp_root, tmpdir = _prepare_tmp_cases("random_full_row_expected")
+        try:
+            module.generate_all(tmpdir)
+
+            case_name = "random_full_row_seed20240623"
+            o_q88_path = tmpdir / f"{case_name}_O_q88.hex"
+            expected_path = tmpdir / ".." / "debug" / case_name / "row000_expected.txt"
+            self.assertTrue(expected_path.exists(), str(expected_path))
+
+            o_q88_lines = o_q88_path.read_text(encoding="ascii").splitlines()
+            expected_text = expected_path.read_text(encoding="ascii")
+
+            required_lines = [
+                "case=random_full_row_seed20240623",
+                "purpose=rtl_scoreboard_row000_expected_from_python_full_row_vector",
+                "q_index=00",
+                "source_o_q88=test_vectors/cases/random_full_row_seed20240623_O_q88.hex",
+                "source_kind=python_full_row_vector",
+                "not_rtl_pass_evidence=1",
+                "D=64",
+                "lane_count=64",
+                "o_format=S8.8",
+            ]
+            for line in required_lines:
+                self.assertIn(line, expected_text)
+
+            lane_lines = [
+                line for line in expected_text.splitlines()
+                if re.fullmatch(r"lane(?:[0-5][0-9]|6[0-3])_o_q88_hex=[0-9A-F]{4}", line)
+            ]
+            self.assertEqual(64, len(lane_lines), str(expected_path))
+
+            for lane in range(64):
+                self.assertIn(f"lane{lane:02d}_o_q88_hex={o_q88_lines[lane]}", expected_text)
+        finally:
+            _cleanup_tmp_root(tmp_root)
 
 
 if __name__ == "__main__":

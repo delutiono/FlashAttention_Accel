@@ -37,12 +37,15 @@ module fa_recip_approx #(
   // row_scoreboard_s4_det: round((2^31 * 2^23) / 0x00e1_4da2).
   localparam logic [OUT_W-1:0] Y_ROW_S4_DET_L =
       OUT_W'(32'h48b8_42a1);
+  localparam logic [63:0] RECIP_NUM = 64'h0040_0000_0000_0000;
 
   logic                 supported_next;
   logic [OUT_W-1:0]     y_next;
+  logic [63:0]          recip_next;
 
   always_comb begin
     supported_next = 1'b1;
+    recip_next = '0;
     unique case (x_i)
       X_ONE: begin
         y_next = Y_ONE;
@@ -66,8 +69,13 @@ module fa_recip_approx #(
         y_next = Y_ROW_S4_DET_L;
       end
       default: begin
-        supported_next = 1'b0;
-        y_next = '0;
+        if (x_i == '0) begin
+          supported_next = 1'b0;
+          y_next = '0;
+        end else begin
+          recip_next = (RECIP_NUM + ({32'b0, x_i} >> 1)) / {32'b0, x_i};
+          y_next = OUT_W'(recip_next);
+        end
       end
     endcase
   end

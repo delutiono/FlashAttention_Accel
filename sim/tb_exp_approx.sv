@@ -6,12 +6,15 @@ module tb_exp_approx;
   localparam logic signed [IN_W-1:0] X_ZERO = '0;
   localparam logic signed [IN_W-1:0] X_NEG_HALF = -24'sd32768;
   localparam logic signed [IN_W-1:0] X_NEG_ONE = -24'sd65536;
+  localparam logic signed [IN_W-1:0] X_NEG_ONE_POINT_FIVE = -24'sd98304;
   localparam logic signed [IN_W-1:0] X_NEG_TWO = -24'sd131072;
   localparam logic signed [IN_W-1:0] X_NEG_FOUR = -24'sd262144;
   localparam logic signed [IN_W-1:0] X_NEG_SIXTEEN = -24'sd1048576;
   localparam logic [OUT_W-1:0] EXP_ZERO = 24'h800000;
   localparam logic [OUT_W-1:0] EXP_NEG_HALF = 24'h4da2cc;
   localparam logic [OUT_W-1:0] EXP_NEG_ONE = 24'h2f16ac;
+  localparam logic [OUT_W-1:0] EXP_NEG_ONE_POINT_FIVE_MIN = 24'h1a0000;
+  localparam logic [OUT_W-1:0] EXP_NEG_ONE_POINT_FIVE_MAX = 24'h1f0000;
   localparam logic [OUT_W-1:0] EXP_NEG_TWO = 24'h1152ab;
   localparam logic [OUT_W-1:0] EXP_NEG_FOUR = 24'h02582b;
 
@@ -57,6 +60,28 @@ module tb_exp_approx;
     end
   endtask
 
+  task automatic drive_and_check_range(
+    input string name,
+    input logic signed [IN_W-1:0] in_x,
+    input logic [OUT_W-1:0] min_y,
+    input logic [OUT_W-1:0] max_y
+  );
+    begin
+      @(negedge clk);
+      valid_i = 1'b1;
+      x_i = in_x;
+      @(posedge clk);
+      #1;
+      if (valid_o !== 1'b1) begin
+        $fatal(1, "%s: valid_o=%0b expected=1", name, valid_o);
+      end
+      if (y_o < min_y || y_o > max_y) begin
+        $fatal(1, "%s: y_o=0x%06h expected range [0x%06h,0x%06h]",
+               name, y_o, min_y, max_y);
+      end
+    end
+  endtask
+
   initial begin
     rst_n = 1'b0;
     valid_i = 1'b0;
@@ -75,7 +100,10 @@ module tb_exp_approx;
     drive_and_check("exp_neg_one_s32_16", X_NEG_ONE, EXP_NEG_ONE);
     drive_and_check("exp_neg_two_s32_16", X_NEG_TWO, EXP_NEG_TWO);
     drive_and_check("exp_neg_four_s32_16", X_NEG_FOUR, EXP_NEG_FOUR);
-    drive_and_check("unsupported_between_table_points", -24'sd98304, '0);
+    drive_and_check_range("exp_neg_one_point_five_s32_16",
+                          X_NEG_ONE_POINT_FIVE,
+                          EXP_NEG_ONE_POINT_FIVE_MIN,
+                          EXP_NEG_ONE_POINT_FIVE_MAX);
     drive_and_check("exp_neg_sixteen_underflows", X_NEG_SIXTEEN, '0);
     drive_and_check("exp_below_neg_sixteen_underflows", X_NEG_SIXTEEN - 24'sd1, '0);
 
