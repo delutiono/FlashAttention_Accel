@@ -1,60 +1,83 @@
-# 后端物理综合流程
+# Genus Synthesis Flow
 
-## 要拷贝到云服务器的文件
+## Current Status
 
-```
-competition/
-├── rtl_yosys/          ← 全部 .sv + .vh 文件
-├── synth/
-│   └── synth_full.ys   ← Yosys 完整综合脚本
-├── innovus/
-│   ├── run_phys.tcl    ← Innovus 物理综合主脚本
-│   ├── mmmc.tcl        ← MMMC 视图定义
-│   └── constraints.sdc ← 时序约束 (200MHz 目标)
-├── sky130_fd_sc_hs.lef
-├── sky130_fd_sc_hs__tt_025C_1v80_slim.lib
-└── sky130_fd_sc_hs.v
-```
+The repository contains draft Genus, Yosys, and Innovus flows, but a baseline
+top-level PPA result has not been produced. The current project priority is
+Genus logic synthesis. Innovus place and route is deferred until the RTL,
+DMA, correctness, cycle count, and Genus PPA gates are closed.
 
-## Step 1: 安装 Yosys（如果没有）
+The checked-in `sky130_ff.lib` is not a usable timing library: it contains no
+Liberty `cell()` definitions. Obtain the full Sky130 HS TT Liberty view from
+the remote Cadence server before running synthesis.
 
-```bash
-conda install -c conda-forge yosys
-```
+The current compute-only top exposes complete Q/K/V/O tensors as very wide
+ports. This causes large AST and netlist expansion and is the main reason
+full-size Yosys synthesis runs out of memory. More RAM may help diagnose the
+design, but the baseline implementation should replace those ports with DMA
+and bounded SRAM-style interfaces.
 
-## Step 2: 完整逻辑综合 → 顶层网表
+## Required Input
+
+Genus logic synthesis currently requires only the full standard-cell Liberty:
 
 ```bash
-cd competition
-yosys synth/synth_full.ys
-# 输出: synth/fa_accel_top_netlist_full.v
+export STD_CELL_LIB=/pdk/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib
 ```
 
-预计时间: 10-30 分钟，峰值内存 ~20-30GB
+Technology LEF, cell LEF, and QRC technology files are only needed when the
+project later enters Innovus physical implementation.
 
-## Step 3: Innovus 物理综合
+## Genus Logic Synthesis
+
+Run from any directory:
 
 ```bash
-cd competition
-/apps/DDI251/25.12.000/bin/innovus -batch -file innovus/run_phys.tcl
+genus -batch -files /path/to/repo/synth/run_genus.tcl
 ```
 
-会自动完成: Floorplan → Place → CTS → Route → 报告
+Expected outputs:
 
-预计时间: 30 分钟 ~ 2 小时
+```text
+synth/reports/qor.rpt
+synth/reports/area.rpt
+synth/reports/timing.rpt
+synth/reports/power.rpt
+synth/outputs/fa_accel_top_mapped.v
+synth/outputs/fa_accel_top_mapped.sdc
+```
 
-## 输出结果
+The script fails early when the Liberty, SDC, or RTL sources are missing.
+Passing setup checks does not imply the current wide-port architecture meets
+area or timing.
 
-所有报告在 `reports/` 目录:
-- `timing_top5.rpt` — 关键路径时序
-- `area.rpt` — 面积报告
-- `power.rpt` — 功耗报告
-- `gate_count.rpt` — 门数统计
-- `drc.rpt` — DRC 检查
-- `summary.rpt` — 总览
+## Yosys Diagnostic Flow
 
-## 可能的问题
+Leaf-module and reduced-parameter scripts remain useful for syntax,
+elaboration, and small gate-level simulation:
 
-1. **综合 OOM**: 如果 64GB 不够，把 synth_full.ys 里 fa_kv_buffer 的参数 BK 改小
-2. **Innovus RC corner**: 如果没有 cap_table 文件，可能需要在 mmmc.tcl 里注释掉 RC corner
-3. **频率达不到 200MHz**: 把 constraints.sdc 里的 period 改大（比如 10.0），重跑 Step 3
+```bash
+yosys synth/synth_modules.ys
+yosys synth/synth_small_params.ys
+```
+
+`synth/synth_full.ys` is an experimental diagnostic path. It expects the full
+TT Liberty file at the repository root as
+`sky130_fd_sc_hs__tt_025C_1v80.lib`. Reduced `S`, `D`, or `BK` results are not
+baseline PPA evidence.
+
+## Innovus Status
+
+Innovus is not a Baseline prerequisite. The checked-in physical implementation
+scripts are drafts and have not been validated against the remote PDK. Do not
+use them as completion evidence. Revisit them only after the Genus reports and
+all functional Baseline gates pass.
+
+## Remaining Engineering Work
+
+1. Replace full-tensor top ports with implemented AXI DMA and bounded buffers.
+2. Remove single-cycle whole-tile copy loops from the scheduler.
+3. Reduce the measured 597,761 cycles below the 300k baseline limit.
+4. Run independent FP32 MAE/MaxAE scoring.
+5. Run Genus with the complete Liberty view and archive the PPA reports.
+6. Optionally revisit Innovus after all Baseline gates pass.
