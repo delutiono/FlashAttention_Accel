@@ -16,15 +16,19 @@ EXP_OUTPUT_BITS = 24
 L_BITS = 32
 ACC_BITS = 48
 PWL_HALF_STEP_S16 = 1 << (SCORE_FRAC_BITS - 1)
-PWL_TAIL_STEP_S16 = 12 << SCORE_FRAC_BITS
 RECIP_NUMERATOR = (1 << 31) * (1 << 23)
 
-# Current fa_exp_approx anchors from 0 through -4. The remaining interval is
-# one RTL tail segment from (-4, 0x02582B) to (-16, 0).
+# Rounded exp(x) * 2^23 anchors for x = 0, -0.5, ..., -16.0.
 _EXP_HALF_STEP_U1_23 = (
     0x800000, 0x4DA2CC, 0x2F16AC, 0x1C8F87,
     0x1152AB, 0x0A81C3, 0x065F6C, 0x03DD82,
-    0x02582B,
+    0x02582B, 0x016C05, 0x00DCCA, 0x0085EA,
+    0x005139, 0x003144, 0x001DE1, 0x001220,
+    0x000AFE, 0x0006AB, 0x00040B, 0x000274,
+    0x00017D, 0x0000E7, 0x00008C, 0x000055,
+    0x000034, 0x00001F, 0x000013, 0x00000C,
+    0x000007, 0x000004, 0x000003, 0x000002,
+    0x000001,
 )
 
 
@@ -90,34 +94,25 @@ def _interp_segment(x: int, x_hi: int, y_hi: int, y_lo: int, step: int) -> int:
 
 
 def exp_pwl_u1_23(delta_s32_16: int) -> int:
-    """Match ``fa_exp_approx`` for a 24-bit signed S*.16 input."""
+    """Evaluate the 33-anchor PWL contract for a 24-bit signed S*.16 input."""
 
     x = wrap_signed(delta_s32_16, SOFTMAX_SCORE_BITS)
     if x >= 0:
         return EXP_ONE_U1_23
-    if x <= -(16 << SCORE_FRAC_BITS):
+    if x < -(16 << SCORE_FRAC_BITS):
         return 0
 
     magnitude = -x
-    if magnitude <= (4 << SCORE_FRAC_BITS):
-        segment, remainder = divmod(magnitude, PWL_HALF_STEP_S16)
-        if remainder == 0:
-            return _EXP_HALF_STEP_U1_23[segment]
-        x_hi = -(segment * PWL_HALF_STEP_S16)
-        return _interp_segment(
-            x,
-            x_hi,
-            _EXP_HALF_STEP_U1_23[segment],
-            _EXP_HALF_STEP_U1_23[segment + 1],
-            PWL_HALF_STEP_S16,
-        )
-
+    segment, remainder = divmod(magnitude, PWL_HALF_STEP_S16)
+    if remainder == 0:
+        return _EXP_HALF_STEP_U1_23[segment]
+    x_hi = -(segment * PWL_HALF_STEP_S16)
     return _interp_segment(
         x,
-        -(4 << SCORE_FRAC_BITS),
-        _EXP_HALF_STEP_U1_23[-1],
-        0,
-        PWL_TAIL_STEP_S16,
+        x_hi,
+        _EXP_HALF_STEP_U1_23[segment],
+        _EXP_HALF_STEP_U1_23[segment + 1],
+        PWL_HALF_STEP_S16,
     )
 
 
@@ -195,8 +190,8 @@ def softmax_row_fixed(
                 wrap_signed(acc_value + (v_value * p_value), ACC_BITS)
                 for acc_value, v_value in zip(acc, v_values)
             ]
-        elif score - m == (1 << SCORE_FRAC_BITS):
-            alpha = _EXP_HALF_STEP_U1_23[2]
+        else:
+            alpha = exp_pwl_u1_23(m - score)
             l_value = wrap_unsigned(
                 ((l_value * alpha) >> EXP_FRAC_BITS) + EXP_ONE_U1_23,
                 L_BITS,
@@ -210,8 +205,6 @@ def softmax_row_fixed(
                 for acc_value, v_value in zip(acc, v_values)
             ]
             m = score
-        # The current RTL has no generic higher-score path. Such inputs hold
-        # state and deassert valid rather than updating m/l/acc.
 
     if m is None or l_value == 0:
         raise ValueError("row has no valid keys")

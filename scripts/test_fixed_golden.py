@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 import unittest
@@ -25,9 +26,34 @@ from model.golden_fixed import (  # noqa: E402
     scaled_score_s32_16,
     softmax_row_fixed,
 )
+from scripts.run_numeric_regression import ideal_attention_rows  # noqa: E402
 
 
 class FixedGoldenTest(unittest.TestCase):
+    def test_full_numeric_regression_meets_baseline_thresholds(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(REPO_ROOT / "scripts" / "run_numeric_regression.py"),
+                "--seeds",
+                "100,101,102",
+                "--sequence-length",
+                "64",
+                "--dimension",
+                "64",
+                "--require-mae",
+                "0.03",
+                "--require-maxae",
+                "0.10",
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("RESULT=PASS", result.stdout)
+
     def test_numeric_regression_cli_thresholds_pass_with_zero_exit(self) -> None:
         result = subprocess.run(
             [
@@ -172,19 +198,33 @@ class FixedGoldenTest(unittest.TestCase):
         self.assertEqual(0x2F16AC, exp_pwl_u1_23(-65536))
         self.assertEqual(0x1C8F87, exp_pwl_u1_23(-98304))
         self.assertEqual(0x1152AB, exp_pwl_u1_23(-131072))
-        self.assertEqual(0, exp_pwl_u1_23(-16 * 65536))
+        self.assertEqual(1, exp_pwl_u1_23(-16 * 65536))
         self.assertEqual(
             0x25D319,
             exp_pwl_u1_23(-81920),
         )
 
-    def test_exp_pwl_tail_matches_current_rtl_exact_constants(self) -> None:
-        self.assertEqual(0x022627, exp_pwl_u1_23(-5 * 65536))
-        self.assertEqual(0x01901D, exp_pwl_u1_23(-8 * 65536))
-        self.assertEqual(0x00C80E, exp_pwl_u1_23(-12 * 65536))
+    def test_exp_pwl_has_33_rounded_half_step_anchors_through_negative_16(self) -> None:
+        expected = [
+            round(math.exp(-half_step / 2.0) * EXP_ONE_U1_23)
+            for half_step in range(33)
+        ]
+        actual = [
+            exp_pwl_u1_23(-half_step * (1 << 15))
+            for half_step in range(33)
+        ]
+        self.assertEqual(expected, actual)
+        self.assertEqual(0, exp_pwl_u1_23(-(16 << 16) - 1))
+
+    def test_exp_pwl_linearly_interpolates_on_the_full_s16_grid(self) -> None:
+        y_hi = round(math.exp(-8.0) * EXP_ONE_U1_23)
+        y_lo = round(math.exp(-8.5) * EXP_ONE_U1_23)
+        difference = y_hi - y_lo
+        expected_quarter = y_hi - ((difference * (1 << 14) + (1 << 14)) // (1 << 15))
+        self.assertEqual(expected_quarter, exp_pwl_u1_23(-(8 << 16) - (1 << 14)))
 
     def test_exp_pwl_uses_full_s16_fraction_not_an_s88_grid(self) -> None:
-        self.assertEqual(0x025812, exp_pwl_u1_23(-262272))
+        self.assertEqual(0x02573F, exp_pwl_u1_23(-262272))
         self.assertNotEqual(
             exp_pwl_u1_23(-262144),
             exp_pwl_u1_23(-262272),
@@ -239,6 +279,48 @@ class FixedGoldenTest(unittest.TestCase):
             state.output_q88,
         )
 
+    def test_arbitrary_higher_scores_rescale_state_and_advance_running_max(self) -> None:
+        cases = (
+            (1024, 1 << 15, 0x4DA2CC),
+            (3072, 3 << 15, 0x1C8F87),
+            (4096, 2 << 16, 0x1152AB),
+        )
+        for k_value, expected_m, alpha in cases:
+            with self.subTest(delta_s16=expected_m):
+                state = softmax_row_fixed(
+                    q_row=[256],
+                    k_rows=[[0], [k_value]],
+                    v_rows=[[256], [512]],
+                    row_index=1,
+                    causal=True,
+                )
+                self.assertEqual(expected_m, state.m_s32_16)
+                self.assertEqual(alpha + EXP_ONE_U1_23, state.l_u9_23)
+                self.assertEqual(
+                    [(256 * alpha) + (512 * EXP_ONE_U1_23)],
+                    state.acc_s17_31,
+                )
+
+    def test_many_negative_eight_terms_do_not_accumulate_linear_tail_mass(self) -> None:
+        lower_term_count = 64
+        p_neg8 = round(math.exp(-8.0) * EXP_ONE_U1_23)
+        state = softmax_row_fixed(
+            q_row=[256],
+            k_rows=[[0]] + [[-16384]] * lower_term_count,
+            v_rows=[[0]] + [[256]] * lower_term_count,
+            row_index=lower_term_count,
+            causal=True,
+        )
+        self.assertEqual(0, state.m_s32_16)
+        self.assertEqual(
+            EXP_ONE_U1_23 + lower_term_count * p_neg8,
+            state.l_u9_23,
+        )
+        self.assertEqual(
+            [lower_term_count * 256 * p_neg8],
+            state.acc_s17_31,
+        )
+
     def test_softmax_consumes_low_signed_24_bits_of_score_pipe(self) -> None:
         state = softmax_row_fixed(
             q_row=[32767],
@@ -256,6 +338,39 @@ class FixedGoldenTest(unittest.TestCase):
             [(256 << 23) + (512 * p)],
             state.acc_s17_31,
         )
+
+    def test_wrapped_24_bit_scores_can_take_the_generic_higher_path(self) -> None:
+        first_score = -8192
+        second_score = 4096
+        alpha = exp_pwl_u1_23(first_score - second_score)
+        state = softmax_row_fixed(
+            q_row=[32767],
+            k_rows=[[32767], [-32768]],
+            v_rows=[[256], [512]],
+            row_index=1,
+            causal=True,
+        )
+        self.assertEqual(second_score, state.m_s32_16)
+        self.assertEqual(alpha + EXP_ONE_U1_23, state.l_u9_23)
+        self.assertEqual(
+            [(256 * alpha) + (512 * EXP_ONE_U1_23)],
+            state.acc_s17_31,
+        )
+
+    def test_ideal_regression_reference_uses_wrapped_24_bit_scores(self) -> None:
+        float_rows, q88_rows = ideal_attention_rows(
+            q_rows=[[0], [32767]],
+            k_rows=[[32767], [-32768]],
+            v_rows=[[0], [256]],
+            max_rows=None,
+        )
+        first_score = -8192 / 65536.0
+        second_score = 4096 / 65536.0
+        expected = math.exp(second_score) / (
+            math.exp(first_score) + math.exp(second_score)
+        )
+        self.assertAlmostEqual(expected, float_rows[1][0], places=12)
+        self.assertEqual(round(expected * 256), q88_rows[1][0])
 
     def test_row_scoreboard_s4_det_matches_published_intermediate_checkpoints(self) -> None:
         lane_values = {

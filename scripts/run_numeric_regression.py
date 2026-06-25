@@ -16,7 +16,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from model.golden_fixed import attention_fixed, scaled_score_s32_16  # noqa: E402
+from model.golden_fixed import (  # noqa: E402
+    SOFTMAX_SCORE_BITS,
+    attention_fixed,
+    scaled_score_s32_16,
+    wrap_signed,
+)
 
 
 def _random_matrix(rng: random.Random, rows: int, columns: int, low: int, high: int) -> list[list[int]]:
@@ -46,7 +51,7 @@ def ideal_attention_rows(
     v_rows: Sequence[Sequence[int]],
     max_rows: int | None,
 ) -> tuple[list[list[float]], list[list[int]]]:
-    """Independent ideal-exp causal reference using the same raw >>> 3 score contract."""
+    """Independent ideal-exp reference using the wrapped low-24 score contract."""
 
     row_count = len(q_rows) if max_rows is None else min(len(q_rows), max_rows)
     float_output: list[list[float]] = []
@@ -54,7 +59,11 @@ def ideal_attention_rows(
 
     for row_index in range(row_count):
         scores = [
-            scaled_score_s32_16(q_rows[row_index], k_rows[key_index]) / 65536.0
+            wrap_signed(
+                scaled_score_s32_16(q_rows[row_index], k_rows[key_index]),
+                SOFTMAX_SCORE_BITS,
+            )
+            / 65536.0
             for key_index in range(row_index + 1)
         ]
         row_max = max(scores)

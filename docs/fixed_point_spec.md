@@ -1,6 +1,6 @@
-# Fixed-Point Spec v0.2 Draft
+# Fixed-Point Spec v0.3 Numerical Closure
 
-Status: v0.2 minimum numerical contract for RTL bring-up, full-row vector reproducibility, and PPA exploration. This is still not the final v1.0 bit-exact numerical contract. The current `golden_model.py` uses FP32 for several softmax state variables to model a wide fixed-point datapath. The formats below should unblock RTL module sizing and debug dumps; v1.0 must be frozen after fixed-point sweep and RTL/golden bit matching.
+Status: model-side numerical contract for RTL alignment. The exp and online-softmax update rules below are frozen for the current baseline. Reciprocal remains the current exact integer oracle in this revision and is explicitly pending alignment to the future RTL Newton-Raphson implementation.
 
 ## Baseline
 
@@ -28,52 +28,64 @@ Examples:
 | Q/K/V | `S8.8` | 16 | External memory and vector files. |
 | Single product `q*k` | `S16.16` | 32 | Exact product of two Q8.8 values. |
 | Raw dot `sum_64(q*k)` | `S32.16` container | 48 | Current RTL `fa_dot_pe` accumulates into signed 48-bit. Effective needed integer range is smaller, but 48-bit is safe. |
-| Scaled score | `S32.16` container | 48 | Baseline v0.2 score is `raw_dot >>> 3`, binary point stays at 16. Current `fa_score_pipe` still emits unscaled raw dot; scale insertion is pending. |
-| Running max `m` | `S32.16` container | 48 | One value per query row. Initialize to negative infinity sentinel. |
-| Exp input `score - m_new` | clamp to `S8.8` | 16 | Clamp to `[-16.0, 0.0]` before LUT. Values below `-16.0` may output zero. |
-| Exp output `p` / `alpha` | `U1.23` | 24 | `exp(0)=1.0` encoded as `1 << 23`. Current Python LUT uses FP32 and default 4096 entries; RTL LUT/PWL is pending. |
+| Scaled score | `S32.16` container | 48 | Baseline v0.3 score is `raw_dot >>> 3`, binary point stays at 16. Current `fa_score_pipe` still emits unscaled raw dot; scale insertion is pending. |
+| Softmax score / running max `m` | signed low 24 bits, `S8.16` | 24 | Consume `scaled_score[23:0]` as two's-complement before max/update. Initialize `m` from the first valid wrapped score. |
+| Exp input `score - m_new` | signed `S*.16` | 24 | Evaluate the low signed 24-bit input on `[-16.0,0.0]`; values below `-16.0` produce zero. |
+| Exp output `p` / `alpha` | `U1.23` | 24 | 33 rounded anchors at 0.5 spacing with integer linear interpolation. |
 | Denominator `l` | `U9.23` | 32 | Range covers `[0, 256]` with guard up to `<512`. Initialize to 0. |
 | Weighted accumulator `acc[d]` | `S17.31` | 48 | Accumulates `sum(exp * V)` before final divide. One accumulator per output dimension. |
 | Reciprocal `recip_l` | `U1.31` | 32 | Represents `1/l` in `[1/256, 1]`. Saturate/flag if `l==0`, though valid causal rows should have `l>0`. |
 | Final product `acc*recip_l` | internal wide | >=80 | Product has 62 fractional bits before output quantization. |
-| O quantized | `S8.8` | 16 | Round half-away-from-zero and saturate to int16 for v0.2 integer finalization. |
+| O quantized | `S8.8` | 16 | Round half-away-from-zero and saturate to int16 for v0.3 integer finalization. |
 
-## v0.2 Minimum Numerical Contract
+## v0.3 Minimum Numerical Contract
 
 This section is the smallest contract needed for the baseline `S=256,D=64,batch=1,head=1,causal,BK=32,scale=1/8` flow. It is intentionally narrower than a final v1.0 contract.
 
 ### Score and Scale
 
-- `REG_SCALE=32` denotes the fixed baseline attention scale `1/8`. Programmable scale values are out of scope for v0.2.
+- `REG_SCALE=32` denotes the fixed baseline attention scale `1/8`. Programmable scale values are out of scope for v0.3.
 - `raw_dot` is the signed 48-bit `S32.16` accumulation of 64 exact `S16.16` products.
 - Baseline scaled score is the signed arithmetic shift `score_s32_16 = raw_dot >>> 3`. This is truncation toward negative infinity for negative two's-complement values.
+- Online softmax consumes `score = signed(score_s32_16[23:0])`. The independent floating-point regression reference must apply the same low-24 wrapping before ideal softmax.
 - Mask-invalid scores must be gated before row max, denominator, and accumulator updates. A finite debug sentinel may be printed, but it must not update `m`, `l`, or `acc`.
 
 ### Exp Input and Output
 
-- Exp input is `delta = score - m_new` in the score container, interpreted as `S*.16`.
-- Clamp the real delta to `[-16.0, 0.0]`.
-- Quantize/narrow the clamped value to signed `S8.8` for LUT/PWL addressing. For v0.2 debug points, exact mappings are required: `0.0 -> 16'h0000`, `-0.5 -> 16'hFF80`, `-1.0 -> 16'hFF00`, `-2.0 -> 16'hFE00`, `-4.0 -> 16'hFC00`, and `<= -16.0 -> 16'hF000`.
-- Exp output is unsigned `U1.23`. `exp(0)` must be exactly `24'h800000`; clamped inputs `<= -16.0` produce zero for the bring-up contract.
-- Generic exp may use either the current Python reference shape, a 4096-entry uniform LUT on `[-16,0]` with linear interpolation, or an RTL LUT/PWL candidate. Non-debug-point error is a v0.2 measurement item, not a v1.0 bit-exact promise; debug dumps must record `exp_mode` and report any MAE/MaxAE or ULP tolerance used.
+- Exp input is the signed low-24 `S*.16` delta.
+- For `x >= 0`, output exactly `24'h800000`. For `x < -16.0`, output zero. The exact `x=-16.0` anchor is `24'h000001`.
+- Freeze 33 anchors for `x_i=-i/2`, `i=0..32`:
+
+```text
+Y[i] = round(exp(-i/2) * 2^23)
+```
+
+- Between adjacent anchors, use the full 16-bit fractional score grid. With `step=2^15`, `offset=(-x)-i*step`, and `0 < offset < step`:
+
+```text
+drop = ((Y[i] - Y[i+1]) * offset + 2^14) // 2^15
+exp  = Y[i] - drop
+```
+
+- This replaces the old single linear tail from `-4` to `-16`, which accumulated excessive probability mass for repeated scores near `-8`.
 
 ### Reciprocal
 
 - Reciprocal input `l` is `U9.23` and must be nonzero for valid causal baseline rows.
 - Reciprocal output is `U1.31`.
-- The v0.2 reference integer formula is:
+- The v0.3 reference integer formula is:
 
 ```text
 recip_u1_31 = round_half_away_from_zero((2^31 * 2^23) / l_u9_23)
 ```
 
 - Exact examples already frozen in debug files include `l=00800000 -> recip=80000000` and `l=01000000 -> recip=40000000`.
-- The Python full-row generator may use the current LUT plus one Newton-Raphson-shaped approximation for `O_q88` generation. RTL may use LUT-only or LUT+NR during PPA exploration, but it must label `recip_mode`; bit-exact reciprocal approximation is a v1.0 item.
+- This revision intentionally keeps the exact integer oracle above. It is not an RTL cost model. Replacing it with a LUT/NR approximation is deferred until the RTL Newton-Raphson contract is available, so exp/higher-score closure and reciprocal approximation are not changed simultaneously.
 
 ### Final O Quantization
 
 - Final product uses `acc_s17_31 * recip_u1_31`, with 62 fractional bits before output quantization.
-- The v0.2 reference integer output is:
+- The v0.3 reference integer output is:
 
 ```text
 o_q88_raw = round_half_away_from_zero((acc_s17_31 * recip_u1_31) / 2^54)
@@ -90,14 +102,14 @@ Current RTL state:
 - `fa_dot_pe` and `fa_score_pipe` output a signed 48-bit raw dot product.
 - That raw dot is a Q16.16 accumulated value, not yet multiplied by `1/8`.
 
-v0.2 RTL target:
+v0.3 RTL target:
 
 1. Multiply each `q[k] * k[k]` exactly in `S16.16`.
 2. Accumulate 64 products in signed 48-bit.
 3. Apply scale `1/8` by signed arithmetic right shift 3: `raw_dot >>> 3`.
 4. Keep the scaled score in signed 48-bit with 16 fractional bits.
 
-Open item: non-baseline `REG_SCALE` values must be aligned separately. `golden_model.py` uses `scale_int=32` for Q8.8 `1/8`; current scheduler smoke tests pass `16'h0100` but do not consume it. For v0.2, RTL should treat the baseline as fixed `REG_SCALE=32` and `raw_dot >>> 3`.
+Open item: non-baseline `REG_SCALE` values must be aligned separately. `golden_model.py` uses `scale_int=32` for Q8.8 `1/8`; current scheduler smoke tests pass `16'h0100` but do not consume it. For v0.3, RTL should treat the baseline as fixed `REG_SCALE=32` and `raw_dot >>> 3`.
 
 ## v1.0 Freeze Candidates
 
@@ -123,6 +135,21 @@ m       = m_new
 l       = l_new
 acc     = acc_new
 ```
+
+The scalar integer oracle specializes that equation without changing its meaning:
+
+- `score == m`: `alpha=p=1`, add one unit to `l`, and add `V<<23` to each accumulator lane.
+- `score < m`: `alpha=1`, `p=exp(score-m)`, then add `p` and `V*p`.
+- `score > m`: this is a generic path for every positive delta, not an exact-point special case. Set `alpha=exp(m-score)` and `p=1`, rescale the old state, add the new term, and update `m=score`:
+
+```text
+l_new      = wrap_u32((l_old * alpha >> 23) + (1 << 23))
+acc_new[d] = wrap_s48(wrap_s48(acc_old[d] * alpha >> 23)
+                      + (V[j,d] << 23))
+m_new      = score
+```
+
+The required higher-score regression points include `+0.5`, `+1.5`, and `+2.0`, plus a transition whose two source scores cross the signed low-24 wrap boundary.
 
 Tile-level update is also allowed:
 
@@ -194,62 +221,28 @@ V2[1]  = +1.0 -> acc1_new  = 000000000000
 V2[63] = -1.0 -> acc63_new = 000080000000
 ```
 
-## Exp Approximation Draft
+## Exp PWL v0.3
 
-Default Python model:
+The complete anchor vector, from `x=0` through `x=-16` in `-0.5` steps, is:
 
-- Range: `x in [-16.0, 0.0]`.
-- Entries: 4096.
-- Method: uniform LUT with linear interpolation.
+```text
+800000 4DA2CC 2F16AC 1C8F87 1152AB 0A81C3 065F6C 03DD82
+02582B 016C05 00DCCA 0085EA 005139 003144 001DE1 001220
+000AFE 0006AB 00040B 000274 00017D 0000E7 00008C 000055
+000034 00001F 000013 00000C 000007 000004 000003 000002
+000001
+```
 
-RTL v0.1 recommendation:
+All between-anchor inputs use the integer interpolation formula in "Exp Input and Output". There are no unsupported holes and no separate long-tail segment. A repeated `-8` risk vector must therefore accumulate `p=0x000AFE` per term rather than the old long-tail value.
 
-- Input source: `score - m_new` from the score path, normally a signed `S*.16` value such as the 48-bit `S32.16` score container.
-- LUT/PWL input contract draft: convert the `S*.16` delta to the exp input domain by clamping the real value to `[-16.0, 0.0]`, then narrowing/quantizing to `S8.8` for address/interpolation generation. A delta of `0.0` must map exactly to `16'h0000`; a delta of `-1.0` must map exactly to `16'hFF00`; values `<= -16.0` clamp to `16'hF000`.
-- Output: `U1.23`.
-- Bring-up constants:
-  - `exp(0) = 1 << 23 = 8388608 = 00800000`.
-  - `exp(-1) = round(exp(-1) * 2^23) = 3085996 = 002F16AC`.
-  - `exp(x <= -16.0) = 0`.
-- Initial implementation may use LUT only or LUT plus interpolation. The exact table size and interpolation rule are not frozen.
+The model regression gate is causal `S=64,D=64`, seeds `100,101,102`, with every seed required to meet:
 
-### Bring-Up Exp LUT v0.2
+```text
+MAE   <= 0.03
+MaxAE <= 0.10
+```
 
-The current RTL bring-up table freezes a few exact S*.16 debug points while the final LUT/PWL/interpolation scheme remains open:
-
-| Real input | S*.16 low-24 hex | U1.23 output |
-|---:|---:|---:|
-| `0.0` | `000000` | `800000` |
-| `-0.5` | `FF8000` | `4DA2CC` |
-| `-1.0` | `FF0000` | `2F16AC` |
-| `-2.0` | `FE0000` | `1152AB` |
-| `-4.0` | `FC0000` | `02582B` |
-| `<= -16.0` | `F00000` or lower | `000000` |
-
-Unsupported between-table points may still return zero in v0.2; do not treat this table as the final exp implementation.
-
-### Pending v1.0 Freeze Checklist
-
-The v1.0 freeze must move beyond exact-point bring-up constants and lock the row-level numerical contract:
-
-- Exp LUT/PWL: input clamp range, `S*.16` to address-domain quantization, table/PWL segmentation, interpolation rule, and exact behavior between `0`, `-0.5`, `-1`, `-2`, `-4`, and the `<= -16` clamp.
-- Reciprocal: input range, LUT size or seed rule, whether Newton-Raphson is mandatory, output rounding, and `l==0` handling.
-- Rounding/saturation: signed shift tie rule, multiply/add narrowing points, final `S8.8` saturation limits, and Python/RTL tie consistency.
-- Error thresholds: row-level MAE/MaxAE targets for `O_q88`, allowed exp/recip ULP error, and bit-exact-only subsets such as deterministic scoreboard sentinels.
-
-Generated regression input:
-
-- `test_vectors/cases/random_full_row_seed20240623_*` is the current reproducible full `S=256,D=64` causal random baseline. Use it to exercise full-row scoreboard plumbing and collect MAE/MaxAE against FP32. Do not treat its `O_q88` as a frozen bit-exact RTL contract until the exp, reciprocal, and rounding items above are closed.
-
-Required draft row behavior:
-
-| Real delta | S8.8 exp input | U1.23 output | Notes |
-|---:|---:|---:|---|
-| `0.0` | `0000` | `00800000` | Exact one; no approximation error allowed. |
-| `-1.0` | `FF00` | `002F16AC` | Temporary bring-up constant using rounded ideal exp. |
-| `<= -16.0` | `F000` after clamp | `00000000` | Underflow clamp for baseline debug. |
-
-The final exp implementation may be pure LUT, LUT plus interpolation, or PWL. Table size, interpolation/PWL coefficients, and any rounding between `S*.16` and `S8.8` remain v1.0 freeze items. Until frozen, debug dumps should record the exp mode and must at least match the exact rows above.
+An `S=256,D=64` single-seed run is recommended as an extended check when runtime permits.
 
 ### Bring-Up Lower-By-1 Subset
 
@@ -324,34 +317,20 @@ acc_new_s17_31                  = 5084982272 = 00012F16AC00
 
 The corresponding manual expected file is `test_vectors/debug/softmax_raise_by_one/expected.txt`.
 
-## Reciprocal Approximation Draft
+## Reciprocal Oracle Pending RTL NR Alignment
 
-Default Python model:
-
-- Range: `l in [0.5, 260.0]`.
-- Entries: 1024.
-- Method: uniform LUT with linear interpolation and optional one Newton-Raphson refinement.
-
-RTL v0.2 recommendation:
-
-- Input: `U9.23`.
-- Output: `U1.31`, using `round_half_away_from_zero((2^31 * 2^23) / l_u9_23)` for reference integer debug values.
-- Clamp range for LUT address generation to `[0.5, 260.0]`.
-- Apply one Newton-Raphson iteration if area/timing allows:
-
-```text
-y1 = y0 * (2 - l * y0)
-```
-
-Open item: whether NR is mandatory is not frozen. If RTL skips NR for bring-up, debug dumps must mark `recip_mode=lut_only`.
+- Input is nonzero `U9.23`; output is `U1.31`.
+- The model continues to use the exact integer formula `round((2^31 * 2^23) / l_u9_23)` and wraps the result to 32 bits.
+- No reciprocal LUT, seed quantization, or Newton-Raphson error is introduced in this revision.
+- When the RTL NR datapath is ready, its seed rule, iteration count, narrowing points, and error bounds must be frozen in a separate change and compared against this oracle.
 
 ## Rounding and Saturation
 
-v0.2 project rule:
+v0.3 project rule:
 
 - Addition/subtraction: compute in the destination container width when possible; saturate only when narrowing.
-- Multiplication: keep full product internally, then round when reducing fractional bits.
-- Narrowing right shifts: use round-to-nearest with half-away-from-zero for signed integer debug/finalization values.
+- Online `l*alpha` and `acc*alpha` rescaling uses integer `>>23` truncation before destination-width wrapping.
+- Final output narrowing uses round-to-nearest with half-away-from-zero.
 - Final O quantization: `round_half_away_from_zero((acc_s17_31 * recip_u1_31) / 2^54)`, then saturate to signed int16 range `[-32768, 32767]`.
 
 Compatibility note: `golden_model.py::float_to_q88` currently uses NumPy `round`, which is ties-to-even. Exact half-way cases are rare in random vectors but must be resolved before bit-exact v1.0.
@@ -392,20 +371,19 @@ With the proposed formats:
 
 - Q/K/V input quantization to Q8.8.
 - Dot-product scale rounding.
-- Score/m narrowing before exp LUT.
-- Exp approximation and output quantization.
-- `l` and `acc` multiply/add rounding.
-- Reciprocal approximation.
+- Signed low-24 score wrapping before online softmax.
+- Exp PWL interpolation error relative to ideal exp.
+- `l` and `acc` rescale truncation and container wrapping.
+- Future RTL reciprocal NR error relative to the current exact oracle.
 - Final O rounding and saturation.
 - Mask handling at tile boundaries.
 
 ## Items Not Frozen
 
-These items must remain marked draft until sweep data exists:
+These items remain open after the model-side numerical closure:
 
-- Exact exp LUT size and whether interpolation is used in RTL.
-- Exact reciprocal LUT size and whether NR is mandatory.
-- Exact rounding tie rule across Python and RTL.
-- Whether exp output should be `U1.23` or a smaller width such as `U1.15` for area.
+- RTL microarchitecture for implementing the frozen 33-anchor exp contract.
+- Reciprocal NR seed, iteration count, narrowing points, and accepted error.
+- Bit-exact Python/RTL alignment for all rounding and wrapping points.
 - Whether `l`/`acc` can be reduced below 32/48 bits while preserving MAE and MaxAE targets.
 - Whether non-default `REG_SCALE` values are supported beyond the fixed `REG_SCALE=32` baseline.
