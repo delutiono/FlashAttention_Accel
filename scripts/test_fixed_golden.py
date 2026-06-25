@@ -216,6 +216,11 @@ class FixedGoldenTest(unittest.TestCase):
         self.assertEqual(expected, actual)
         self.assertEqual(0, exp_pwl_u1_23(-(16 << 16) - 1))
 
+    def test_exp_pwl_accepts_mathematical_delta_without_score_width_wrap(self) -> None:
+        wide_delta = 254 << 16
+        self.assertEqual(0, exp_pwl_u1_23(-wide_delta))
+        self.assertEqual(EXP_ONE_U1_23, exp_pwl_u1_23(wide_delta))
+
     def test_exp_pwl_linearly_interpolates_on_the_full_s16_grid(self) -> None:
         y_hi = round(math.exp(-8.0) * EXP_ONE_U1_23)
         y_lo = round(math.exp(-8.5) * EXP_ONE_U1_23)
@@ -300,6 +305,18 @@ class FixedGoldenTest(unittest.TestCase):
                     [(256 * alpha) + (512 * EXP_ONE_U1_23)],
                     state.acc_s17_31,
                 )
+
+    def test_large_span_higher_score_does_not_wrap_the_mathematical_delta(self) -> None:
+        state = softmax_row_fixed(
+            q_row=[256] * 8,
+            k_rows=[[-32512] * 8, [32512] * 8],
+            v_rows=[[256], [512]],
+            row_index=1,
+            causal=True,
+        )
+        self.assertEqual(127 << 16, state.m_s32_16)
+        self.assertEqual(EXP_ONE_U1_23, state.l_u9_23)
+        self.assertEqual([512 * EXP_ONE_U1_23], state.acc_s17_31)
 
     def test_many_negative_eight_terms_do_not_accumulate_linear_tail_mass(self) -> None:
         lower_term_count = 64

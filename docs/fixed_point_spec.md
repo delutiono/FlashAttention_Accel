@@ -30,7 +30,7 @@ Examples:
 | Raw dot `sum_64(q*k)` | `S32.16` container | 48 | Current RTL `fa_dot_pe` accumulates into signed 48-bit. Effective needed integer range is smaller, but 48-bit is safe. |
 | Scaled score | `S32.16` container | 48 | Baseline v0.3 score is `raw_dot >>> 3`, binary point stays at 16. Current `fa_score_pipe` still emits unscaled raw dot; scale insertion is pending. |
 | Softmax score / running max `m` | signed low 24 bits, `S8.16` | 24 | Consume `scaled_score[23:0]` as two's-complement before max/update. Initialize `m` from the first valid wrapped score. |
-| Exp input `score - m_new` | signed `S*.16` | 24 | Evaluate the low signed 24-bit input on `[-16.0,0.0]`; values below `-16.0` produce zero. |
+| Exp input `score - m_new` | mathematical signed `S*.16` | >=25 | Subtract the already-wrapped signed24 scores with sign extension. The difference must not wrap back to 24 bits. |
 | Exp output `p` / `alpha` | `U1.23` | 24 | 33 rounded anchors at 0.5 spacing with integer linear interpolation. |
 | Denominator `l` | `U9.23` | 32 | Range covers `[0, 256]` with guard up to `<512`. Initialize to 0. |
 | Weighted accumulator `acc[d]` | `S17.31` | 48 | Accumulates `sum(exp * V)` before final divide. One accumulator per output dimension. |
@@ -48,12 +48,13 @@ This section is the smallest contract needed for the baseline `S=256,D=64,batch=
 - `raw_dot` is the signed 48-bit `S32.16` accumulation of 64 exact `S16.16` products.
 - Baseline scaled score is the signed arithmetic shift `score_s32_16 = raw_dot >>> 3`. This is truncation toward negative infinity for negative two's-complement values.
 - Online softmax consumes `score = signed(score_s32_16[23:0])`. The independent floating-point regression reference must apply the same low-24 wrapping before ideal softmax.
+- Compute `score-m` and `m-score` after that score wrapping, as mathematical signed integer differences. Two valid `S8.16` scores can differ by almost 256.0, so the delta requires at least 25 signed bits and must not wrap to the score width.
 - Mask-invalid scores must be gated before row max, denominator, and accumulator updates. A finite debug sentinel may be printed, but it must not update `m`, `l`, or `acc`.
 
 ### Exp Input and Output
 
-- Exp input is the signed low-24 `S*.16` delta.
-- For `x >= 0`, output exactly `24'h800000`. For `x < -16.0`, output zero. The exact `x=-16.0` anchor is `24'h000001`.
+- Exp input is the mathematical signed `S*.16` delta. The exp function does not perform score-width wrapping.
+- For `x >= 0`, output exactly `24'h800000`. For `x == -16.0`, output `24'h000001`. For `x < -16.0`, output zero.
 - Freeze 33 anchors for `x_i=-i/2`, `i=0..32`:
 
 ```text
@@ -149,7 +150,7 @@ acc_new[d] = wrap_s48(wrap_s48(acc_old[d] * alpha >> 23)
 m_new      = score
 ```
 
-The required higher-score regression points include `+0.5`, `+1.5`, and `+2.0`, plus a transition whose two source scores cross the signed low-24 wrap boundary.
+The required higher-score regression points include `+0.5`, `+1.5`, and `+2.0`, plus a large-span transition from `m=-127.0` to `score=+127.0`. Both source scores are legal signed24 `S8.16`, while `m-score=-254.0` is a 25-bit mathematical delta and must produce `alpha=0`, not wrap to `+2.0`.
 
 Tile-level update is also allowed:
 
@@ -234,6 +235,8 @@ The complete anchor vector, from `x=0` through `x=-16` in `-0.5` steps, is:
 ```
 
 All between-anchor inputs use the integer interpolation formula in "Exp Input and Output". There are no unsupported holes and no separate long-tail segment. A repeated `-8` risk vector must therefore accumulate `p=0x000AFE` per term rather than the old long-tail value.
+
+The 33 anchors define only the interpolation interval. Boundary handling occurs on the unwrapped mathematical delta before anchor lookup: nonnegative deltas return one, exactly `-16.0` returns the final one-LSB anchor, and values below `-16.0` return zero.
 
 The model regression gate is causal `S=64,D=64`, seeds `100,101,102`, with every seed required to meet:
 

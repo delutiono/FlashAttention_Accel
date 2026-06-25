@@ -184,7 +184,7 @@ This file freezes the temporary bring-up constants for the first lower-score upd
 
 The raise-by-one file freezes the complementary max-raise update: after the same initial state, a second valid `score=+1.0` raises `m_new` and uses `alpha=round(exp(-1)*2^23)=002F16AC`, `p=1<<23`, `l_new=00AF16AC`, and for `V0=1.0`, `V1=2.0`, `acc_new=00012F16AC00` in `S17.31`. This is also a hand-written scalar checkpoint.
 
-The `softmax_lower_by_half/expected.txt` file freezes a softmax generic lower delta v0.2 smoke: first `score=0,V0 lane00=1.0`, then second `score=-0.5,V1 lane00=2.0`. It uses the exp LUT v0.2 exact point `p=004DA2CC` for `exp(-0.5)`, so `l_new=(1<<23)+p=13476556` (`00CDA2CC`) and `acc_new=(1.0<<23)+(2.0*p)=4752513024` (`00011B459800`). This is not the final exp LUT/PWL contract and not a row-level golden.
+The `softmax_lower_by_half/expected.txt` file freezes a softmax generic lower delta smoke: first `score=0,V0 lane00=1.0`, then second `score=-0.5,V1 lane00=2.0`. It uses the frozen 33-anchor PWL value `p=004DA2CC` for `exp(-0.5)`, so `l_new=(1<<23)+p=13476556` (`00CDA2CC`) and `acc_new=(1.0<<23)+(2.0*p)=4752513024` (`00011B459800`). This is a sparse bit-exact checkpoint, not a row-level golden.
 
 The vector first/equal file freezes the first `D=64` accumulator branch checkpoint. `m` and `l` are shared per query row, while `acc[0:63]` are independent signed `S17.31` lanes. The file records `V0[0]=+1.0`, `V0[1]=-1.0`, `V0[63]=+2.0` for the first valid update (`acc=V0<<23`), then an equal-score update with `V2[0]=+0.5`, `V2[1]=+1.0`, `V2[63]=-1.0`. The frozen result is `l=01000000`, `acc[0]=0000C0000000`, `acc[1]=000000000000`, and `acc[63]=000080000000`.
 
@@ -231,9 +231,11 @@ These `final_expected.txt` files are final datapath smoke vectors. They are inte
 
 ### `exp_lut_v02`
 
-- `expected.txt` freezes the current exact-point exp bring-up table: `0`, `-0.5`, `-1`, `-2`, `-4`, and the `<= -16` clamp.
-- Inputs are recorded in S*.16 low-24 hex and outputs in U1.23 hex.
-- This is not the final exp LUT/PWL/interpolation scheme; unsupported between-table points may still return zero until generic bucket mapping is added.
+- `expected.txt` is a legacy sparse sample of the frozen 33-anchor PWL contract at `0`, `-0.5`, `-1`, `-2`, `-4`, and the negative boundary.
+- Scores are first interpreted as signed low-24 `S8.16`. Exp deltas are then computed as mathematical signed `S*.16` differences with at least 25 bits; never truncate or wrap the delta back to 24 bits.
+- Boundary behavior is `delta>=0 -> 800000`, `delta==-16.0 -> 000001`, and `delta<-16.0 -> 000000`.
+- On `[-16,0]`, anchors are `round(exp(-i/2)*2^23)` for `i=0..32`; every between-anchor input uses `2^15`-step integer linear interpolation. There are no unsupported holes.
+- Existing low-24 hex samples remain unambiguous because they lie inside `[-16,0]`. Any large-span delta dump must preserve the sign-extended mathematical value rather than only its low 24 bits.
 
 ### `causal_i0`
 
@@ -277,7 +279,7 @@ These `final_expected.txt` files are final datapath smoke vectors. They are inte
 - It drives `Q1[0]=0100`, `K0[0]=0000`, and `K1[0]=FC00`, so k0 scaled score is zero and k1 has raw dot `-262144`, scaled score `FFFFFFFF8000` (`-0.5`), and softmax low24 `FF8000`.
 - Causal mask still suppresses k2, so k2 must be observed as a masked no-update point.
 - The exact bring-up constants are `exp(-0.5)=004DA2CC`, final `l=00CDA2CC`, lane00 accumulator `00011B459800`, reciprocal `4FACBF4E`, and lane00 final output `0161`; all other lanes are held at zero.
-- This smoke is scheduler-driven and bit-exact only for the stated bring-up constants. It is still not the final exp/recip contract, not a randomized row-level golden, and not a full softmax correctness golden.
+- This smoke is scheduler-driven and bit-exact for the stated exp anchor. It does not alone validate all 33 anchors, interpolation, large-span delta handling, reciprocal alignment, or randomized row-level behavior.
 
 ### `q1_delta_neg2`
 
@@ -285,7 +287,7 @@ These `final_expected.txt` files are final datapath smoke vectors. They are inte
 - It drives `Q1[0]=0100`, `K0[0]=0000`, and `K1[0]=F000`, so k0 scaled score is zero and k1 has raw dot `-1048576`, scaled score `FFFFFFFE0000` (`-2.0`), and softmax low24 `FE0000`.
 - Causal mask still suppresses k2, so k2 must be observed as a masked no-update point.
 - The exact bring-up constants are `exp(-2)=001152AB`, final `l=009152AB`, lane00 accumulator `0000A2A55600`, reciprocal `70BDF523`, and lane00 final output `011F`; all other lanes are held at zero.
-- This smoke is scheduler-driven and bit-exact only for the stated bring-up constants. It is still not the final exp/recip contract, not a randomized row-level golden, and not a full softmax correctness golden.
+- This smoke is scheduler-driven and bit-exact for the stated exp anchor. It does not alone validate all 33 anchors, interpolation, large-span delta handling, reciprocal alignment, or randomized row-level behavior.
 
 ### `q1_delta_neg4`
 
@@ -293,7 +295,7 @@ These `final_expected.txt` files are final datapath smoke vectors. They are inte
 - It drives `Q1[0]=0100`, `K0[0]=0000`, and `K1[0]=E000`, so k0 scaled score is zero and k1 has raw dot `-2097152`, scaled score `FFFFFFFC0000` (`-4.0`), and softmax low24 `FC0000`.
 - Causal mask still suppresses k2, so k2 must be observed as a masked no-update point.
 - The exact bring-up constants are `exp(-4)=0002582B`, final `l=0082582B`, lane00 accumulator `000084B05600`, reciprocal `7DB2A076`, and lane00 final output `0105`; all other lanes are held at zero.
-- This smoke is scheduler-driven and bit-exact only for the stated bring-up constants. It is still not the final exp/recip contract, not a randomized row-level golden, and not a full softmax correctness golden.
+- This smoke is scheduler-driven and bit-exact for the stated exp anchor. It does not alone validate all 33 anchors, interpolation, large-span delta handling, reciprocal alignment, or randomized row-level behavior.
 
 ### `row_scoreboard_s4_det`
 
@@ -307,7 +309,7 @@ scheduler -> score_pipe -> softmax_vec -> finalize_vec
 - The matching inputs are `test_vectors/cases/row_scoreboard_s4_det_Q.hex`, `row_scoreboard_s4_det_K.hex`, and `row_scoreboard_s4_det_V.hex`. They use the same flat `[256,64]` row-major Q/K/V hex layout as the other case vectors. `Q[3][0]=0100`; `K[0..3][0]` are `0000`, `FC00`, `F000`, and `E000`; and V rows `0..3` take their nonzero lane values from the `laneDD_v0_q88_hex` through `laneDD_v3_q88_hex` keys in `expected.txt`.
 - The file lists all 64 `laneDD_o_q88_hex` lines so a row/full-row scoreboard can compare a complete D-lane row without requiring a full `S=256` golden dump.
 - Key nonzero lanes are `00`, `01`, `02`, `07`, `31`, and `63`; they mix positive and negative V values across multiple K entries. The remaining lanes are explicit zero outputs.
-- This is a deterministic scoreboard sentinel, not the final full random row golden. It uses the current exp exact-point constants and the bring-up reciprocal formula, so it must not be used as evidence that exp LUT/PWL or reciprocal v0.2 is frozen.
+- This is a deterministic scoreboard sentinel, not the final full random row golden. Its selected scores land on frozen exp anchors, but it does not by itself validate all 33 anchors, interpolation intervals, large-span delta handling, or reciprocal behavior.
 
 ### `non_causal_smoke`
 

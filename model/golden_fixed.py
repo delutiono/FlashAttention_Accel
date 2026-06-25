@@ -94,9 +94,9 @@ def _interp_segment(x: int, x_hi: int, y_hi: int, y_lo: int, step: int) -> int:
 
 
 def exp_pwl_u1_23(delta_s32_16: int) -> int:
-    """Evaluate the 33-anchor PWL contract for a 24-bit signed S*.16 input."""
+    """Evaluate the 33-anchor PWL contract for a mathematical S*.16 delta."""
 
-    x = wrap_signed(delta_s32_16, SOFTMAX_SCORE_BITS)
+    x = delta_s32_16
     if x >= 0:
         return EXP_ONE_U1_23
     if x < -(16 << SCORE_FRAC_BITS):
