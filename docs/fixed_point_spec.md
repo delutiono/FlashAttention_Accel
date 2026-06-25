@@ -1,6 +1,6 @@
-# Fixed-Point Spec v0.3 Numerical Closure
+# Fixed-Point Spec v0.4 Reciprocal NR Closure
 
-Status: model-side numerical contract for RTL alignment. The exp and online-softmax update rules below are frozen for the current baseline. Reciprocal remains the current exact integer oracle in this revision and is explicitly pending alignment to the future RTL Newton-Raphson implementation.
+Status: model-side numerical contract for RTL alignment. The exp and online-softmax update rules remain frozen from v0.3. This revision freezes a division-free reciprocal normalization, seed ROM, and fixed-count Newton-Raphson contract in the separate `model/recip_nr.py` oracle without changing the `model/golden_fixed.py` main path.
 
 ## Baseline
 
@@ -72,16 +72,64 @@ exp  = Y[i] - drop
 
 ### Reciprocal
 
-- Reciprocal input `l` is `U9.23` and must be nonzero for valid causal baseline rows.
-- Reciprocal output is `U1.31`.
-- The v0.3 reference integer formula is:
+- Reciprocal input is a 32-bit `U9.23`; output is a 32-bit `U1.31`.
+- The v0.3 exact formula remains in `golden_fixed.py` as the comparison oracle. The RTL-target approximation is isolated in `model/recip_nr.py`.
+- The datapath contains no variable division. Runtime operations are leading-one detection, shifts, ROM lookup, add/subtract, fixed-width multiplication, comparison, and a fixed-count loop.
+- Supported configurations are `LUT_ENTRIES={8,16,32,64}` and `NR_ITERATIONS={1,2}`.
+
+For nonzero input integer `x`, let `p=floor(log2(x))` and `e=p-23`. Normalize:
 
 ```text
-recip_u1_31 = round_half_away_from_zero((2^31 * 2^23) / l_u9_23)
+m_u1_31 = x << (31-p)
+x_real  = m_real * 2^e
+1 <= m_real < 2
 ```
 
-- Exact examples already frozen in debug files include `l=00800000 -> recip=80000000` and `l=01000000 -> recip=40000000`.
-- This revision intentionally keeps the exact integer oracle above. It is not an RTL cost model. Replacing it with a LUT/NR approximation is deferred until the RTL Newton-Raphson contract is available, so exp/higher-score closure and reciprocal approximation are not changed simultaneously.
+The LUT index is the top `log2(LUT_ENTRIES)` fractional bits of `m_u1_31`. ROM entry `i` is generated offline by rounding the reciprocal of the interval midpoint:
+
+```text
+m_mid(i) = 1 + (i + 0.5) / LUT_ENTRIES
+seed[i]  = round((1 / m_mid(i)) * 2^31)
+```
+
+The checked-in ROM constants are the contract. The formula is documentation for regenerating them and is not implemented in the runtime oracle or RTL.
+
+Each Newton-Raphson iteration uses:
+
+```text
+my_q2_31   = (m_u1_31 * y_u1_31) >> 31
+corr_q2_31 = (2 << 31) - my_q2_31
+y_next     = (y_u1_31 * corr_q2_31) >> 31
+```
+
+Both shifts truncate discarded low bits. After the fixed iteration count:
+
+```text
+e >= 0: recip_u1_31 = y >> e
+e <  0: recip_u1_31 = saturate_u32(y << -e)
+```
+
+Valid baseline rows have `l>=1`, so `e>=0`; the left-shift saturation rule covers the full nonzero `U9.23` container. For `x=0`, output zero, assert `divide_by_zero`, and preserve normal valid timing.
+
+Recommended RTL baseline:
+
+- `32` entries, `1` NR iteration, valid latency `4` cycles.
+- Stricter exact-final alignment option: `16` entries, `2` NR iterations, valid latency `6` cycles.
+- Pipeline latency is `2 + 2*NR_ITERATIONS`: normalization/address, registered seed read, and two registered multiply stages per iteration. `out_valid` is `in_valid` delayed by the same fixed count for all data, including zero.
+
+Intermediate formats and narrowing rules:
+
+| Stage | Format / width | Rule |
+|---|---:|---|
+| Input `x` | `U9.23`, 32 | No saturation on entry; consume all 32 bits. |
+| Exponent `e` | signed 6 bits minimum | Mathematical range `[-23,8]`; baseline range `[0,8]`. |
+| Normalized `m` | `U1.31`, 32 | Exact left shift after leading-one detection. |
+| Seed `y0` | `U1.31`, 32 | Offline round-to-nearest ROM constant. |
+| `m*y` product | unsigned 64 | Keep full product, then truncate `>>31`. |
+| `my` / correction | `U2.31`, 33 | `2.0` is `33'h1_00000000`. |
+| `y*corr` product | unsigned 65 | Keep full product, then truncate `>>31`. |
+| NR iterate | `U1.31`, 32 | Clamp to unsigned 32-bit range defensively. |
+| De-normalized output | `U1.31`, 32 | Right shift truncates; left shift saturates. |
 
 ### Final O Quantization
 
@@ -320,12 +368,12 @@ acc_new_s17_31                  = 5084982272 = 00012F16AC00
 
 The corresponding manual expected file is `test_vectors/debug/softmax_raise_by_one/expected.txt`.
 
-## Reciprocal Oracle Pending RTL NR Alignment
+## Reciprocal Oracle Alignment
 
-- Input is nonzero `U9.23`; output is `U1.31`.
-- The model continues to use the exact integer formula `round((2^31 * 2^23) / l_u9_23)` and wraps the result to 32 bits.
-- No reciprocal LUT, seed quantization, or Newton-Raphson error is introduced in this revision.
-- When the RTL NR datapath is ready, its seed rule, iteration count, narrowing points, and error bounds must be frozen in a separate change and compared against this oracle.
+- `model/golden_fixed.py::reciprocal_u1_31` remains the exact variable-division reference and is unchanged.
+- `model/recip_nr.py::reciprocal_nr_u1_31` is the RTL-target, pure-integer, division-free oracle.
+- `model/recip_nr.py::reciprocal_nr_trace` exposes normalized mantissa, exponent, seed index, seed, each NR iterate, final reciprocal, zero flag, and valid latency for debug comparison.
+- RTL should match the selected approximation bit-for-bit at every exposed checkpoint before replacing exact-point bring-up constants.
 
 ## Rounding and Saturation
 
@@ -377,7 +425,7 @@ With the proposed formats:
 - Signed low-24 score wrapping before online softmax.
 - Exp PWL interpolation error relative to ideal exp.
 - `l` and `acc` rescale truncation and container wrapping.
-- Future RTL reciprocal NR error relative to the current exact oracle.
+- Reciprocal seed/NR error relative to the current exact oracle.
 - Final O rounding and saturation.
 - Mask handling at tile boundaries.
 
@@ -386,7 +434,6 @@ With the proposed formats:
 These items remain open after the model-side numerical closure:
 
 - RTL microarchitecture for implementing the frozen 33-anchor exp contract.
-- Reciprocal NR seed, iteration count, narrowing points, and accepted error.
 - Bit-exact Python/RTL alignment for all rounding and wrapping points.
 - Whether `l`/`acc` can be reduced below 32/48 bits while preserving MAE and MaxAE targets.
 - Whether non-default `REG_SCALE` values are supported beyond the fixed `REG_SCALE=32` baseline.
