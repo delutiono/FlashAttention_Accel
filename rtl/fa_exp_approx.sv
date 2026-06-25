@@ -81,7 +81,7 @@ module fa_exp_approx #(
 
     if (x_i >= X_ZERO) begin
       y_next = Y_ONE;
-    end else if (x_i <= X_NEG_SIXTEEN) begin
+    end else if (x_i < X_NEG_SIXTEEN) begin
       y_next = '0;
     end else begin
       y_next = y_hi - OUT_W'(interp_drop);

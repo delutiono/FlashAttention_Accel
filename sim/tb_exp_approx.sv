@@ -123,7 +123,7 @@ module tb_exp_approx;
       seq_x[5] = anchor_x(31);
       seq_y[5] = exp_anchor(31);
       seq_x[6] = anchor_x(32);
-      seq_y[6] = '0;
+      seq_y[6] = exp_anchor(32);
       seq_x[7] = anchor_x(32) - 24'sd1;
       seq_y[7] = '0;
 
@@ -170,7 +170,8 @@ module tb_exp_approx;
                       anchor_x(i) - 24'sd16384, midpoint_y(i));
     end
 
-    drive_and_check("neg_sixteen_clamps_to_zero", anchor_x(32), '0);
+    drive_and_check("neg_sixteen_uses_final_anchor",
+                    anchor_x(32), exp_anchor(32));
     drive_and_check("below_neg_sixteen_clamps_to_zero",
                     anchor_x(32) - 24'sd1, '0);
 
