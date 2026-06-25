@@ -14,230 +14,198 @@ module fa_softmax_online_vec #(
   input  logic                         score_valid_i,
   input  logic signed [SCORE_W-1:0]    score_i,
   input  var logic signed [15:0]       v_i [D],
+  output logic                         ready_o,
   output logic                         valid_o,
   output logic signed [SCORE_W-1:0]    m_o,
   output logic [L_W-1:0]               l_o,
   output logic signed [ACC_W-1:0]      acc_o [D]
 );
-  localparam logic [L_W-1:0] L_ONE = ({{(L_W-1){1'b0}}, 1'b1} << 23);
-  localparam logic [23:0] P_EXP_NEG_ONE = 24'h2f16ac;
-  localparam logic signed [SCORE_W-1:0] SCORE_HALF = SCORE_W'(32'sd32768);
-  localparam logic signed [SCORE_W-1:0] SCORE_ONE = SCORE_W'(32'sd65536);
-  localparam logic signed [SCORE_W-1:0] SCORE_TWO = SCORE_W'(32'sd131072);
-  localparam logic signed [SCORE_W-1:0] SCORE_FOUR = SCORE_W'(32'sd262144);
-  localparam int unsigned EXP_LOWER_FIFO_DEPTH = 2;
+  localparam int unsigned DELTA_W = SCORE_W + 1;
+  localparam int unsigned EXP_FRAC_W = 23;
+  localparam logic [L_W-1:0] L_ONE =
+      ({{(L_W-1){1'b0}}, 1'b1} << EXP_FRAC_W);
 
-  logic signed [SCORE_W-1:0] m_q;
-  logic [L_W-1:0]            l_q;
-  logic signed [ACC_W-1:0]   acc_q [D];
-  logic                      seen_q;
-  logic signed [ACC_W-1:0]   v_scaled [D];
-  logic signed [ACC_W-1:0]   v_weighted_neg_one [D];
-  logic signed [SCORE_W-1:0] score_delta;
-  logic signed [SCORE_W-1:0] score_delta_up;
-  logic                      lower_by_one;
-  logic                      higher_by_one;
-  logic                      lower_exp_supported;
-  logic                      exp_lower_push;
-  logic                      exp_lower_pop;
-  logic                      exp_lower_can_push;
-  logic [1:0]                exp_lower_count_q;
-  logic signed [15:0]        exp_lower_v_q [EXP_LOWER_FIFO_DEPTH][D];
-  logic                      exp_lower_valid_i;
-  logic signed [SCORE_W-1:0] exp_lower_x_i;
-  logic                      exp_lower_valid_o;
-  logic [EXP_W-1:0]          exp_lower_p;
-  logic [L_W-1:0]            l_scaled_neg_one;
-  logic [L_W-1:0]            l_exp_lower;
-  logic [L_W+24-1:0]         l_alpha_product;
-  logic signed [ACC_W+25-1:0] acc_alpha_product [D];
-  logic signed [ACC_W-1:0]   acc_scaled_neg_one [D];
-  logic signed [ACC_W-1:0]   v_weighted_exp_lower [D];
+  typedef enum logic [1:0] {
+    OP_FIRST,
+    OP_EQUAL,
+    OP_LOWER,
+    OP_HIGHER
+  } op_e;
 
-  assign score_delta = m_q - score_i;
-  assign score_delta_up = score_i - m_q;
-  assign lower_by_one = (score_i < m_q) && (score_delta == SCORE_ONE);
-  assign higher_by_one = (score_i > m_q) && (score_delta_up == SCORE_ONE);
-  // Generic lower-delta path routes through fa_exp_approx; -1 keeps the
-  // single-cycle fast path used by the existing bring-up checkpoints.
-  assign lower_exp_supported =
-      (score_i < m_q) && (score_delta != SCORE_ONE);
-  assign exp_lower_pop = exp_lower_valid_o && (exp_lower_count_q != 0);
-  assign exp_lower_can_push =
-      (exp_lower_count_q < 2'd2) || exp_lower_pop;
-  assign exp_lower_push =
-      valid_i && score_valid_i && seen_q && lower_exp_supported &&
-      exp_lower_can_push;
-  assign exp_lower_valid_i = exp_lower_push;
-  assign exp_lower_x_i = score_i - m_q;
-  assign l_alpha_product = l_q * P_EXP_NEG_ONE;
-  assign l_scaled_neg_one = l_alpha_product[L_W+24-1:23];
-  assign l_exp_lower = l_q + {{(L_W-EXP_W){1'b0}}, exp_lower_p};
+  logic                         issue_seen_q;
+  logic signed [SCORE_W-1:0]    issue_m_q;
+  logic signed [SCORE_W-1:0]    commit_m_q;
+  logic [L_W-1:0]               commit_l_q;
+  logic signed [ACC_W-1:0]      commit_acc_q [D];
+
+  logic                         metadata_valid_q;
+  op_e                          metadata_op_q;
+  logic signed [SCORE_W-1:0]    metadata_new_m_q;
+  logic signed [15:0]           metadata_v_q [D];
+
+  logic                         row_start_accept;
+  logic                         transaction_accept;
+  logic                         effective_seen;
+  logic signed [SCORE_W-1:0]    effective_m;
+  logic signed [DELTA_W-1:0]    score_ext;
+  logic signed [DELTA_W-1:0]    effective_m_ext;
+  logic signed [DELTA_W-1:0]    factor_x;
+  op_e                          issue_op;
+  logic signed [SCORE_W-1:0]    issue_new_m;
+
+  logic                         factor_valid;
+  logic [EXP_W-1:0]             factor;
+  logic [L_W+EXP_W-1:0]         l_factor_product;
+  logic [L_W-1:0]               l_scaled;
+  logic signed [ACC_W+EXP_W:0]  acc_factor_product [D];
+  logic signed [ACC_W+EXP_W:0]  v_factor_product [D];
+  logic signed [ACC_W-1:0]      acc_scaled [D];
+  logic signed [ACC_W-1:0]      v_scaled [D];
+  logic signed [ACC_W-1:0]      v_weighted [D];
+
+  assign ready_o = rst_n && (!row_start_i || !metadata_valid_q);
+  assign row_start_accept = row_start_i && ready_o;
+  assign transaction_accept =
+      valid_i && score_valid_i && ready_o;
+
+  assign effective_seen = issue_seen_q && !row_start_accept;
+  assign effective_m = row_start_accept ? '0 : issue_m_q;
+  assign score_ext = $signed({score_i[SCORE_W-1], score_i});
+  assign effective_m_ext =
+      $signed({effective_m[SCORE_W-1], effective_m});
+
+  always_comb begin
+    issue_op = OP_FIRST;
+    issue_new_m = score_i;
+    factor_x = '0;
+
+    if (effective_seen) begin
+      if (score_i == effective_m) begin
+        issue_op = OP_EQUAL;
+        issue_new_m = effective_m;
+        factor_x = '0;
+      end else if (score_i < effective_m) begin
+        issue_op = OP_LOWER;
+        issue_new_m = effective_m;
+        factor_x = score_ext - effective_m_ext;
+      end else begin
+        issue_op = OP_HIGHER;
+        issue_new_m = score_i;
+        factor_x = effective_m_ext - score_ext;
+      end
+    end
+  end
 
   fa_exp_approx #(
-    .IN_W(SCORE_W),
+    .IN_W(DELTA_W),
     .OUT_W(EXP_W)
-  ) u_exp_lower (
+  ) u_factor (
     .clk(clk),
     .rst_n(rst_n),
-    .valid_i(exp_lower_valid_i),
-    .x_i(exp_lower_x_i),
-    .valid_o(exp_lower_valid_o),
-    .y_o(exp_lower_p)
+    .valid_i(transaction_accept),
+    .x_i(factor_x),
+    .valid_o(factor_valid),
+    .y_o(factor)
   );
+
+  assign l_factor_product = commit_l_q * factor;
+  assign l_scaled = l_factor_product >> EXP_FRAC_W;
 
   genvar g;
   generate
     for (g = 0; g < D; g++) begin : gen_lane_math
-      assign v_scaled[g] = $signed({{(ACC_W-16){v_i[g][15]}}, v_i[g]}) <<< 23;
-      assign v_weighted_neg_one[g] =
-          $signed({{(ACC_W-16){v_i[g][15]}}, v_i[g]}) *
-          $signed({{(ACC_W-25){1'b0}}, 1'b0, P_EXP_NEG_ONE});
-      assign acc_alpha_product[g] =
-          acc_q[g] * $signed({1'b0, P_EXP_NEG_ONE});
-      assign acc_scaled_neg_one[g] = acc_alpha_product[g][ACC_W+25-1:23];
-      assign v_weighted_exp_lower[g] =
-          $signed({{(ACC_W-16){exp_lower_v_q[0][g][15]}}, exp_lower_v_q[0][g]}) *
-          $signed({1'b0, exp_lower_p});
+      assign acc_factor_product[g] =
+          $signed(commit_acc_q[g]) * $signed({1'b0, factor});
+      assign v_factor_product[g] =
+          $signed({{(ACC_W-16){metadata_v_q[g][15]}}, metadata_v_q[g]}) *
+          $signed({1'b0, factor});
+      assign acc_scaled[g] = acc_factor_product[g] >>> EXP_FRAC_W;
+      assign v_scaled[g] =
+          $signed({{(ACC_W-16){metadata_v_q[g][15]}}, metadata_v_q[g]})
+          <<< EXP_FRAC_W;
+      assign v_weighted[g] = v_factor_product[g];
     end
   endgenerate
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      m_q     <= '0;
-      l_q     <= '0;
-      seen_q  <= 1'b0;
-      exp_lower_count_q <= '0;
+      issue_seen_q <= 1'b0;
+      issue_m_q <= '0;
+      commit_m_q <= '0;
+      commit_l_q <= '0;
+      metadata_valid_q <= 1'b0;
+      metadata_op_q <= OP_FIRST;
+      metadata_new_m_q <= '0;
       valid_o <= 1'b0;
-      m_o     <= '0;
-      l_o     <= '0;
+      m_o <= '0;
+      l_o <= '0;
       for (int lane = 0; lane < D; lane++) begin
-        acc_q[lane] <= '0;
+        commit_acc_q[lane] <= '0;
+        metadata_v_q[lane] <= '0;
         acc_o[lane] <= '0;
-        for (int slot = 0; slot < EXP_LOWER_FIFO_DEPTH; slot++) begin
-          exp_lower_v_q[slot][lane] <= '0;
-        end
       end
     end else begin
-      if (row_start_i) begin
-        valid_o <= 1'b0;
-        m_q    <= '0;
-        l_q    <= '0;
-        seen_q <= 1'b0;
-        exp_lower_count_q <= '0;
-        m_o    <= '0;
-        l_o    <= '0;
-        for (int lane = 0; lane < D; lane++) begin
-          acc_q[lane] <= '0;
-          acc_o[lane] <= '0;
-          for (int slot = 0; slot < EXP_LOWER_FIFO_DEPTH; slot++) begin
-            exp_lower_v_q[slot][lane] <= '0;
-          end
-        end
-      end else begin
-        if (exp_lower_pop && exp_lower_push) begin
-          exp_lower_count_q <= exp_lower_count_q;
-          for (int lane = 0; lane < D; lane++) begin
-            if (exp_lower_count_q == 2'd1) begin
-              exp_lower_v_q[0][lane] <= v_i[lane];
-              exp_lower_v_q[1][lane] <= '0;
-            end else begin
-              exp_lower_v_q[0][lane] <= exp_lower_v_q[1][lane];
-              exp_lower_v_q[1][lane] <= v_i[lane];
-            end
-          end
-        end else if (exp_lower_pop) begin
-          exp_lower_count_q <= exp_lower_count_q - 2'd1;
-          for (int lane = 0; lane < D; lane++) begin
-            exp_lower_v_q[0][lane] <= exp_lower_v_q[1][lane];
-            exp_lower_v_q[1][lane] <= '0;
-          end
-        end else if (exp_lower_push) begin
-          exp_lower_count_q <= exp_lower_count_q + 2'd1;
-          for (int lane = 0; lane < D; lane++) begin
-            if (exp_lower_count_q == 2'd0) begin
-              exp_lower_v_q[0][lane] <= v_i[lane];
-            end else begin
-              exp_lower_v_q[1][lane] <= v_i[lane];
-            end
-          end
-        end
+      valid_o <= 1'b0;
 
-        if (exp_lower_pop) begin
+      if (row_start_accept) begin
+        commit_m_q <= '0;
+        commit_l_q <= '0;
+        m_o <= '0;
+        l_o <= '0;
+        for (int lane = 0; lane < D; lane++) begin
+          commit_acc_q[lane] <= '0;
+          acc_o[lane] <= '0;
+        end
+      end else if (factor_valid) begin
         valid_o <= 1'b1;
-        m_q   <= m_q;
-        l_q   <= l_exp_lower;
-        m_o   <= m_q;
-        l_o   <= l_exp_lower;
-        for (int lane = 0; lane < D; lane++) begin
-          acc_q[lane] <= acc_q[lane] + v_weighted_exp_lower[lane];
-          acc_o[lane] <= acc_q[lane] + v_weighted_exp_lower[lane];
-        end
-        end else if (valid_i && score_valid_i) begin
-        if (!seen_q) begin
-          valid_o <= 1'b1;
-          m_q    <= score_i;
-          l_q    <= L_ONE;
-          seen_q <= 1'b1;
-          m_o    <= score_i;
-          l_o    <= L_ONE;
-          for (int lane = 0; lane < D; lane++) begin
-            acc_q[lane] <= v_scaled[lane];
-            acc_o[lane] <= v_scaled[lane];
+        commit_m_q <= metadata_new_m_q;
+        m_o <= metadata_new_m_q;
+
+        case (metadata_op_q)
+          OP_FIRST: begin
+            commit_l_q <= L_ONE;
+            l_o <= L_ONE;
+            for (int lane = 0; lane < D; lane++) begin
+              commit_acc_q[lane] <= v_scaled[lane];
+              acc_o[lane] <= v_scaled[lane];
+            end
           end
-        end else if (score_i == m_q) begin
-          valid_o <= 1'b1;
-          m_q   <= m_q;
-          l_q   <= l_q + L_ONE;
-          m_o   <= m_q;
-          l_o   <= l_q + L_ONE;
-          for (int lane = 0; lane < D; lane++) begin
-            acc_q[lane] <= acc_q[lane] + v_scaled[lane];
-            acc_o[lane] <= acc_q[lane] + v_scaled[lane];
+
+          OP_EQUAL, OP_LOWER: begin
+            commit_l_q <= commit_l_q + factor;
+            l_o <= commit_l_q + factor;
+            for (int lane = 0; lane < D; lane++) begin
+              commit_acc_q[lane] <= commit_acc_q[lane] + v_weighted[lane];
+              acc_o[lane] <= commit_acc_q[lane] + v_weighted[lane];
+            end
           end
-        end else if (lower_by_one) begin
-          valid_o <= 1'b1;
-          m_q   <= m_q;
-          l_q   <= l_q + {{(L_W-24){1'b0}}, P_EXP_NEG_ONE};
-          m_o   <= m_q;
-          l_o   <= l_q + {{(L_W-24){1'b0}}, P_EXP_NEG_ONE};
-          for (int lane = 0; lane < D; lane++) begin
-            acc_q[lane] <= acc_q[lane] + v_weighted_neg_one[lane];
-            acc_o[lane] <= acc_q[lane] + v_weighted_neg_one[lane];
+
+          default: begin
+            commit_l_q <= l_scaled + L_ONE;
+            l_o <= l_scaled + L_ONE;
+            for (int lane = 0; lane < D; lane++) begin
+              commit_acc_q[lane] <= acc_scaled[lane] + v_scaled[lane];
+              acc_o[lane] <= acc_scaled[lane] + v_scaled[lane];
+            end
           end
-        end else if (higher_by_one) begin
-          valid_o <= 1'b1;
-          m_q   <= score_i;
-          l_q   <= l_scaled_neg_one + L_ONE;
-          m_o   <= score_i;
-          l_o   <= l_scaled_neg_one + L_ONE;
-          for (int lane = 0; lane < D; lane++) begin
-            acc_q[lane] <= acc_scaled_neg_one[lane] + v_scaled[lane];
-            acc_o[lane] <= acc_scaled_neg_one[lane] + v_scaled[lane];
-          end
-        end else if (lower_exp_supported && exp_lower_can_push) begin
-          valid_o <= 1'b0;
-          m_o   <= m_q;
-          l_o   <= l_q;
-          for (int lane = 0; lane < D; lane++) begin
-            acc_o[lane] <= acc_q[lane];
-          end
-        end else begin
-          valid_o <= 1'b0;
-          m_o   <= m_q;
-          l_o   <= l_q;
-          for (int lane = 0; lane < D; lane++) begin
-            acc_o[lane] <= acc_q[lane];
-          end
-        end
-      end else begin
-        valid_o <= 1'b0;
-        m_o   <= m_q;
-        l_o   <= l_q;
-        for (int lane = 0; lane < D; lane++) begin
-          acc_o[lane] <= acc_q[lane];
-        end
+        endcase
       end
+
+      if (row_start_accept) begin
+        issue_seen_q <= transaction_accept;
+        issue_m_q <= transaction_accept ? score_i : '0;
+      end else if (transaction_accept) begin
+        issue_seen_q <= 1'b1;
+        issue_m_q <= issue_new_m;
+      end
+
+      metadata_valid_q <= transaction_accept;
+      if (transaction_accept) begin
+        metadata_op_q <= issue_op;
+        metadata_new_m_q <= issue_new_m;
+        for (int lane = 0; lane < D; lane++) begin
+          metadata_v_q[lane] <= v_i[lane];
+        end
       end
     end
   end
