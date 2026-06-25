@@ -1,8 +1,3 @@
-# Competition reference documents kept outside the public repository
-/docs/request.md
-/docs/FA_Accel_IP_Product_Spec.md
-/docs/FA_Accel_IP_Project_Plan.md
-
 # Python local cache
 __pycache__/
 *.pyc
@@ -26,4 +21,8 @@ work_q*/
 work_red_score/
 work_green_score/
 work_green_sched_score/
+work_round*/
 transcript
+
+# Generated regression logs
+logs/*.log

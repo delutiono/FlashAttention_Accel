@@ -42,7 +42,17 @@ module fa_regfile (
   input  logic         done_i,
   input  logic         error_i
 );
-  logic write_fire;
+  logic        aw_pending;
+  logic [11:0] awaddr_q;
+  logic        w_pending;
+  logic [31:0] wdata_q;
+  logic [3:0]  wstrb_q;
+  logic        aw_take;
+  logic        w_take;
+  logic        write_fire;
+  logic [11:0] write_addr;
+  logic [31:0] write_data;
+  logic [3:0]  write_strb;
   logic read_fire;
 
   function automatic logic [31:0] apply_wstrb(
@@ -61,13 +71,25 @@ module fa_regfile (
     end
   endfunction
 
-  assign write_fire = s_axil_awvalid & s_axil_wvalid & s_axil_awready & s_axil_wready;
+  assign aw_take    = s_axil_awvalid & s_axil_awready;
+  assign w_take     = s_axil_wvalid & s_axil_wready;
+  assign write_fire = !s_axil_bvalid
+                    & (aw_pending | aw_take)
+                    & (w_pending | w_take);
+  assign write_addr = aw_pending ? awaddr_q : s_axil_awaddr;
+  assign write_data = w_pending ? wdata_q : s_axil_wdata;
+  assign write_strb = w_pending ? wstrb_q : s_axil_wstrb;
   assign read_fire  = s_axil_arvalid & s_axil_arready;
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       s_axil_bvalid    <= 1'b0;
       s_axil_bresp     <= 2'b00;
+      aw_pending       <= 1'b0;
+      awaddr_q         <= 12'h000;
+      w_pending        <= 1'b0;
+      wdata_q          <= 32'h0000_0000;
+      wstrb_q          <= 4'h0;
       s_axil_rvalid    <= 1'b0;
       s_axil_rresp     <= 2'b00;
       s_axil_rdata     <= 32'h0;
@@ -97,37 +119,52 @@ module fa_regfile (
       end
 
       if (write_fire) begin
+        aw_pending <= 1'b0;
+        w_pending  <= 1'b0;
+      end else begin
+        if (aw_take) begin
+          aw_pending <= 1'b1;
+          awaddr_q   <= s_axil_awaddr;
+        end
+        if (w_take) begin
+          w_pending <= 1'b1;
+          wdata_q   <= s_axil_wdata;
+          wstrb_q   <= s_axil_wstrb;
+        end
+      end
+
+      if (write_fire) begin
         s_axil_bvalid <= 1'b1;
-        unique case (s_axil_awaddr)
+        unique case (write_addr)
           REG_CTRL: begin
-            if (s_axil_wstrb[0]) begin
-              start_pulse      <= s_axil_wdata[0];
-              soft_reset_pulse <= s_axil_wdata[1];
-              irq_en           <= s_axil_wdata[2];
+            if (write_strb[0]) begin
+              start_pulse      <= write_data[0];
+              soft_reset_pulse <= write_data[1];
+              irq_en           <= write_data[2];
             end
           end
           REG_STATUS: begin
-            if (s_axil_wstrb[0] && s_axil_wdata[1]) begin
+            if (write_strb[0] && write_data[1]) begin
               done_clear_pulse <= 1'b1;
             end
           end
           REG_CFG: begin
-            if (s_axil_wstrb[0]) causal_en <= s_axil_wdata[0];
+            if (write_strb[0]) causal_en <= write_data[0];
           end
-          REG_Q_BASE_L:     q_base[31:0]  <= apply_wstrb(q_base[31:0], s_axil_wdata, s_axil_wstrb);
-          REG_Q_BASE_H:     q_base[63:32] <= apply_wstrb(q_base[63:32], s_axil_wdata, s_axil_wstrb);
-          REG_K_BASE_L:     k_base[31:0]  <= apply_wstrb(k_base[31:0], s_axil_wdata, s_axil_wstrb);
-          REG_K_BASE_H:     k_base[63:32] <= apply_wstrb(k_base[63:32], s_axil_wdata, s_axil_wstrb);
-          REG_V_BASE_L:     v_base[31:0]  <= apply_wstrb(v_base[31:0], s_axil_wdata, s_axil_wstrb);
-          REG_V_BASE_H:     v_base[63:32] <= apply_wstrb(v_base[63:32], s_axil_wdata, s_axil_wstrb);
-          REG_O_BASE_L:     o_base[31:0]  <= apply_wstrb(o_base[31:0], s_axil_wdata, s_axil_wstrb);
-          REG_O_BASE_H:     o_base[63:32] <= apply_wstrb(o_base[63:32], s_axil_wdata, s_axil_wstrb);
-          REG_STRIDE_BYTES: stride_bytes  <= apply_wstrb(stride_bytes, s_axil_wdata, s_axil_wstrb);
+          REG_Q_BASE_L:     q_base[31:0]  <= apply_wstrb(q_base[31:0], write_data, write_strb);
+          REG_Q_BASE_H:     q_base[63:32] <= apply_wstrb(q_base[63:32], write_data, write_strb);
+          REG_K_BASE_L:     k_base[31:0]  <= apply_wstrb(k_base[31:0], write_data, write_strb);
+          REG_K_BASE_H:     k_base[63:32] <= apply_wstrb(k_base[63:32], write_data, write_strb);
+          REG_V_BASE_L:     v_base[31:0]  <= apply_wstrb(v_base[31:0], write_data, write_strb);
+          REG_V_BASE_H:     v_base[63:32] <= apply_wstrb(v_base[63:32], write_data, write_strb);
+          REG_O_BASE_L:     o_base[31:0]  <= apply_wstrb(o_base[31:0], write_data, write_strb);
+          REG_O_BASE_H:     o_base[63:32] <= apply_wstrb(o_base[63:32], write_data, write_strb);
+          REG_STRIDE_BYTES: stride_bytes  <= apply_wstrb(stride_bytes, write_data, write_strb);
           REG_NEG_LARGE: begin
-            neg_large <= apply_wstrb({16'h0, neg_large}, s_axil_wdata, s_axil_wstrb)[15:0];
+            neg_large <= apply_wstrb({16'h0, neg_large}, write_data, write_strb)[15:0];
           end
           REG_SCALE: begin
-            scale <= apply_wstrb({16'h0, scale}, s_axil_wdata, s_axil_wstrb)[15:0];
+            scale <= apply_wstrb({16'h0, scale}, write_data, write_strb)[15:0];
           end
           default: begin
           end
@@ -158,7 +195,7 @@ module fa_regfile (
     end
   end
 
-  assign s_axil_awready = !s_axil_bvalid;
-  assign s_axil_wready  = !s_axil_bvalid;
+  assign s_axil_awready = !s_axil_bvalid & !aw_pending;
+  assign s_axil_wready  = !s_axil_bvalid & !w_pending;
   assign s_axil_arready = !s_axil_rvalid;
 endmodule
