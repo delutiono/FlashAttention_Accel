@@ -69,6 +69,36 @@ module fa_accel_top (
   logic        done;
   logic        done_clear;
   logic        error;
+  logic        dma_rst_n;
+
+  logic        rd_cmd_valid;
+  logic        rd_cmd_ready;
+  logic [63:0] rd_data;
+  logic        rd_valid;
+  logic        rd_ready;
+  logic        rd_last;
+  logic        rd_done;
+  logic        rd_error;
+  logic [31:0] rd_byte_count;
+
+  logic        wr_cmd_valid;
+  logic        wr_cmd_ready;
+  logic        wr_done;
+  logic        wr_error;
+  logic [31:0] wr_byte_count;
+
+  typedef enum logic [1:0] {
+    TOP_DMA_SMOKE_IDLE,
+    TOP_DMA_SMOKE_ISSUE,
+    TOP_DMA_SMOKE_RUN,
+    TOP_DMA_SMOKE_COMPLETE
+  } top_dma_smoke_state_e;
+
+  top_dma_smoke_state_e top_dma_smoke_state;
+  logic                 top_dma_smoke_rd_issued;
+  logic                 top_dma_smoke_wr_issued;
+  logic                 top_dma_smoke_rd_done_seen;
+  logic                 top_dma_smoke_wr_done_seen;
 
   fa_regfile u_regfile (
     .clk              (clk),
@@ -111,7 +141,7 @@ module fa_accel_top (
   fa_scheduler u_scheduler (
     .clk              (clk),
     .rst_n            (rst_n),
-    .start_i          (start_pulse),
+    .start_i          (1'b0),
     .soft_reset_i     (soft_reset_pulse),
     .done_clear_i     (done_clear),
     .causal_en_i      (causal_en),
@@ -122,10 +152,10 @@ module fa_accel_top (
     .stride_bytes_i   (stride_bytes),
     .neg_large_i      (neg_large),
     .scale_i          (scale),
-    .busy_o           (busy),
-    .done_o           (done),
-    .error_o          (error),
-    .cycles_o         (cycles),
+    .busy_o           (),
+    .done_o           (),
+    .error_o          (),
+    .cycles_o         (),
     .state_o          (),
     .q_index_o        (),
     .kv_tile_o        (),
@@ -133,22 +163,162 @@ module fa_accel_top (
     .score_valid_o    ()
   );
 
-  assign irq = irq_en & done;
+  assign dma_rst_n    = rst_n & !soft_reset_pulse;
+  assign irq          = irq_en & done;
+  assign rd_cmd_valid = (top_dma_smoke_state == TOP_DMA_SMOKE_ISSUE) &&
+                        !top_dma_smoke_rd_issued;
+  assign wr_cmd_valid = (top_dma_smoke_state == TOP_DMA_SMOKE_ISSUE) &&
+                        !top_dma_smoke_wr_issued;
 
-  assign m_axi_araddr  = '0;
-  assign m_axi_arlen   = '0;
-  assign m_axi_arsize  = 3'd3;
-  assign m_axi_arburst = 2'b01;
-  assign m_axi_arvalid = 1'b0;
-  assign m_axi_rready  = 1'b0;
-  assign m_axi_awaddr  = '0;
-  assign m_axi_awlen   = '0;
-  assign m_axi_awsize  = 3'd3;
-  assign m_axi_awburst = 2'b01;
-  assign m_axi_awvalid = 1'b0;
-  assign m_axi_wdata   = '0;
-  assign m_axi_wstrb   = '0;
-  assign m_axi_wlast   = 1'b0;
-  assign m_axi_wvalid  = 1'b0;
-  assign m_axi_bready  = 1'b0;
+  fa_dma_rd u_dma_rd (
+    .clk           (clk),
+    .rst_n         (dma_rst_n),
+    .cmd_valid     (rd_cmd_valid),
+    .cmd_ready     (rd_cmd_ready),
+    .cmd_addr      (q_base),
+    .cmd_beats     (9'd16),
+    .out_data      (rd_data),
+    .out_valid     (rd_valid),
+    .out_ready     (rd_ready),
+    .out_last      (rd_last),
+    .done          (rd_done),
+    .error         (rd_error),
+    .byte_count    (rd_byte_count),
+    .m_axi_araddr  (m_axi_araddr),
+    .m_axi_arlen   (m_axi_arlen),
+    .m_axi_arsize  (m_axi_arsize),
+    .m_axi_arburst (m_axi_arburst),
+    .m_axi_arvalid (m_axi_arvalid),
+    .m_axi_arready (m_axi_arready),
+    .m_axi_rdata   (m_axi_rdata),
+    .m_axi_rresp   (m_axi_rresp),
+    .m_axi_rlast   (m_axi_rlast),
+    .m_axi_rvalid  (m_axi_rvalid),
+    .m_axi_rready  (m_axi_rready)
+  );
+
+  fa_dma_wr u_dma_wr (
+    .clk           (clk),
+    .rst_n         (dma_rst_n),
+    .cmd_valid     (wr_cmd_valid),
+    .cmd_ready     (wr_cmd_ready),
+    .cmd_addr      (o_base),
+    .cmd_beats     (9'd16),
+    .in_data       (rd_data),
+    .in_valid      (rd_valid),
+    .in_ready      (rd_ready),
+    .in_last       (rd_last),
+    .done          (wr_done),
+    .error         (wr_error),
+    .byte_count    (wr_byte_count),
+    .m_axi_awaddr  (m_axi_awaddr),
+    .m_axi_awlen   (m_axi_awlen),
+    .m_axi_awsize  (m_axi_awsize),
+    .m_axi_awburst (m_axi_awburst),
+    .m_axi_awvalid (m_axi_awvalid),
+    .m_axi_awready (m_axi_awready),
+    .m_axi_wdata   (m_axi_wdata),
+    .m_axi_wstrb   (m_axi_wstrb),
+    .m_axi_wlast   (m_axi_wlast),
+    .m_axi_wvalid  (m_axi_wvalid),
+    .m_axi_wready  (m_axi_wready),
+    .m_axi_bresp   (m_axi_bresp),
+    .m_axi_bvalid  (m_axi_bvalid),
+    .m_axi_bready  (m_axi_bready)
+  );
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      top_dma_smoke_state        <= TOP_DMA_SMOKE_IDLE;
+      top_dma_smoke_rd_issued    <= 1'b0;
+      top_dma_smoke_wr_issued    <= 1'b0;
+      top_dma_smoke_rd_done_seen <= 1'b0;
+      top_dma_smoke_wr_done_seen <= 1'b0;
+      busy                       <= 1'b0;
+      done                       <= 1'b0;
+      error                      <= 1'b0;
+      cycles                     <= 32'h0;
+    end else if (soft_reset_pulse) begin
+      top_dma_smoke_state        <= TOP_DMA_SMOKE_IDLE;
+      top_dma_smoke_rd_issued    <= 1'b0;
+      top_dma_smoke_wr_issued    <= 1'b0;
+      top_dma_smoke_rd_done_seen <= 1'b0;
+      top_dma_smoke_wr_done_seen <= 1'b0;
+      busy                       <= 1'b0;
+      done                       <= 1'b0;
+      error                      <= 1'b0;
+      cycles                     <= 32'h0;
+    end else begin
+      if (done_clear) begin
+        done <= 1'b0;
+      end
+
+      if (busy) begin
+        cycles <= cycles + 32'd1;
+      end
+
+      unique case (top_dma_smoke_state)
+        TOP_DMA_SMOKE_IDLE: begin
+          busy <= 1'b0;
+          if (start_pulse) begin
+            top_dma_smoke_state        <= TOP_DMA_SMOKE_ISSUE;
+            top_dma_smoke_rd_issued    <= 1'b0;
+            top_dma_smoke_wr_issued    <= 1'b0;
+            top_dma_smoke_rd_done_seen <= 1'b0;
+            top_dma_smoke_wr_done_seen <= 1'b0;
+            busy                       <= 1'b1;
+            done                       <= 1'b0;
+            error                      <= 1'b0;
+            cycles                     <= 32'h0;
+          end
+        end
+
+        TOP_DMA_SMOKE_ISSUE: begin
+          if (rd_cmd_valid && rd_cmd_ready) begin
+            top_dma_smoke_rd_issued <= 1'b1;
+          end
+          if (wr_cmd_valid && wr_cmd_ready) begin
+            top_dma_smoke_wr_issued <= 1'b1;
+          end
+          if ((top_dma_smoke_rd_issued || (rd_cmd_valid && rd_cmd_ready)) &&
+              (top_dma_smoke_wr_issued || (wr_cmd_valid && wr_cmd_ready))) begin
+            top_dma_smoke_state <= TOP_DMA_SMOKE_RUN;
+          end
+        end
+
+        TOP_DMA_SMOKE_RUN: begin
+          if (rd_done) begin
+            top_dma_smoke_rd_done_seen <= 1'b1;
+          end
+          if (wr_done) begin
+            top_dma_smoke_wr_done_seen <= 1'b1;
+          end
+          if ((top_dma_smoke_rd_done_seen || rd_done) &&
+              (top_dma_smoke_wr_done_seen || wr_done)) begin
+            top_dma_smoke_state <= TOP_DMA_SMOKE_COMPLETE;
+          end
+        end
+
+        TOP_DMA_SMOKE_COMPLETE: begin
+          busy <= 1'b0;
+          if (rd_error || wr_error) begin
+            error <= 1'b1;
+          end else begin
+            done <= 1'b1;
+          end
+          top_dma_smoke_state <= TOP_DMA_SMOKE_IDLE;
+        end
+
+        default: begin
+          busy                <= 1'b0;
+          error               <= 1'b1;
+          top_dma_smoke_state <= TOP_DMA_SMOKE_IDLE;
+        end
+      endcase
+    end
+  end
+
+  logic unused_top_dma_smoke;
+  assign unused_top_dma_smoke = rd_byte_count[0] ^ wr_byte_count[0] ^
+                                stride_bytes[0];
 endmodule
