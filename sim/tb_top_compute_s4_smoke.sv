@@ -64,7 +64,10 @@ module tb_top_compute_s4_smoke;
   logic [63:0] v_beats [0:TOTAL_BEATS-1];
   logic [63:0] o_golden_beats [0:TOTAL_BEATS-1];
 
-  fa_accel_top dut (
+  fa_accel_top #(
+    .COMPUTE_ROWS (ROWS),
+    .KV_TILE_ROWS (2)
+  ) dut (
     .clk,
     .rst_n,
     .s_axil_awaddr,
@@ -111,6 +114,15 @@ module tb_top_compute_s4_smoke;
     .m_axi_bready,
     .irq
   );
+
+  initial begin : static_config_checks
+    if (dut.COMPUTE_ROWS != ROWS) begin
+      fail("top compute smoke COMPUTE_ROWS override did not apply");
+    end
+    if (dut.KV_TILE_ROWS != 2) begin
+      fail("top compute smoke KV_TILE_ROWS override did not apply");
+    end
+  end
 
   axi_mem_model u_mem (
     .clk,

@@ -2,7 +2,10 @@
 
 import fa_pkg::*;
 
-module fa_accel_top (
+module fa_accel_top #(
+  parameter int unsigned COMPUTE_ROWS = FA_S,
+  parameter int unsigned KV_TILE_ROWS = 64
+) (
   input  logic                     clk,
   input  logic                     rst_n,
 
@@ -53,9 +56,12 @@ module fa_accel_top (
 
   output logic                     irq
 );
-  localparam int unsigned TOP_COMPUTE_ROWS = 4;
   localparam int unsigned TOP_COMPUTE_D = 64;
-  localparam int unsigned TOP_ROW_BEATS = 16;
+  localparam int unsigned TOP_AXI_LANES = FA_AXI_DATA_W / FA_ELEM_W;
+  localparam int unsigned TOP_ROW_BEATS = TOP_COMPUTE_D / TOP_AXI_LANES;
+  localparam int unsigned TOP_ROW_BEAT_IDX_W = $clog2(TOP_ROW_BEATS);
+  localparam logic [7:0] TOP_COMPUTE_LAST_ROW = COMPUTE_ROWS - 1;
+  localparam logic [7:0] TOP_KV_TILE_LAST_OFFSET = KV_TILE_ROWS - 1;
 
   logic        start_pulse;
   logic        soft_reset_pulse;
@@ -135,21 +141,26 @@ module fa_accel_top (
   logic       top_dma_smoke_wr_issued;
   logic       top_dma_smoke_rd_done_seen;
   logic       top_dma_smoke_wr_done_seen;
-  logic [1:0] compute_q_idx;
-  logic [1:0] compute_k_idx;
-  logic [3:0] compute_rd_beat_idx;
-  logic [3:0] compute_wr_beat_idx;
+  logic [7:0] compute_q_idx;
+  logic [7:0] compute_kv_tile_base_idx;
+  logic [7:0] compute_key_in_tile_idx;
+  logic [7:0] compute_k_idx;
+  logic [TOP_ROW_BEAT_IDX_W-1:0] compute_rd_beat_idx;
+  logic [TOP_ROW_BEAT_IDX_W-1:0] compute_wr_beat_idx;
   logic [63:0] compute_rd_addr;
   logic [63:0] compute_wr_data;
+  logic [7:0]  compute_row_last_key_idx;
+  logic        compute_key_is_row_last;
+  logic        compute_key_is_tile_last;
 
   function automatic logic [63:0] top_row_addr(
     input logic [63:0] base,
-    input logic [1:0]  row
+    input logic [7:0]  row
   );
     logic [63:0] row_ext;
     logic [63:0] stride_ext;
     begin
-      row_ext = {62'h0, row};
+      row_ext = {56'h0, row};
       stride_ext = {32'h0, stride_bytes};
       top_row_addr = base + (row_ext * stride_ext);
     end
@@ -229,8 +240,8 @@ module fa_accel_top (
     .valid_i           (row_engine_valid_i),
     .row_start_i       (row_engine_row_start),
     .last_i            (row_engine_last),
-    .q_index_i         ({6'h0, compute_q_idx}),
-    .k_index_i         ({6'h0, compute_k_idx}),
+    .q_index_i         (compute_q_idx),
+    .k_index_i         (compute_k_idx),
     .q_i               (compute_q_row),
     .k_i               (compute_k_row),
     .v_i               (compute_v_row),
@@ -259,9 +270,9 @@ module fa_accel_top (
 
   always_comb begin
     compute_wr_data = 64'h0;
-    for (int lane = 0; lane < 4; lane++) begin
+    for (int lane = 0; lane < TOP_AXI_LANES; lane++) begin
       compute_wr_data[(lane * 16) +: 16] =
-          compute_o_row[(compute_wr_beat_idx * 4) + lane];
+          compute_o_row[(compute_wr_beat_idx * TOP_AXI_LANES) + lane];
     end
   end
 
@@ -289,12 +300,15 @@ module fa_accel_top (
   assign wr_in_valid  = (top_state == TOP_ST_COMPUTE_WRITE_RUN) ?
                         1'b1 : rd_valid;
   assign wr_in_last   = (top_state == TOP_ST_COMPUTE_WRITE_RUN) ?
-                        (compute_wr_beat_idx == 4'(TOP_ROW_BEATS - 1)) : rd_last;
+                        (compute_wr_beat_idx == TOP_ROW_BEAT_IDX_W'(TOP_ROW_BEATS - 1)) : rd_last;
 
   assign row_engine_valid_i   = (top_state == TOP_ST_COMPUTE_ENGINE_ISSUE) &&
                                 row_engine_ready;
-  assign row_engine_row_start = (compute_k_idx == 2'd0);
-  assign row_engine_last      = (compute_k_idx == compute_q_idx);
+  assign compute_row_last_key_idx = causal_en ? compute_q_idx : TOP_COMPUTE_LAST_ROW;
+  assign compute_key_is_row_last  = (compute_k_idx == compute_row_last_key_idx);
+  assign compute_key_is_tile_last = (compute_key_in_tile_idx == TOP_KV_TILE_LAST_OFFSET);
+  assign row_engine_row_start     = (compute_k_idx == 8'd0);
+  assign row_engine_last          = compute_key_is_row_last;
 
   fa_dma_rd u_dma_rd (
     .clk           (clk),
@@ -360,10 +374,12 @@ module fa_accel_top (
       top_dma_smoke_wr_issued    <= 1'b0;
       top_dma_smoke_rd_done_seen <= 1'b0;
       top_dma_smoke_wr_done_seen <= 1'b0;
-      compute_q_idx              <= 2'd0;
-      compute_k_idx              <= 2'd0;
-      compute_rd_beat_idx        <= 4'd0;
-      compute_wr_beat_idx        <= 4'd0;
+      compute_q_idx              <= 8'd0;
+      compute_kv_tile_base_idx   <= 8'd0;
+      compute_key_in_tile_idx    <= 8'd0;
+      compute_k_idx              <= 8'd0;
+      compute_rd_beat_idx        <= '0;
+      compute_wr_beat_idx        <= '0;
       busy                       <= 1'b0;
       done                       <= 1'b0;
       error                      <= 1'b0;
@@ -380,10 +396,12 @@ module fa_accel_top (
       top_dma_smoke_wr_issued    <= 1'b0;
       top_dma_smoke_rd_done_seen <= 1'b0;
       top_dma_smoke_wr_done_seen <= 1'b0;
-      compute_q_idx              <= 2'd0;
-      compute_k_idx              <= 2'd0;
-      compute_rd_beat_idx        <= 4'd0;
-      compute_wr_beat_idx        <= 4'd0;
+      compute_q_idx              <= 8'd0;
+      compute_kv_tile_base_idx   <= 8'd0;
+      compute_key_in_tile_idx    <= 8'd0;
+      compute_k_idx              <= 8'd0;
+      compute_rd_beat_idx        <= '0;
+      compute_wr_beat_idx        <= '0;
       busy                       <= 1'b0;
       done                       <= 1'b0;
       error                      <= 1'b0;
@@ -406,25 +424,25 @@ module fa_accel_top (
       if (rd_valid && rd_out_ready) begin
         unique case (top_state)
           TOP_ST_COMPUTE_LOAD_Q_RUN: begin
-            for (int lane = 0; lane < 4; lane++) begin
-              compute_q_row[(compute_rd_beat_idx * 4) + lane] <=
+            for (int lane = 0; lane < TOP_AXI_LANES; lane++) begin
+              compute_q_row[(compute_rd_beat_idx * TOP_AXI_LANES) + lane] <=
                   rd_data[(lane * 16) +: 16];
             end
-            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+            compute_rd_beat_idx <= compute_rd_beat_idx + 1'b1;
           end
           TOP_ST_COMPUTE_LOAD_K_RUN: begin
-            for (int lane = 0; lane < 4; lane++) begin
-              compute_k_row[(compute_rd_beat_idx * 4) + lane] <=
+            for (int lane = 0; lane < TOP_AXI_LANES; lane++) begin
+              compute_k_row[(compute_rd_beat_idx * TOP_AXI_LANES) + lane] <=
                   rd_data[(lane * 16) +: 16];
             end
-            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+            compute_rd_beat_idx <= compute_rd_beat_idx + 1'b1;
           end
           TOP_ST_COMPUTE_LOAD_V_RUN: begin
-            for (int lane = 0; lane < 4; lane++) begin
-              compute_v_row[(compute_rd_beat_idx * 4) + lane] <=
+            for (int lane = 0; lane < TOP_AXI_LANES; lane++) begin
+              compute_v_row[(compute_rd_beat_idx * TOP_AXI_LANES) + lane] <=
                   rd_data[(lane * 16) +: 16];
             end
-            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+            compute_rd_beat_idx <= compute_rd_beat_idx + 1'b1;
           end
           default: begin
           end
@@ -439,10 +457,12 @@ module fa_accel_top (
             top_dma_smoke_wr_issued    <= 1'b0;
             top_dma_smoke_rd_done_seen <= 1'b0;
             top_dma_smoke_wr_done_seen <= 1'b0;
-            compute_q_idx              <= 2'd0;
-            compute_k_idx              <= 2'd0;
-            compute_rd_beat_idx        <= 4'd0;
-            compute_wr_beat_idx        <= 4'd0;
+            compute_q_idx              <= 8'd0;
+            compute_kv_tile_base_idx   <= 8'd0;
+            compute_key_in_tile_idx    <= 8'd0;
+            compute_k_idx              <= 8'd0;
+            compute_rd_beat_idx        <= '0;
+            compute_wr_beat_idx        <= '0;
             busy                       <= 1'b1;
             done                       <= 1'b0;
             error                      <= 1'b0;
@@ -493,7 +513,7 @@ module fa_accel_top (
 
         TOP_ST_COMPUTE_LOAD_Q_ISSUE: begin
           if (rd_cmd_valid && rd_cmd_ready) begin
-            compute_rd_beat_idx <= 4'd0;
+            compute_rd_beat_idx <= '0;
             top_state <= TOP_ST_COMPUTE_LOAD_Q_RUN;
           end
         end
@@ -504,7 +524,9 @@ module fa_accel_top (
               error <= 1'b1;
               top_state <= TOP_ST_COMPUTE_COMPLETE;
             end else begin
-              compute_k_idx <= 2'd0;
+              compute_kv_tile_base_idx <= 8'd0;
+              compute_key_in_tile_idx  <= 8'd0;
+              compute_k_idx            <= 8'd0;
               top_state <= TOP_ST_COMPUTE_LOAD_K_ISSUE;
             end
           end
@@ -512,7 +534,7 @@ module fa_accel_top (
 
         TOP_ST_COMPUTE_LOAD_K_ISSUE: begin
           if (rd_cmd_valid && rd_cmd_ready) begin
-            compute_rd_beat_idx <= 4'd0;
+            compute_rd_beat_idx <= '0;
             top_state <= TOP_ST_COMPUTE_LOAD_K_RUN;
           end
         end
@@ -530,7 +552,7 @@ module fa_accel_top (
 
         TOP_ST_COMPUTE_LOAD_V_ISSUE: begin
           if (rd_cmd_valid && rd_cmd_ready) begin
-            compute_rd_beat_idx <= 4'd0;
+            compute_rd_beat_idx <= '0;
             top_state <= TOP_ST_COMPUTE_LOAD_V_RUN;
           end
         end
@@ -553,8 +575,15 @@ module fa_accel_top (
         end
 
         TOP_ST_COMPUTE_ENGINE_WAIT: begin
-          if (compute_k_idx < compute_q_idx) begin
-            compute_k_idx <= compute_k_idx + 2'd1;
+          if (!compute_key_is_row_last) begin
+            if (compute_key_is_tile_last) begin
+              compute_kv_tile_base_idx <= compute_kv_tile_base_idx + 8'(KV_TILE_ROWS);
+              compute_key_in_tile_idx  <= 8'd0;
+              compute_k_idx            <= compute_kv_tile_base_idx + 8'(KV_TILE_ROWS);
+            end else begin
+              compute_key_in_tile_idx <= compute_key_in_tile_idx + 8'd1;
+              compute_k_idx           <= compute_k_idx + 8'd1;
+            end
             top_state <= TOP_ST_COMPUTE_LOAD_K_ISSUE;
           end else if (row_engine_valid_o) begin
             if (row_engine_div_zero) begin
@@ -571,24 +600,26 @@ module fa_accel_top (
 
         TOP_ST_COMPUTE_WRITE_ISSUE: begin
           if (wr_cmd_valid && wr_cmd_ready) begin
-            compute_wr_beat_idx <= 4'd0;
+            compute_wr_beat_idx <= '0;
             top_state <= TOP_ST_COMPUTE_WRITE_RUN;
           end
         end
 
         TOP_ST_COMPUTE_WRITE_RUN: begin
           if (wr_in_valid && wr_in_ready) begin
-            compute_wr_beat_idx <= compute_wr_beat_idx + 4'd1;
+            compute_wr_beat_idx <= compute_wr_beat_idx + 1'b1;
           end
           if (wr_done) begin
             if (wr_error) begin
               error <= 1'b1;
               top_state <= TOP_ST_COMPUTE_COMPLETE;
-            end else if (compute_q_idx == 2'(TOP_COMPUTE_ROWS - 1)) begin
+            end else if (compute_q_idx == TOP_COMPUTE_LAST_ROW) begin
               top_state <= TOP_ST_COMPUTE_COMPLETE;
             end else begin
-              compute_q_idx <= compute_q_idx + 2'd1;
-              compute_k_idx <= 2'd0;
+              compute_q_idx            <= compute_q_idx + 8'd1;
+              compute_kv_tile_base_idx <= 8'd0;
+              compute_key_in_tile_idx  <= 8'd0;
+              compute_k_idx            <= 8'd0;
               top_state <= TOP_ST_COMPUTE_LOAD_Q_ISSUE;
             end
           end
