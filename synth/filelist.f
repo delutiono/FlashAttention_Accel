@@ -9,8 +9,8 @@
 ../rtl/fa_recip_approx.sv
 ../rtl/fa_softmax_online.sv
 ../rtl/fa_softmax_online_vec.sv
-../rtl/fa_finalize_vec.sv
 ../rtl/fa_out_quant.sv
+../rtl/fa_finalize_vec.sv
 ../rtl/fa_dma_rd.sv
 ../rtl/fa_dma_wr.sv
 ../rtl/fa_q_buffer.sv

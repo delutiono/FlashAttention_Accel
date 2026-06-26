@@ -38,6 +38,7 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
   logic signed [ELEM_W-1:0] v_vec [D];
 
   logic softmax_valid;
+  logic softmax_ready;
   logic signed [SOFTMAX_SCORE_W-1:0] softmax_m;
   logic [L_W-1:0] softmax_l;
   logic signed [ACC_W-1:0] softmax_acc [D];
@@ -50,6 +51,7 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
   logic [L_W-1:0] finalize_l;
   logic signed [ACC_W-1:0] finalize_acc [D];
   logic finalize_valid_o;
+  logic finalize_div_zero;
   logic signed [OUT_W-1:0] finalize_o_q88 [D];
 
   logic [ELEM_W-1:0] q_mem [S * D];
@@ -133,6 +135,7 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
     .score_valid_i(score_valid),
     .score_i(softmax_score),
     .v_i(v_vec),
+    .ready_o(softmax_ready),
     .valid_o(softmax_valid),
     .m_o(softmax_m),
     .l_o(softmax_l),
@@ -151,6 +154,7 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
     .l_i(finalize_l),
     .acc_i(finalize_acc),
     .valid_o(finalize_valid_o),
+    .div_zero_o(finalize_div_zero),
     .o_q88_o(finalize_o_q88)
   );
 
@@ -510,6 +514,9 @@ module tb_scheduler_softmax_finalize_row_scoreboard;
       end
 
       if (finalize_valid_o && target_softmax_count > 0) begin
+        if (finalize_div_zero !== 1'b0) begin
+          $fatal(1, "%s unexpected divide-by-zero during finalize", case_name);
+        end
         target_finalize_count++;
         if (target_finalize_count == target_finalize_index) begin
           check_expected_row(case_name, finalize_o_q88);

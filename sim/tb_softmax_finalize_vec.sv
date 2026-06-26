@@ -21,6 +21,7 @@ module tb_softmax_finalize_vec;
   logic softmax_score_valid_i;
   logic signed [SCORE_W-1:0] softmax_score_i;
   logic signed [15:0] softmax_v_i [D];
+  logic softmax_ready_o;
   logic softmax_valid_o;
   logic signed [SCORE_W-1:0] softmax_m_o;
   logic [L_W-1:0] softmax_l_o;
@@ -30,6 +31,7 @@ module tb_softmax_finalize_vec;
   logic [L_W-1:0] finalize_l_i;
   logic signed [ACC_W-1:0] finalize_acc_i [D];
   logic finalize_valid_o;
+  logic finalize_div_zero_o;
   logic signed [OUT_W-1:0] finalize_o_q88_o [D];
 
   fa_softmax_online_vec #(
@@ -45,6 +47,7 @@ module tb_softmax_finalize_vec;
     .score_valid_i(softmax_score_valid_i),
     .score_i(softmax_score_i),
     .v_i(softmax_v_i),
+    .ready_o(softmax_ready_o),
     .valid_o(softmax_valid_o),
     .m_o(softmax_m_o),
     .l_o(softmax_l_o),
@@ -63,6 +66,7 @@ module tb_softmax_finalize_vec;
     .l_i(finalize_l_i),
     .acc_i(finalize_acc_i),
     .valid_o(finalize_valid_o),
+    .div_zero_o(finalize_div_zero_o),
     .o_q88_o(finalize_o_q88_o)
   );
 
@@ -127,6 +131,10 @@ module tb_softmax_finalize_vec;
       softmax_v_i[63] = lane63;
       @(posedge clk);
       #1;
+      @(negedge clk);
+      clear_inputs();
+      @(posedge clk);
+      #1;
     end
   endtask
 
@@ -173,6 +181,9 @@ module tb_softmax_finalize_vec;
         @(posedge clk);
         #1;
         if (finalize_valid_o === 1'b1) begin
+          if (finalize_div_zero_o !== 1'b0) begin
+            $fatal(1, "%s unexpected finalize divide-by-zero", tag);
+          end
           return;
         end
       end
@@ -199,7 +210,8 @@ module tb_softmax_finalize_vec;
     clear_inputs();
 
     #1;
-    if (softmax_valid_o !== 1'b0 || finalize_valid_o !== 1'b0) begin
+    if (softmax_valid_o !== 1'b0 || finalize_valid_o !== 1'b0 ||
+        finalize_div_zero_o !== 1'b0) begin
       $fatal(1, "reset valid outputs not clear");
     end
 

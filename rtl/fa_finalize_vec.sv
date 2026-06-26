@@ -12,11 +12,15 @@ module fa_finalize_vec #(
   input  logic [L_W-1:0]               l_i,
   input  var logic signed [ACC_W-1:0]  acc_i [D],
   output logic                         valid_o,
+  output logic                         div_zero_o,
   output logic signed [OUT_W-1:0]      o_q88_o [D]
 );
+  localparam int unsigned RECIP_LATENCY = 4;
+
   logic                         recip_valid;
+  logic                         recip_div_zero;
   logic [31:0]                  recip_l;
-  logic signed [ACC_W-1:0]      acc_d1 [D];
+  logic signed [ACC_W-1:0]      acc_pipe [RECIP_LATENCY][D];
   logic                         quant_valid [D];
 
   fa_recip_approx #(
@@ -28,7 +32,8 @@ module fa_finalize_vec #(
     .valid_i,
     .x_i(l_i),
     .valid_o(recip_valid),
-    .y_o(recip_l)
+    .y_o(recip_l),
+    .div_zero_o(recip_div_zero)
   );
 
   genvar g;
@@ -42,7 +47,7 @@ module fa_finalize_vec #(
         .clk,
         .rst_n,
         .valid_i(recip_valid),
-        .x_i(acc_d1[g]),
+        .x_i(acc_pipe[RECIP_LATENCY-1][g]),
         .recip_l_i(recip_l),
         .valid_o(quant_valid[g]),
         .y_o(o_q88_o[g])
@@ -54,12 +59,21 @@ module fa_finalize_vec #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      for (int lane = 0; lane < D; lane++) begin
-        acc_d1[lane] <= '0;
+      div_zero_o <= 1'b0;
+      for (int stage = 0; stage < RECIP_LATENCY; stage++) begin
+        for (int lane = 0; lane < D; lane++) begin
+          acc_pipe[stage][lane] <= '0;
+        end
       end
     end else begin
+      div_zero_o <= recip_valid && recip_div_zero;
       for (int lane = 0; lane < D; lane++) begin
-        acc_d1[lane] <= valid_i ? acc_i[lane] : '0;
+        acc_pipe[0][lane] <= valid_i ? acc_i[lane] : '0;
+      end
+      for (int stage = 1; stage < RECIP_LATENCY; stage++) begin
+        for (int lane = 0; lane < D; lane++) begin
+          acc_pipe[stage][lane] <= acc_pipe[stage-1][lane];
+        end
       end
     end
   end

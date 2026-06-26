@@ -20,6 +20,33 @@ import model.recip_nr as recip_nr  # noqa: E402
 
 
 class ReciprocalNrTest(unittest.TestCase):
+    def test_recommended_32x1_zero_and_container_corners_are_bit_exact(self) -> None:
+        expected = {
+            0x00000000: (0x00000000, 0, 0, 0x00000000, (), 0x00000000, True),
+            0x00000001: (0x80000000, -23, 0, 0x7E07E07E, (0x7FF83E87,), 0xFFFFFFFF, False),
+            0x007FFFFF: (0xFFFFFE00, -1, 31, 0x40810204, (0x3FFEFC76,), 0x7FFDF8EC, False),
+            0x00800000: (0x80000000, 0, 0, 0x7E07E07E, (0x7FF83E87,), 0x7FF83E87, False),
+            0x00FFFFFF: (0xFFFFFF00, 0, 31, 0x40810204, (0x3FFEFC35,), 0x3FFEFC35, False),
+            0x01000000: (0x80000000, 1, 0, 0x7E07E07E, (0x7FF83E87,), 0x3FFC1F43, False),
+            0x7FFFFFFF: (0xFFFFFFFE, 7, 31, 0x40810204, (0x3FFEFBF4,), 0x007FFDF7, False),
+            0x80000000: (0x80000000, 8, 0, 0x7E07E07E, (0x7FF83E87,), 0x007FF83E, False),
+            0xFFFFFFFF: (0xFFFFFFFF, 8, 31, 0x40810204, (0x3FFEFBF4,), 0x003FFEFB, False),
+        }
+        for denominator, checkpoint in expected.items():
+            with self.subTest(denominator=f"0x{denominator:08X}"):
+                trace = recip_nr.reciprocal_nr_trace(denominator)
+                actual = (
+                    trace.normalized.mantissa_u1_31,
+                    trace.normalized.exponent,
+                    trace.seed_index,
+                    trace.seed_u1_31,
+                    trace.iterates_u1_31,
+                    trace.reciprocal_u1_31,
+                    trace.divide_by_zero,
+                )
+                self.assertEqual(checkpoint, actual)
+                self.assertEqual(4, trace.valid_latency)
+
     def test_analysis_cli_reports_distribution_corners_and_all_candidates(self) -> None:
         result = subprocess.run(
             [
@@ -45,6 +72,15 @@ class ReciprocalNrTest(unittest.TestCase):
         self.assertIn("zero", payload["corner_cases"])
         self.assertEqual(8, len(payload["candidates"]))
         self.assertIn("exact_reciprocal", payload)
+        self.assertEqual(
+            {
+                "recip_mode": "nr",
+                "lut_entries": 32,
+                "nr_iterations": 1,
+                "valid_latency": 4,
+            },
+            payload["recommended"],
+        )
         self.assertTrue(
             all(candidate["elements"] == 64 for candidate in payload["candidates"])
         )

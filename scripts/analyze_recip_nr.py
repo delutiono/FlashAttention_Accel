@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from model.golden_fixed import (  # noqa: E402
+    RECIP_MODE_EXACT,
     finalize_q88,
     reciprocal_u1_31,
     softmax_row_fixed,
@@ -201,6 +202,7 @@ def analyze(
                 v_rows,
                 row_index,
                 causal=True,
+                recip_mode=RECIP_MODE_EXACT,
             )
             denominators.append(state.l_u9_23)
             _update_metrics(
@@ -322,6 +324,12 @@ def analyze(
         },
         "denominators": summarize_denominators(denominators),
         "corner_cases": corner_case_report(),
+        "recommended": {
+            "recip_mode": "nr",
+            "lut_entries": 32,
+            "nr_iterations": 1,
+            "valid_latency": 4,
+        },
         "exact_reciprocal": exact,
         "candidates": candidates,
     }
@@ -333,6 +341,14 @@ def _print_text(payload: dict[str, object]) -> None:
     print(
         f"CONFIG S={payload['sequence_length']} D={payload['dimension']} "
         f"seeds={','.join(map(str, payload['seeds']))}"
+    )
+    recommended = payload["recommended"]
+    assert isinstance(recommended, dict)
+    print(
+        f"RECOMMENDED recip_mode={recommended['recip_mode']} "
+        f"LUT={recommended['lut_entries']} "
+        f"iterations={recommended['nr_iterations']} "
+        f"latency={recommended['valid_latency']}"
     )
     print(
         f"DENOM count={denominators['count']} "

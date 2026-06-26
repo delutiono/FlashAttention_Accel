@@ -9,10 +9,32 @@ proc require_std_cell_lib {} {
   return $lib_path
 }
 
+array set leaf_tops {
+  exp       fa_exp_approx
+  recip     fa_recip_approx
+  softmax   fa_softmax_online_vec
+  finalize  fa_finalize_vec
+}
+set supported_tops [list \
+    fa_exp_approx \
+    fa_recip_approx \
+    fa_softmax_online_vec \
+    fa_finalize_vec]
+
 set std_cell_lib [require_std_cell_lib]
-set top fa_accel_top
-if {[info exists ::env(TOP)] && $::env(TOP) ne ""} {
-  set top $::env(TOP)
+if {![info exists ::env(TOP)] || $::env(TOP) eq ""} {
+  error "TOP must be one of exp, recip, softmax, finalize, or its fa_* module name"
+}
+
+set requested_top $::env(TOP)
+if {[info exists leaf_tops($requested_top)]} {
+  set top $leaf_tops($requested_top)
+} else {
+  set top $requested_top
+}
+
+if {[lsearch -exact $supported_tops $top] < 0} {
+  error "unsupported leaf TOP '$requested_top'"
 }
 
 set report_dir [file join reports $top]

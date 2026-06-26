@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
+from model.recip_nr import reciprocal_nr_trace
+
 
 EXP_FRAC_BITS = 23
 EXP_ONE_U1_23 = 1 << EXP_FRAC_BITS
@@ -17,6 +19,11 @@ L_BITS = 32
 ACC_BITS = 48
 PWL_HALF_STEP_S16 = 1 << (SCORE_FRAC_BITS - 1)
 RECIP_NUMERATOR = (1 << 31) * (1 << 23)
+RECIP_MODE_EXACT = "exact"
+RECIP_MODE_NR = "nr"
+DEFAULT_RECIP_MODE = RECIP_MODE_NR
+DEFAULT_RECIP_LUT_ENTRIES = 32
+DEFAULT_RECIP_NR_ITERATIONS = 1
 
 # Rounded exp(x) * 2^23 anchors for x = 0, -0.5, ..., -16.0.
 _EXP_HALF_STEP_U1_23 = (
@@ -40,6 +47,11 @@ class FixedRowState:
     l_u9_23: int
     acc_s17_31: list[int]
     output_q88: list[int]
+    reciprocal_u1_31: int
+    recip_mode: str
+    recip_lut_entries: int
+    recip_nr_iterations: int
+    recip_valid_latency: int
 
 
 def wrap_unsigned(value: int, bits: int) -> int:
@@ -126,6 +138,34 @@ def reciprocal_u1_31(l_u9_23: int) -> int:
     return wrap_unsigned(reciprocal, 32)
 
 
+def reciprocal_for_finalize(
+    l_u9_23: int,
+    *,
+    recip_mode: str = DEFAULT_RECIP_MODE,
+    recip_lut_entries: int = DEFAULT_RECIP_LUT_ENTRIES,
+    recip_nr_iterations: int = DEFAULT_RECIP_NR_ITERATIONS,
+) -> tuple[int, int, int, int]:
+    """Resolve reciprocal value plus LUT, iteration, and latency metadata."""
+
+    if recip_mode == RECIP_MODE_EXACT:
+        return reciprocal_u1_31(l_u9_23), 0, 0, 0
+    if recip_mode != RECIP_MODE_NR:
+        raise ValueError("recip_mode must be 'nr' or 'exact'")
+    trace = reciprocal_nr_trace(
+        l_u9_23,
+        lut_entries=recip_lut_entries,
+        nr_iterations=recip_nr_iterations,
+    )
+    if trace.divide_by_zero:
+        raise ValueError("l_u9_23 must be nonzero")
+    return (
+        trace.reciprocal_u1_31,
+        recip_lut_entries,
+        recip_nr_iterations,
+        trace.valid_latency,
+    )
+
+
 def finalize_q88(acc_s17_31: int, recip_u1_31: int) -> int:
     """Match the wrapped RTL inputs, half-away rounding, and saturation."""
 
@@ -141,6 +181,9 @@ def softmax_row_fixed(
     v_rows: Sequence[Sequence[int]],
     row_index: int,
     causal: bool = True,
+    recip_mode: str = DEFAULT_RECIP_MODE,
+    recip_lut_entries: int = DEFAULT_RECIP_LUT_ENTRIES,
+    recip_nr_iterations: int = DEFAULT_RECIP_NR_ITERATIONS,
 ) -> FixedRowState:
     """Run scalar online softmax and all V lanes for one query row."""
 
@@ -209,9 +252,24 @@ def softmax_row_fixed(
     if m is None or l_value == 0:
         raise ValueError("row has no valid keys")
 
-    reciprocal = reciprocal_u1_31(l_value)
+    reciprocal, lut_entries, nr_iterations, valid_latency = reciprocal_for_finalize(
+        l_value,
+        recip_mode=recip_mode,
+        recip_lut_entries=recip_lut_entries,
+        recip_nr_iterations=recip_nr_iterations,
+    )
     output = [finalize_q88(acc_value, reciprocal) for acc_value in acc]
-    return FixedRowState(m, l_value, acc, output)
+    return FixedRowState(
+        m,
+        l_value,
+        acc,
+        output,
+        reciprocal,
+        recip_mode,
+        lut_entries,
+        nr_iterations,
+        valid_latency,
+    )
 
 
 def attention_fixed(
@@ -220,6 +278,9 @@ def attention_fixed(
     v_rows: Sequence[Sequence[int]],
     causal: bool = True,
     max_rows: int | None = None,
+    recip_mode: str = DEFAULT_RECIP_MODE,
+    recip_lut_entries: int = DEFAULT_RECIP_LUT_ENTRIES,
+    recip_nr_iterations: int = DEFAULT_RECIP_NR_ITERATIONS,
 ) -> list[list[int]]:
     """Compute fixed-point attention outputs for a prefix of query rows."""
 
@@ -227,6 +288,15 @@ def attention_fixed(
         raise ValueError("Q, K, and V must have the same row count")
     row_count = len(q_rows) if max_rows is None else min(len(q_rows), max_rows)
     return [
-        softmax_row_fixed(q_rows[row], k_rows, v_rows, row, causal).output_q88
+        softmax_row_fixed(
+            q_rows[row],
+            k_rows,
+            v_rows,
+            row,
+            causal,
+            recip_mode,
+            recip_lut_entries,
+            recip_nr_iterations,
+        ).output_q88
         for row in range(row_count)
     ]

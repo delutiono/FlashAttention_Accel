@@ -1,6 +1,6 @@
-# Fixed-Point Spec v0.4 Reciprocal NR Closure
+# Fixed-Point Spec v0.5 Default NR Finalization
 
-Status: model-side numerical contract for RTL alignment. The exp and online-softmax update rules remain frozen from v0.3. This revision freezes a division-free reciprocal normalization, seed ROM, and fixed-count Newton-Raphson contract in the separate `model/recip_nr.py` oracle without changing the `model/golden_fixed.py` main path.
+Status: algorithm-side contract ready for RTL alignment. The exp, score, and online-softmax update rules remain frozen from v0.3. The default `model/golden_fixed.py` finalization path now uses the division-free 32-entry LUT plus one Newton-Raphson iteration. Exact division remains available only as an explicit comparison mode.
 
 ## Baseline
 
@@ -73,7 +73,9 @@ exp  = Y[i] - drop
 ### Reciprocal
 
 - Reciprocal input is a 32-bit `U9.23`; output is a 32-bit `U1.31`.
-- The v0.3 exact formula remains in `golden_fixed.py` as the comparison oracle. The RTL-target approximation is isolated in `model/recip_nr.py`.
+- Default fixed golden mode is `recip_mode=nr`, `LUT_ENTRIES=32`, `NR_ITERATIONS=1`, valid latency `4`.
+- The exact formula remains in `golden_fixed.py` as the comparison oracle and is selected with `recip_mode=exact`.
+- The RTL-target approximation and bit-exact checkpoints are implemented in `model/recip_nr.py`.
 - The datapath contains no variable division. Runtime operations are leading-one detection, shifts, ROM lookup, add/subtract, fixed-width multiplication, comparison, and a fixed-count loop.
 - Supported configurations are `LUT_ENTRIES={8,16,32,64}` and `NR_ITERATIONS={1,2}`.
 
@@ -111,11 +113,12 @@ e <  0: recip_u1_31 = saturate_u32(y << -e)
 
 Valid baseline rows have `l>=1`, so `e>=0`; the left-shift saturation rule covers the full nonzero `U9.23` container. For `x=0`, output zero, assert `divide_by_zero`, and preserve normal valid timing.
 
-Recommended RTL baseline:
+Frozen RTL baseline:
 
 - `32` entries, `1` NR iteration, valid latency `4` cycles.
 - Stricter exact-final alignment option: `16` entries, `2` NR iterations, valid latency `6` cycles.
 - Pipeline latency is `2 + 2*NR_ITERATIONS`: normalization/address, registered seed read, and two registered multiply stages per iteration. `out_valid` is `in_valid` delayed by the same fixed count for all data, including zero.
+- For the frozen 32x1 interface, accept `l_u9_23` when `in_valid=1`; return `recip_u1_31`, `divide_by_zero`, and `out_valid` exactly four cycles later. Zero follows the same four-cycle valid timing and returns reciprocal zero with `divide_by_zero=1`.
 
 Intermediate formats and narrowing rules:
 
@@ -286,14 +289,23 @@ All between-anchor inputs use the integer interpolation formula in "Exp Input an
 
 The 33 anchors define only the interpolation interval. Boundary handling occurs on the unwrapped mathematical delta before anchor lookup: nonnegative deltas return one, exactly `-16.0` returns the final one-LSB anchor, and values below `-16.0` return zero.
 
-The model regression gate is causal `S=64,D=64`, seeds `100,101,102`, with every seed required to meet:
+The model regression gates are causal `D=64`, seeds `100,101,102,103,104`:
+
+- Required fast gate: `S=64`.
+- Required full baseline gate: `S=256`.
+- Both gates run the default 32x1 finalization and require every seed to meet:
 
 ```text
 MAE   <= 0.03
 MaxAE <= 0.10
+candidate final vs exact-reciprocal final <= 1 Q8.8 LSB
 ```
 
-An `S=256,D=64` single-seed run is recommended as an extended check when runtime permits.
+The regression output must record `recip_mode`, LUT entries, NR iterations, and valid latency. Reproduce the full gate with:
+
+```text
+python -B scripts/run_numeric_regression.py --seeds 100,101,102,103,104 --sequence-length 256 --dimension 64 --require-mae 0.03 --require-maxae 0.10 --require-candidate-exact-max-lsb 1
+```
 
 ### Bring-Up Lower-By-1 Subset
 
@@ -370,10 +382,11 @@ The corresponding manual expected file is `test_vectors/debug/softmax_raise_by_o
 
 ## Reciprocal Oracle Alignment
 
-- `model/golden_fixed.py::reciprocal_u1_31` remains the exact variable-division reference and is unchanged.
+- `model/golden_fixed.py::softmax_row_fixed` and `attention_fixed` default to 32x1 NR finalization.
+- `model/golden_fixed.py::reciprocal_u1_31` remains the exact variable-division reference selected by `recip_mode=exact`.
 - `model/recip_nr.py::reciprocal_nr_u1_31` is the RTL-target, pure-integer, division-free oracle.
 - `model/recip_nr.py::reciprocal_nr_trace` exposes normalized mantissa, exponent, seed index, seed, each NR iterate, final reciprocal, zero flag, and valid latency for debug comparison.
-- RTL should match the selected approximation bit-for-bit at every exposed checkpoint before replacing exact-point bring-up constants.
+- RTL must match the 32x1 trace bit-for-bit at every exposed checkpoint and delay valid by four cycles before replacing exact-point bring-up constants.
 
 ## Rounding and Saturation
 
@@ -407,7 +420,7 @@ The generated debug subset `test_vectors/debug/causal_i0` freezes a narrow sched
 After all K/V tiles for a query row:
 
 ```text
-recip_l = approx_recip(l)
+recip_l = recip_nr_32x1(l)  # default, 4-cycle valid latency
 O[d]    = quant_q88(acc[d] * recip_l)
 ```
 
@@ -434,6 +447,6 @@ With the proposed formats:
 These items remain open after the model-side numerical closure:
 
 - RTL microarchitecture for implementing the frozen 33-anchor exp contract.
-- Bit-exact Python/RTL alignment for all rounding and wrapping points.
+- Bit-exact RTL alignment to the frozen Python reciprocal checkpoints and four-cycle valid timing.
 - Whether `l`/`acc` can be reduced below 32/48 bits while preserving MAE and MaxAE targets.
 - Whether non-default `REG_SCALE` values are supported beyond the fixed `REG_SCALE=32` baseline.

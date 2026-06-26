@@ -1,22 +1,49 @@
 # Reciprocal NR Error Analysis
 
-Date: 2026-06-25
+Date: 2026-06-26
 
 ## Scope
 
-This report evaluates the division-free oracle in `model/recip_nr.py` without changing the `golden_fixed.py` main path. It uses the current Q/K/V generator and online-softmax model with:
+This report evaluates the division-free oracle now used by the default `model/golden_fixed.py` finalization path. Exact reciprocal remains an explicit comparison mode. The full run uses:
 
 - `S=256`, `D=64`, causal attention.
 - Seeds `100,101,102,103,104`.
 - `1280` final row denominators and `81920` final Q8.8 output elements.
-- Candidate reciprocal substituted into the existing `finalize_q88`.
+- Default reciprocal mode `nr`, 32 LUT entries, one NR iteration, four-cycle RTL-valid latency.
 - Final error measured against the independent ideal-softmax floating reference.
 
 Reproduce:
 
 ```text
-python -B scripts/analyze_recip_nr.py --seeds 100,101,102,103,104 --sequence-length 256 --dimension 64 --enforce-thresholds
+python -B scripts/run_numeric_regression.py --seeds 100,101,102,103,104 --sequence-length 256 --dimension 64 --require-mae 0.03 --require-maxae 0.10 --require-candidate-exact-max-lsb 1
 ```
+
+## Default-Path Closure
+
+The default fixed golden path passes both required gates:
+
+| Gate | Seeds | Candidate MAE | Candidate MaxAE | Exact-final MAE | Candidate vs exact |
+|---|---|---:|---:|---:|---:|
+| `S=64,D=64` | 100-104 | 0.00394442 | 0.03223060 | 0.00394422 | 51/20480 changed, max 1 LSB |
+| `S=256,D=64` | 100-104 | 0.00236523 | 0.03811298 | 0.00236447 | 108/81920 changed, max 1 LSB |
+
+Both are below `MAE<=0.03` and `MaxAE<=0.10`. The exact CLI comparison is:
+
+```text
+python -B scripts/run_numeric_regression.py --recip-mode exact ...
+```
+
+It reports LUT, iterations, and latency as zero because exact division is a model-only reference, not the RTL pipeline.
+
+## Error Attribution
+
+`run_numeric_regression.py` reports three complementary views from the same final `m/l/acc` state:
+
+- `pwl_fixed_vs_ideal`: exact reciprocal finalization versus ideal softmax. This includes Q8.8 inputs, score scaling/wrapping, exp PWL, online rescale truncation/wrapping, and final Q8.8 rounding/saturation.
+- `reciprocal_vs_exact`: default NR finalization versus exact reciprocal finalization. At `S=256`, mean delta is `0.001318` Q8.8 LSB, maximum delta is `1` LSB, and `108` outputs change.
+- `candidate_vs_ideal`: the complete default path versus ideal softmax. This is the acceptance MAE/MaxAE.
+
+The reciprocal contribution is therefore bounded to one final-output LSB in the required seeds; the observed MaxAE is controlled by the pre-reciprocal fixed-point path rather than the 32x1 reciprocal.
 
 ## Denominator Distribution
 
@@ -62,7 +89,7 @@ The exact reciprocal baseline produces `MAE=0.00236447` and `MaxAE=0.03811298`. 
 
 ## Recommendation
 
-Use **32 LUT entries and 1 NR iteration** for the first generic RTL implementation:
+The default golden and frozen RTL target use **32 LUT entries and 1 NR iteration**:
 
 - Same 4-cycle latency as other one-iteration choices.
 - `1024` ROM bits.

@@ -17,7 +17,12 @@ if str(REPO_ROOT) not in sys.path:
 
 import model.golden_fixed as golden_fixed  # noqa: E402
 from model.golden_fixed import (  # noqa: E402
+    DEFAULT_RECIP_LUT_ENTRIES,
+    DEFAULT_RECIP_MODE,
+    DEFAULT_RECIP_NR_ITERATIONS,
     EXP_ONE_U1_23,
+    RECIP_MODE_EXACT,
+    RECIP_MODE_NR,
     exp_pwl_u1_23,
     finalize_q88,
     reciprocal_u1_31,
@@ -37,7 +42,7 @@ class FixedGoldenTest(unittest.TestCase):
                 "-B",
                 str(REPO_ROOT / "scripts" / "run_numeric_regression.py"),
                 "--seeds",
-                "100,101,102",
+                "100,101,102,103,104",
                 "--sequence-length",
                 "64",
                 "--dimension",
@@ -46,6 +51,8 @@ class FixedGoldenTest(unittest.TestCase):
                 "0.03",
                 "--require-maxae",
                 "0.10",
+                "--require-candidate-exact-max-lsb",
+                "1",
             ],
             check=False,
             text=True,
@@ -53,6 +60,126 @@ class FixedGoldenTest(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("RESULT=PASS", result.stdout)
+        self.assertIn("recip_mode=nr", result.stdout)
+        self.assertIn("LUT=32", result.stdout)
+        self.assertIn("iterations=1", result.stdout)
+        self.assertIn("latency=4", result.stdout)
+
+    def test_s256_seeds_100_through_104_meet_finalization_gates(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(REPO_ROOT / "scripts" / "run_numeric_regression.py"),
+                "--seeds",
+                "100,101,102,103,104",
+                "--sequence-length",
+                "256",
+                "--dimension",
+                "64",
+                "--require-mae",
+                "0.03",
+                "--require-maxae",
+                "0.10",
+                "--require-candidate-exact-max-lsb",
+                "1",
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("RESULT=PASS", result.stdout)
+
+    def test_default_finalize_is_bit_exact_32_entry_one_nr(self) -> None:
+        self.assertEqual(RECIP_MODE_NR, DEFAULT_RECIP_MODE)
+        self.assertEqual(32, DEFAULT_RECIP_LUT_ENTRIES)
+        self.assertEqual(1, DEFAULT_RECIP_NR_ITERATIONS)
+        state = softmax_row_fixed(
+            q_row=[256],
+            k_rows=[[0], [-2048]],
+            v_rows=[[256], [512]],
+            row_index=1,
+            causal=True,
+        )
+        self.assertEqual(0x00AF16AC, state.l_u9_23)
+        self.assertEqual(0x5D92640B, state.reciprocal_u1_31)
+        self.assertEqual(RECIP_MODE_NR, state.recip_mode)
+        self.assertEqual(32, state.recip_lut_entries)
+        self.assertEqual(1, state.recip_nr_iterations)
+        self.assertEqual(4, state.recip_valid_latency)
+        self.assertEqual([325], state.output_q88)
+
+    def test_exact_mode_remains_an_explicit_comparison_path(self) -> None:
+        nr_state = softmax_row_fixed(
+            q_row=[256],
+            k_rows=[[0], [-3072]],
+            v_rows=[[256], [512]],
+            row_index=1,
+            causal=True,
+        )
+        exact_state = softmax_row_fixed(
+            q_row=[256],
+            k_rows=[[0], [-3072]],
+            v_rows=[[256], [512]],
+            row_index=1,
+            causal=True,
+            recip_mode=RECIP_MODE_EXACT,
+        )
+        self.assertEqual(reciprocal_u1_31(exact_state.l_u9_23), exact_state.reciprocal_u1_31)
+        self.assertEqual(RECIP_MODE_EXACT, exact_state.recip_mode)
+        self.assertEqual(0, exact_state.recip_lut_entries)
+        self.assertEqual(0, exact_state.recip_nr_iterations)
+        self.assertEqual(0, exact_state.recip_valid_latency)
+        self.assertLessEqual(
+            max(abs(a - b) for a, b in zip(nr_state.output_q88, exact_state.output_q88)),
+            1,
+        )
+
+    def test_numeric_regression_json_records_reciprocal_and_error_sources(self) -> None:
+        command = [
+            sys.executable,
+            "-B",
+            str(REPO_ROOT / "scripts" / "run_numeric_regression.py"),
+            "--seeds",
+            "100",
+            "--sequence-length",
+            "8",
+            "--dimension",
+            "8",
+            "--json",
+        ]
+        candidate = subprocess.run(command, check=False, text=True, capture_output=True)
+        self.assertEqual(0, candidate.returncode, candidate.stderr)
+        payload = json.loads(candidate.stdout)
+        self.assertEqual(
+            {
+                "mode": "nr",
+                "lut_entries": 32,
+                "nr_iterations": 1,
+                "valid_latency": 4,
+            },
+            payload["reciprocal"],
+        )
+        self.assertIn("pwl_fixed_vs_ideal", payload["error_sources"])
+        self.assertIn("reciprocal_vs_exact", payload["error_sources"])
+        self.assertIn("candidate_vs_ideal", payload["error_sources"])
+        self.assertLessEqual(
+            payload["error_sources"]["reciprocal_vs_exact"]["max_final_delta_lsb"],
+            1,
+        )
+
+        exact = subprocess.run(
+            [*command[:-1], "--recip-mode", "exact", "--json"],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, exact.returncode, exact.stderr)
+        exact_payload = json.loads(exact.stdout)
+        self.assertEqual("exact", exact_payload["reciprocal"]["mode"])
+        self.assertEqual(0, exact_payload["reciprocal"]["valid_latency"])
+        self.assertEqual(0, exact_payload["error_sources"]["reciprocal_vs_exact"]["max_final_delta_lsb"])
 
     def test_numeric_regression_cli_thresholds_pass_with_zero_exit(self) -> None:
         result = subprocess.run(
@@ -105,6 +232,33 @@ class FixedGoldenTest(unittest.TestCase):
         self.assertIn("RESULT=FAIL", result.stdout)
         self.assertIn("MAE threshold exceeded", result.stdout)
         self.assertIn("MaxAE threshold exceeded", result.stdout)
+
+    def test_candidate_exact_threshold_alone_controls_result_text_and_exit(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(REPO_ROOT / "scripts" / "run_numeric_regression.py"),
+                "--seeds",
+                "100",
+                "--sequence-length",
+                "64",
+                "--dimension",
+                "64",
+                "--recip-lut-entries",
+                "8",
+                "--recip-nr-iterations",
+                "1",
+                "--require-candidate-exact-max-lsb",
+                "1",
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("candidate-vs-exact threshold exceeded", result.stdout)
+        self.assertIn("RESULT=FAIL", result.stdout)
 
     def test_numeric_regression_cli_applies_thresholds_to_each_seed(self) -> None:
         base_command = [
