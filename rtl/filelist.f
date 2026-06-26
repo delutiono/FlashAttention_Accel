@@ -4,6 +4,7 @@ rtl/fa_scheduler.sv
 rtl/fa_dot_pe.sv
 rtl/fa_score_scale.sv
 rtl/fa_score_pipe.sv
+rtl/fa_row_engine.sv
 rtl/fa_compute_core.sv
 rtl/fa_exp_approx.sv
 rtl/fa_recip_approx.sv
