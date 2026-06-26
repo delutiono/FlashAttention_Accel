@@ -29,6 +29,7 @@ module fa_regfile (
   output logic         done_clear_pulse,
   output logic         irq_en,
   output logic         causal_en,
+  output logic         compute_smoke_en,
   output logic [63:0]  q_base,
   output logic [63:0]  k_base,
   output logic [63:0]  v_base,
@@ -98,6 +99,7 @@ module fa_regfile (
       done_clear_pulse <= 1'b0;
       irq_en           <= 1'b0;
       causal_en        <= 1'b1;
+      compute_smoke_en <= 1'b0;
       q_base           <= 64'h0;
       k_base           <= 64'h0;
       v_base           <= 64'h0;
@@ -150,6 +152,7 @@ module fa_regfile (
           end
           REG_CFG: begin
             if (write_strb[0]) causal_en <= write_data[0];
+            if (write_strb[3]) compute_smoke_en <= write_data[31];
           end
           REG_Q_BASE_L:     q_base[31:0]  <= apply_wstrb(q_base[31:0], write_data, write_strb);
           REG_Q_BASE_H:     q_base[63:32] <= apply_wstrb(q_base[63:32], write_data, write_strb);
@@ -176,7 +179,7 @@ module fa_regfile (
         unique case (s_axil_araddr)
           REG_CTRL:         s_axil_rdata <= {29'h0, irq_en, 2'b00};
           REG_STATUS:       s_axil_rdata <= {29'h0, error_i, done_i, busy_i};
-          REG_CFG:          s_axil_rdata <= {31'h0, causal_en};
+          REG_CFG:          s_axil_rdata <= {compute_smoke_en, 30'h0, causal_en};
           REG_Q_BASE_L:     s_axil_rdata <= q_base[31:0];
           REG_Q_BASE_H:     s_axil_rdata <= q_base[63:32];
           REG_K_BASE_L:     s_axil_rdata <= k_base[31:0];

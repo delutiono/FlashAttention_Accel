@@ -53,10 +53,15 @@ module fa_accel_top (
 
   output logic                     irq
 );
+  localparam int unsigned TOP_COMPUTE_ROWS = 4;
+  localparam int unsigned TOP_COMPUTE_D = 64;
+  localparam int unsigned TOP_ROW_BEATS = 16;
+
   logic        start_pulse;
   logic        soft_reset_pulse;
   logic        irq_en;
   logic        causal_en;
+  logic        compute_smoke_en;
   logic [63:0] q_base;
   logic [63:0] k_base;
   logic [63:0] v_base;
@@ -73,9 +78,10 @@ module fa_accel_top (
 
   logic        rd_cmd_valid;
   logic        rd_cmd_ready;
+  logic [63:0] rd_cmd_addr;
   logic [63:0] rd_data;
   logic        rd_valid;
-  logic        rd_ready;
+  logic        rd_out_ready;
   logic        rd_last;
   logic        rd_done;
   logic        rd_error;
@@ -83,22 +89,71 @@ module fa_accel_top (
 
   logic        wr_cmd_valid;
   logic        wr_cmd_ready;
+  logic [63:0] wr_cmd_addr;
+  logic [63:0] wr_in_data;
+  logic        wr_in_valid;
+  logic        wr_in_ready;
+  logic        wr_in_last;
   logic        wr_done;
   logic        wr_error;
   logic [31:0] wr_byte_count;
 
-  typedef enum logic [1:0] {
-    TOP_DMA_SMOKE_IDLE,
-    TOP_DMA_SMOKE_ISSUE,
-    TOP_DMA_SMOKE_RUN,
-    TOP_DMA_SMOKE_COMPLETE
-  } top_dma_smoke_state_e;
+  logic signed [FA_ELEM_W-1:0] compute_q_row [TOP_COMPUTE_D];
+  logic signed [FA_ELEM_W-1:0] compute_k_row [TOP_COMPUTE_D];
+  logic signed [FA_ELEM_W-1:0] compute_v_row [TOP_COMPUTE_D];
+  logic signed [FA_ELEM_W-1:0] compute_o_row [TOP_COMPUTE_D];
 
-  top_dma_smoke_state_e top_dma_smoke_state;
-  logic                 top_dma_smoke_rd_issued;
-  logic                 top_dma_smoke_wr_issued;
-  logic                 top_dma_smoke_rd_done_seen;
-  logic                 top_dma_smoke_wr_done_seen;
+  logic        row_engine_valid_i;
+  logic        row_engine_row_start;
+  logic        row_engine_last;
+  logic        row_engine_ready;
+  logic        row_engine_busy;
+  logic        row_engine_valid_o;
+  logic        row_engine_div_zero;
+  logic signed [FA_ELEM_W-1:0] row_engine_o [TOP_COMPUTE_D];
+
+  typedef enum logic [4:0] {
+    TOP_ST_IDLE,
+    TOP_ST_DMA_ISSUE,
+    TOP_ST_DMA_RUN,
+    TOP_ST_DMA_COMPLETE,
+    TOP_ST_COMPUTE_LOAD_Q_ISSUE,
+    TOP_ST_COMPUTE_LOAD_Q_RUN,
+    TOP_ST_COMPUTE_LOAD_K_ISSUE,
+    TOP_ST_COMPUTE_LOAD_K_RUN,
+    TOP_ST_COMPUTE_LOAD_V_ISSUE,
+    TOP_ST_COMPUTE_LOAD_V_RUN,
+    TOP_ST_COMPUTE_ENGINE_ISSUE,
+    TOP_ST_COMPUTE_ENGINE_WAIT,
+    TOP_ST_COMPUTE_WRITE_ISSUE,
+    TOP_ST_COMPUTE_WRITE_RUN,
+    TOP_ST_COMPUTE_COMPLETE
+  } top_state_e;
+
+  top_state_e top_state;
+  logic       top_dma_smoke_rd_issued;
+  logic       top_dma_smoke_wr_issued;
+  logic       top_dma_smoke_rd_done_seen;
+  logic       top_dma_smoke_wr_done_seen;
+  logic [1:0] compute_q_idx;
+  logic [1:0] compute_k_idx;
+  logic [3:0] compute_rd_beat_idx;
+  logic [3:0] compute_wr_beat_idx;
+  logic [63:0] compute_rd_addr;
+  logic [63:0] compute_wr_data;
+
+  function automatic logic [63:0] top_row_addr(
+    input logic [63:0] base,
+    input logic [1:0]  row
+  );
+    logic [63:0] row_ext;
+    logic [63:0] stride_ext;
+    begin
+      row_ext = {62'h0, row};
+      stride_ext = {32'h0, stride_bytes};
+      top_row_addr = base + (row_ext * stride_ext);
+    end
+  endfunction
 
   fa_regfile u_regfile (
     .clk              (clk),
@@ -125,6 +180,7 @@ module fa_accel_top (
     .done_clear_pulse (done_clear),
     .irq_en           (irq_en),
     .causal_en        (causal_en),
+    .compute_smoke_en (compute_smoke_en),
     .q_base           (q_base),
     .k_base           (k_base),
     .v_base           (v_base),
@@ -163,23 +219,93 @@ module fa_accel_top (
     .score_valid_o    ()
   );
 
-  assign dma_rst_n    = rst_n & !soft_reset_pulse;
-  assign irq          = irq_en & done;
-  assign rd_cmd_valid = (top_dma_smoke_state == TOP_DMA_SMOKE_ISSUE) &&
-                        !top_dma_smoke_rd_issued;
-  assign wr_cmd_valid = (top_dma_smoke_state == TOP_DMA_SMOKE_ISSUE) &&
-                        !top_dma_smoke_wr_issued;
+  fa_row_engine #(
+    .D(TOP_COMPUTE_D),
+    .ELEM_W(FA_ELEM_W),
+    .OUT_W(FA_ELEM_W)
+  ) u_row_engine (
+    .clk,
+    .rst_n             (dma_rst_n),
+    .valid_i           (row_engine_valid_i),
+    .row_start_i       (row_engine_row_start),
+    .last_i            (row_engine_last),
+    .q_index_i         ({6'h0, compute_q_idx}),
+    .k_index_i         ({6'h0, compute_k_idx}),
+    .q_i               (compute_q_row),
+    .k_i               (compute_k_row),
+    .v_i               (compute_v_row),
+    .ready_o           (row_engine_ready),
+    .busy_o            (row_engine_busy),
+    .valid_o           (row_engine_valid_o),
+    .div_zero_o        (row_engine_div_zero),
+    .o_q88_o           (row_engine_o)
+  );
+
+  assign dma_rst_n = rst_n & !soft_reset_pulse;
+  assign irq       = irq_en & done;
+
+  always_comb begin
+    compute_rd_addr = 64'h0;
+    unique case (top_state)
+      TOP_ST_COMPUTE_LOAD_Q_ISSUE,
+      TOP_ST_COMPUTE_LOAD_Q_RUN: compute_rd_addr = top_row_addr(q_base, compute_q_idx);
+      TOP_ST_COMPUTE_LOAD_K_ISSUE,
+      TOP_ST_COMPUTE_LOAD_K_RUN: compute_rd_addr = top_row_addr(k_base, compute_k_idx);
+      TOP_ST_COMPUTE_LOAD_V_ISSUE,
+      TOP_ST_COMPUTE_LOAD_V_RUN: compute_rd_addr = top_row_addr(v_base, compute_k_idx);
+      default: compute_rd_addr = q_base;
+    endcase
+  end
+
+  always_comb begin
+    compute_wr_data = 64'h0;
+    for (int lane = 0; lane < 4; lane++) begin
+      compute_wr_data[(lane * 16) +: 16] =
+          compute_o_row[(compute_wr_beat_idx * 4) + lane];
+    end
+  end
+
+  assign rd_cmd_valid = (top_state == TOP_ST_DMA_ISSUE &&
+                         !top_dma_smoke_rd_issued) ||
+                        (top_state == TOP_ST_COMPUTE_LOAD_Q_ISSUE) ||
+                        (top_state == TOP_ST_COMPUTE_LOAD_K_ISSUE) ||
+                        (top_state == TOP_ST_COMPUTE_LOAD_V_ISSUE);
+  assign rd_cmd_addr  = ((top_state == TOP_ST_COMPUTE_LOAD_Q_ISSUE) ||
+                         (top_state == TOP_ST_COMPUTE_LOAD_K_ISSUE) ||
+                         (top_state == TOP_ST_COMPUTE_LOAD_V_ISSUE)) ?
+                        compute_rd_addr : q_base;
+  assign rd_out_ready = ((top_state == TOP_ST_COMPUTE_LOAD_Q_RUN) ||
+                         (top_state == TOP_ST_COMPUTE_LOAD_K_RUN) ||
+                         (top_state == TOP_ST_COMPUTE_LOAD_V_RUN)) ?
+                        1'b1 : wr_in_ready;
+
+  assign wr_cmd_valid = (top_state == TOP_ST_DMA_ISSUE &&
+                         !top_dma_smoke_wr_issued) ||
+                        (top_state == TOP_ST_COMPUTE_WRITE_ISSUE);
+  assign wr_cmd_addr  = (top_state == TOP_ST_COMPUTE_WRITE_ISSUE) ?
+                        top_row_addr(o_base, compute_q_idx) : o_base;
+  assign wr_in_data   = (top_state == TOP_ST_COMPUTE_WRITE_RUN) ?
+                        compute_wr_data : rd_data;
+  assign wr_in_valid  = (top_state == TOP_ST_COMPUTE_WRITE_RUN) ?
+                        1'b1 : rd_valid;
+  assign wr_in_last   = (top_state == TOP_ST_COMPUTE_WRITE_RUN) ?
+                        (compute_wr_beat_idx == 4'(TOP_ROW_BEATS - 1)) : rd_last;
+
+  assign row_engine_valid_i   = (top_state == TOP_ST_COMPUTE_ENGINE_ISSUE) &&
+                                row_engine_ready;
+  assign row_engine_row_start = (compute_k_idx == 2'd0);
+  assign row_engine_last      = (compute_k_idx == compute_q_idx);
 
   fa_dma_rd u_dma_rd (
     .clk           (clk),
     .rst_n         (dma_rst_n),
     .cmd_valid     (rd_cmd_valid),
     .cmd_ready     (rd_cmd_ready),
-    .cmd_addr      (q_base),
+    .cmd_addr      (rd_cmd_addr),
     .cmd_beats     (9'd16),
     .out_data      (rd_data),
     .out_valid     (rd_valid),
-    .out_ready     (rd_ready),
+    .out_ready     (rd_out_ready),
     .out_last      (rd_last),
     .done          (rd_done),
     .error         (rd_error),
@@ -202,12 +328,12 @@ module fa_accel_top (
     .rst_n         (dma_rst_n),
     .cmd_valid     (wr_cmd_valid),
     .cmd_ready     (wr_cmd_ready),
-    .cmd_addr      (o_base),
+    .cmd_addr      (wr_cmd_addr),
     .cmd_beats     (9'd16),
-    .in_data       (rd_data),
-    .in_valid      (rd_valid),
-    .in_ready      (rd_ready),
-    .in_last       (rd_last),
+    .in_data       (wr_in_data),
+    .in_valid      (wr_in_valid),
+    .in_ready      (wr_in_ready),
+    .in_last       (wr_in_last),
     .done          (wr_done),
     .error         (wr_error),
     .byte_count    (wr_byte_count),
@@ -229,25 +355,45 @@ module fa_accel_top (
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      top_dma_smoke_state        <= TOP_DMA_SMOKE_IDLE;
+      top_state                  <= TOP_ST_IDLE;
       top_dma_smoke_rd_issued    <= 1'b0;
       top_dma_smoke_wr_issued    <= 1'b0;
       top_dma_smoke_rd_done_seen <= 1'b0;
       top_dma_smoke_wr_done_seen <= 1'b0;
+      compute_q_idx              <= 2'd0;
+      compute_k_idx              <= 2'd0;
+      compute_rd_beat_idx        <= 4'd0;
+      compute_wr_beat_idx        <= 4'd0;
       busy                       <= 1'b0;
       done                       <= 1'b0;
       error                      <= 1'b0;
       cycles                     <= 32'h0;
+      for (int lane = 0; lane < TOP_COMPUTE_D; lane++) begin
+        compute_q_row[lane] <= '0;
+        compute_k_row[lane] <= '0;
+        compute_v_row[lane] <= '0;
+        compute_o_row[lane] <= '0;
+      end
     end else if (soft_reset_pulse) begin
-      top_dma_smoke_state        <= TOP_DMA_SMOKE_IDLE;
+      top_state                  <= TOP_ST_IDLE;
       top_dma_smoke_rd_issued    <= 1'b0;
       top_dma_smoke_wr_issued    <= 1'b0;
       top_dma_smoke_rd_done_seen <= 1'b0;
       top_dma_smoke_wr_done_seen <= 1'b0;
+      compute_q_idx              <= 2'd0;
+      compute_k_idx              <= 2'd0;
+      compute_rd_beat_idx        <= 4'd0;
+      compute_wr_beat_idx        <= 4'd0;
       busy                       <= 1'b0;
       done                       <= 1'b0;
       error                      <= 1'b0;
       cycles                     <= 32'h0;
+      for (int lane = 0; lane < TOP_COMPUTE_D; lane++) begin
+        compute_q_row[lane] <= '0;
+        compute_k_row[lane] <= '0;
+        compute_v_row[lane] <= '0;
+        compute_o_row[lane] <= '0;
+      end
     end else begin
       if (done_clear) begin
         done <= 1'b0;
@@ -257,23 +403,59 @@ module fa_accel_top (
         cycles <= cycles + 32'd1;
       end
 
-      unique case (top_dma_smoke_state)
-        TOP_DMA_SMOKE_IDLE: begin
+      if (rd_valid && rd_out_ready) begin
+        unique case (top_state)
+          TOP_ST_COMPUTE_LOAD_Q_RUN: begin
+            for (int lane = 0; lane < 4; lane++) begin
+              compute_q_row[(compute_rd_beat_idx * 4) + lane] <=
+                  rd_data[(lane * 16) +: 16];
+            end
+            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+          end
+          TOP_ST_COMPUTE_LOAD_K_RUN: begin
+            for (int lane = 0; lane < 4; lane++) begin
+              compute_k_row[(compute_rd_beat_idx * 4) + lane] <=
+                  rd_data[(lane * 16) +: 16];
+            end
+            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+          end
+          TOP_ST_COMPUTE_LOAD_V_RUN: begin
+            for (int lane = 0; lane < 4; lane++) begin
+              compute_v_row[(compute_rd_beat_idx * 4) + lane] <=
+                  rd_data[(lane * 16) +: 16];
+            end
+            compute_rd_beat_idx <= compute_rd_beat_idx + 4'd1;
+          end
+          default: begin
+          end
+        endcase
+      end
+
+      unique case (top_state)
+        TOP_ST_IDLE: begin
           busy <= 1'b0;
           if (start_pulse) begin
-            top_dma_smoke_state        <= TOP_DMA_SMOKE_ISSUE;
             top_dma_smoke_rd_issued    <= 1'b0;
             top_dma_smoke_wr_issued    <= 1'b0;
             top_dma_smoke_rd_done_seen <= 1'b0;
             top_dma_smoke_wr_done_seen <= 1'b0;
+            compute_q_idx              <= 2'd0;
+            compute_k_idx              <= 2'd0;
+            compute_rd_beat_idx        <= 4'd0;
+            compute_wr_beat_idx        <= 4'd0;
             busy                       <= 1'b1;
             done                       <= 1'b0;
             error                      <= 1'b0;
             cycles                     <= 32'h0;
+            if (compute_smoke_en) begin
+              top_state <= TOP_ST_COMPUTE_LOAD_Q_ISSUE;
+            end else begin
+              top_state <= TOP_ST_DMA_ISSUE;
+            end
           end
         end
 
-        TOP_DMA_SMOKE_ISSUE: begin
+        TOP_ST_DMA_ISSUE: begin
           if (rd_cmd_valid && rd_cmd_ready) begin
             top_dma_smoke_rd_issued <= 1'b1;
           end
@@ -282,11 +464,11 @@ module fa_accel_top (
           end
           if ((top_dma_smoke_rd_issued || (rd_cmd_valid && rd_cmd_ready)) &&
               (top_dma_smoke_wr_issued || (wr_cmd_valid && wr_cmd_ready))) begin
-            top_dma_smoke_state <= TOP_DMA_SMOKE_RUN;
+            top_state <= TOP_ST_DMA_RUN;
           end
         end
 
-        TOP_DMA_SMOKE_RUN: begin
+        TOP_ST_DMA_RUN: begin
           if (rd_done) begin
             top_dma_smoke_rd_done_seen <= 1'b1;
           end
@@ -295,30 +477,141 @@ module fa_accel_top (
           end
           if ((top_dma_smoke_rd_done_seen || rd_done) &&
               (top_dma_smoke_wr_done_seen || wr_done)) begin
-            top_dma_smoke_state <= TOP_DMA_SMOKE_COMPLETE;
+            top_state <= TOP_ST_DMA_COMPLETE;
           end
         end
 
-        TOP_DMA_SMOKE_COMPLETE: begin
+        TOP_ST_DMA_COMPLETE: begin
           busy <= 1'b0;
           if (rd_error || wr_error) begin
             error <= 1'b1;
           end else begin
             done <= 1'b1;
           end
-          top_dma_smoke_state <= TOP_DMA_SMOKE_IDLE;
+          top_state <= TOP_ST_IDLE;
+        end
+
+        TOP_ST_COMPUTE_LOAD_Q_ISSUE: begin
+          if (rd_cmd_valid && rd_cmd_ready) begin
+            compute_rd_beat_idx <= 4'd0;
+            top_state <= TOP_ST_COMPUTE_LOAD_Q_RUN;
+          end
+        end
+
+        TOP_ST_COMPUTE_LOAD_Q_RUN: begin
+          if (rd_done) begin
+            if (rd_error) begin
+              error <= 1'b1;
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else begin
+              compute_k_idx <= 2'd0;
+              top_state <= TOP_ST_COMPUTE_LOAD_K_ISSUE;
+            end
+          end
+        end
+
+        TOP_ST_COMPUTE_LOAD_K_ISSUE: begin
+          if (rd_cmd_valid && rd_cmd_ready) begin
+            compute_rd_beat_idx <= 4'd0;
+            top_state <= TOP_ST_COMPUTE_LOAD_K_RUN;
+          end
+        end
+
+        TOP_ST_COMPUTE_LOAD_K_RUN: begin
+          if (rd_done) begin
+            if (rd_error) begin
+              error <= 1'b1;
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else begin
+              top_state <= TOP_ST_COMPUTE_LOAD_V_ISSUE;
+            end
+          end
+        end
+
+        TOP_ST_COMPUTE_LOAD_V_ISSUE: begin
+          if (rd_cmd_valid && rd_cmd_ready) begin
+            compute_rd_beat_idx <= 4'd0;
+            top_state <= TOP_ST_COMPUTE_LOAD_V_RUN;
+          end
+        end
+
+        TOP_ST_COMPUTE_LOAD_V_RUN: begin
+          if (rd_done) begin
+            if (rd_error) begin
+              error <= 1'b1;
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else begin
+              top_state <= TOP_ST_COMPUTE_ENGINE_ISSUE;
+            end
+          end
+        end
+
+        TOP_ST_COMPUTE_ENGINE_ISSUE: begin
+          if (row_engine_ready) begin
+            top_state <= TOP_ST_COMPUTE_ENGINE_WAIT;
+          end
+        end
+
+        TOP_ST_COMPUTE_ENGINE_WAIT: begin
+          if (compute_k_idx < compute_q_idx) begin
+            compute_k_idx <= compute_k_idx + 2'd1;
+            top_state <= TOP_ST_COMPUTE_LOAD_K_ISSUE;
+          end else if (row_engine_valid_o) begin
+            if (row_engine_div_zero) begin
+              error <= 1'b1;
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else begin
+              for (int lane = 0; lane < TOP_COMPUTE_D; lane++) begin
+                compute_o_row[lane] <= row_engine_o[lane];
+              end
+              top_state <= TOP_ST_COMPUTE_WRITE_ISSUE;
+            end
+          end
+        end
+
+        TOP_ST_COMPUTE_WRITE_ISSUE: begin
+          if (wr_cmd_valid && wr_cmd_ready) begin
+            compute_wr_beat_idx <= 4'd0;
+            top_state <= TOP_ST_COMPUTE_WRITE_RUN;
+          end
+        end
+
+        TOP_ST_COMPUTE_WRITE_RUN: begin
+          if (wr_in_valid && wr_in_ready) begin
+            compute_wr_beat_idx <= compute_wr_beat_idx + 4'd1;
+          end
+          if (wr_done) begin
+            if (wr_error) begin
+              error <= 1'b1;
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else if (compute_q_idx == 2'(TOP_COMPUTE_ROWS - 1)) begin
+              top_state <= TOP_ST_COMPUTE_COMPLETE;
+            end else begin
+              compute_q_idx <= compute_q_idx + 2'd1;
+              compute_k_idx <= 2'd0;
+              top_state <= TOP_ST_COMPUTE_LOAD_Q_ISSUE;
+            end
+          end
+        end
+
+        TOP_ST_COMPUTE_COMPLETE: begin
+          busy <= 1'b0;
+          if (!error) begin
+            done <= 1'b1;
+          end
+          top_state <= TOP_ST_IDLE;
         end
 
         default: begin
-          busy                <= 1'b0;
-          error               <= 1'b1;
-          top_dma_smoke_state <= TOP_DMA_SMOKE_IDLE;
+          busy      <= 1'b0;
+          error     <= 1'b1;
+          top_state <= TOP_ST_IDLE;
         end
       endcase
     end
   end
 
-  logic unused_top_dma_smoke;
-  assign unused_top_dma_smoke = rd_byte_count[0] ^ wr_byte_count[0] ^
-                                stride_bytes[0];
+  logic unused_top;
+  assign unused_top = rd_byte_count[0] ^ wr_byte_count[0] ^
+                      stride_bytes[0] ^ row_engine_busy;
 endmodule
