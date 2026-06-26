@@ -96,6 +96,35 @@ The comparator reports `MAE`, `MaxAE`, maximum LSB error, and the first failing 
 
 When the S4 smoke is stable, expand to `S=256,D=64` with the same generator and metadata contract, but do not commit the full generated directory by default. Keep the large baseline vectors in the regression artifact area, commit only small manifests or selected smoke includes, and reuse the same comparator in `beats64` mode for top-memory dumps.
 
+### Cycle Model Mapping for Round 6 Top Compute
+
+Use `scripts/cycle_bandwidth_model.py` as the shared A/B contract for top-compute schedule estimates. The RTL parameters map to model arguments as follows:
+
+| RTL / TB parameter | Cycle model argument | Meaning |
+|---|---|---|
+| `SEQUENCE_LENGTH` | `--sequence-length` | Logical S for the full attention problem. Baseline target remains `256`. |
+| `DIMENSION` | `--dimension` | Feature dimension D. Baseline target remains `64`. |
+| `COMPUTE_ROWS` | `--compute-rows` | Number of output Q/O rows produced by the top-compute invocation. `--max-rows` is retained as a legacy alias and must match when both are supplied. |
+| `KV_TILE_ROWS` | `--kv-tile-rows` | Number of K/V rows in each reusable tile. Round 6 baseline studies should compare at least `16` and `32`. |
+| K/V tile reuse enabled | `--reuse-kv-tile` | Active model path uses tile-reuse traffic. `--no-reuse-kv-tile` forces the sequential no-reuse budget path for comparison. |
+
+The report now emits both traffic paths for every scenario:
+
+- `sequential_*`: Q is read once, and K/V are read for every causal score. This approximates the current straightforward schedule without K/V tile reuse.
+- `tile_reuse_*`: Q is read once, K/V rows are read once across `KV_TILE_ROWS` chunks for the `COMPUTE_ROWS` output tile, and O is written once. This is the Round 6 target direction.
+- `read_bytes`, `read_beats`, `dma_cycles`, `total_cycles`, and `under_cycle_budget` follow the active path selected by `reuse_kv_tile`.
+
+Useful checks:
+
+```text
+python -B scripts/cycle_bandwidth_model.py --sequence-length 4 --dimension 64 --compute-rows 4 --kv-tile-rows 4 --json
+python -B scripts/cycle_bandwidth_model.py --sequence-length 256 --dimension 64 --compute-rows 256 --kv-tile-rows 16 --json
+python -B scripts/cycle_bandwidth_model.py --sequence-length 256 --dimension 64 --compute-rows 256 --kv-tile-rows 32 --json
+python -B scripts/cycle_bandwidth_model.py --sequence-length 256 --dimension 64 --compute-rows 256 --kv-tile-rows 16 --no-reuse-kv-tile --json
+```
+
+Round 6 status boundary: the committed S4/D64 fixture and top-compute smoke are functional evidence for data plumbing and fixed-golden comparison. They are not yet PPA or baseline proof. Baseline signoff still needs an `S=256,D=64` tile schedule, PPA runs on the parameterized top, and larger regression artifacts using the same v1 metadata/comparator contract.
+
 ## Legacy File Set v0.1
 
 ## File Set
