@@ -27,13 +27,13 @@
 | 成员 | 当前焦点 | 下一步 |
 |---|---|---|
 | A：RTL / 验证 / 综合 | reciprocal/finalize/softmax 联合路径已通 | 接 DMA/top，补 AXI memory smoke 与 leaf Genus 远程验证 |
-| B：算法 / 定点建模 | 默认 NR finalize 与 S64/S256 回归已闭环 | 支持 A 对齐 checkpoint，不改 exp/score 契约 |
+| B：算法 / 定点建模 | 默认 NR finalize、S64/S256 回归、可复现向量导出与 cycle/bandwidth model 已闭环 | 支持 A 接 AXI smoke / cocotb scoreboard，不改 exp/score 契约 |
 
 ## 4. 开放对接请求
 
 | ID | 负责人 | 状态 | 需要补齐/冻结 | 对齐颗粒度 | 产物 |
 |---|---|---|---|---|---|
-| REQ-005 | B | 待对接 | 修复 golden 保存 hex 的环境兼容问题 | 当前 bundled Python/numpy 下保存向量会报错，需可复现生成 | `golden_model.py` |
+| REQ-005 | B | 已完成 | 可复现 golden/vector 导出 | 不依赖 NumPy；输出 16-bit word hex、64-bit beat hex、metadata JSON；默认对齐 fixed golden 32-entry + 1NR | `scripts/generate_test_vectors.py`, `docs/test_vector_format.md` |
 | REQ-006 | A | 已完成 | reciprocal RTL | 已对齐 32-entry ROM、1 次 NR、trace checkpoint、zero flag、固定 4 拍 valid | `rtl/fa_recip_approx.sv` |
 
 ## 5. 当前阻塞/风险
@@ -45,6 +45,13 @@
 | score/memory 测试仍是零延迟 | 接 buffer/DMA 后 valid 对齐可能出 bug | 后续 TB 加 memory latency/backpressure |
 
 ## 6. 最近推进记录
+
+### 2026-06-26 Round 3 B
+
+- 新增 `scripts/generate_test_vectors.py`：复用 `generate_qkv` 与 `model.golden_fixed.attention_fixed`，支持 baseline `S=256,D=64`、small smoke、`max_rows`、单 seed / 多 seed 导出。
+- 向量格式升级为持久 v1 契约：`*_Q/K/V/O_golden.hex` 16-bit row-major word 文件、`*_beats64.hex` stride-padded 64-bit AXI beat 文件、`*_metadata.json` 记录 endian/stride/reciprocal/source。
+- 新增 `scripts/cycle_bandwidth_model.py`：估算 baseline read/write bytes、DMA beats、compute/DMA/total cycles，并给出 current functional 与 target parallel 两组参数的 `<300k` 判断。
+- 新增 unittest 覆盖向量可复现、hex/beat packing、metadata、bytes/beats 和 cycle budget；产物用于后续 RTL end-to-end、cocotb scoreboard 与 AXI memory model，不是临时 dump。
 
 ### 2026-06-26 Round 2 B
 
@@ -59,19 +66,6 @@
 - `fa_finalize_vec` 对齐 reciprocal 固定延迟，新增 `div_zero_o`，`tb_finalize_vec` 和 `tb_softmax_finalize_vec` 已迁移。
 - `tb_scheduler_softmax_finalize_row_scoreboard` 接入 `ready_o`/`div_zero_o`，代表性路径 0 warning 通过。
 - Genus 脚本新增 leaf top 入口，并输出 `check_design/area/timing/power/qor` report 以及 mapped Verilog/SDC。
-
-### 2026-06-16 Round 16 A/B/C
-
-- RTL：`fa_exp_approx` 扩到 bring-up LUT v0.2，覆盖 `0/-0.5/-1/-2/-4/<=-16` exact points，接口不变。
-- 算法/文档：新增 `exp_lut_v02/expected.txt`，并在 fixed-point/debug 文档中标明这不是最终 LUT/PWL。
-- 验证：`tb_exp_approx PASS`；脚本测试 13 项 OK；RTL/synth filelist lint 0 errors/0 warnings。
-
-### 2026-06-17 Round 20 A/B/C
-
-- RTL：`fa_recip_approx` 新增 `l=0082582B -> recip=7DB2A076`，新增 `tb_scheduler_softmax_finalize_q1_neg4_vec`。
-- 算法：新增 `q1_delta_neg4/pipeline_final_expected.txt`，冻结 score `FFFFFFFC0000`、exp `0002582B`、acc `000084B05600`、final O `0105`。
-- C：确认 -4 仍只是 bring-up exact point；下一轮必须转向 generic exp/recip、random/full-row scoreboard、tile/top/DMA 闭环。
-- 验证：`tb_scheduler_softmax_finalize_q1_neg4_vec PASS`；脚本测试 17 项 OK；RTL/synth filelist lint 0 errors/0 warnings。
 
 ### 2026-06-17 Round 21 A/B/C
 
@@ -92,7 +86,7 @@
 | 成员 | 下一步 |
 |---|---|
 | A | 接 DMA/top 与 AXI memory smoke，逐步替换零延迟 testbench 假设 |
-| B | 补随机/full-row case 导出、cycle/bandwidth model，并与 AXI smoke 对齐向量格式 |
+| B | 配合 A 将 v1 向量接入 RTL end-to-end/cocotb scoreboard，必要时补更小 committed smoke fixture |
 
 ## 8. 文档索引
 
@@ -103,7 +97,7 @@
 | 项目计划书 | 已有 | `docs/FA_Accel_IP_Project_Plan.md` |
 | 团队同步 | 已有 | `docs/team_sync.md` |
 | 定点规格 | v0.5 reciprocal 默认路径已冻结 | `docs/fixed_point_spec.md` |
-| 测试向量格式 | v0.1 已有 | `docs/test_vector_format.md` |
+| 测试向量格式 | v1 导出契约已补齐 | `docs/test_vector_format.md` |
 | Debug dump 格式 | v0.1 已有 | `docs/debug_dump_format.md` |
 | 架构规格 | 待创建 | `docs/architecture_spec.md` |
 | 验证计划 | 待创建 | `docs/verification_plan.md` |
