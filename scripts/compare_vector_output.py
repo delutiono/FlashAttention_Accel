@@ -195,6 +195,8 @@ def compare_vectors(
                 "col": index % dimension,
                 "golden": golden[index],
                 "dut": dut[index],
+                "expected": golden[index],
+                "got": dut[index],
                 "lsb_error": abs_error,
             }
             break
@@ -239,8 +241,8 @@ def _format_first_failure(first_failure: dict[str, int] | None) -> str:
         f"index={first_failure['index']} "
         f"row={first_failure['row']} "
         f"col={first_failure['col']} "
-        f"golden={first_failure['golden']} "
-        f"dut={first_failure['dut']} "
+        f"expected={first_failure['expected']} "
+        f"got={first_failure['got']} "
         f"lsb_error={first_failure['lsb_error']}"
     )
 

@@ -70,6 +70,21 @@ python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 4 --dime
 
 It contains `Q`, `K`, `V`, and `O_golden` as both 16-bit word hex and stride-padded 64-bit AXI beat hex, plus `s4_d64_seed100_metadata.json`. Use `O_golden` for deterministic output comparison while RTL `row_engine`/top memory plumbing is being closed.
 
+For top-level compute or AXI-memory smoke tests that want include-friendly constants, regenerate and include the checked-in SVH:
+
+```text
+python -B scripts/dump_fixture_sv.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --output sim/include/s4_d64_seed100_vectors.svh
+```
+
+`sim/include/s4_d64_seed100_vectors.svh` is intentionally small and deterministic. It contains:
+
+- Shape constants: `S4_D64_SEED100_SEQUENCE_LENGTH=4`, `S4_D64_SEED100_DIMENSION=64`, `S4_D64_SEED100_BEATS_PER_ROW=16`, and `S4_D64_SEED100_O_GOLDEN_BEATS=64`.
+- `$readmemh` path constants for Q/K/V/O `*_beats64.hex`, so a TB can load a 64-bit AXI memory model without hard-coding paths.
+- Localparam arrays `S4_D64_SEED100_{Q,K,V,O_GOLDEN}_BEATS64[0:63]`, useful for direct initialization when a simulator or smoke TB does not want file I/O.
+- `S4_D64_SEED100_o_golden_word(row, col)`, which extracts `beat[(lane * 16) +: 16]`; this matches the v1 little-endian lane rule where `WDATA[15:0]` is column 0 of each 4-lane beat.
+
+A top compute S4 smoke should preload Q/K/V beats at the agreed base addresses with `row * STRIDE_BYTES + beat * 8`, run the top for `S=4,D=64,causal=1`, dump the O region as either 256 `words16` lines or 64 stride-padded `beats64` lines, and compare against `O_golden`.
+
 `scripts/compare_vector_output.py` compares a DUT output file against the fixture metadata and golden output:
 
 ```text
@@ -78,6 +93,8 @@ python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_
 ```
 
 The comparator reports `MAE`, `MaxAE`, maximum LSB error, and the first failing row/column. A nonzero process exit means the requested threshold failed or the input format was invalid.
+
+When the S4 smoke is stable, expand to `S=256,D=64` with the same generator and metadata contract, but do not commit the full generated directory by default. Keep the large baseline vectors in the regression artifact area, commit only small manifests or selected smoke includes, and reuse the same comparator in `beats64` mode for top-memory dumps.
 
 ## Legacy File Set v0.1
 

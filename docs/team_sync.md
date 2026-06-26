@@ -27,7 +27,7 @@
 | 成员 | 当前焦点 | 下一步 |
 |---|---|---|
 | A：RTL / 验证 / 综合 | reciprocal/finalize/softmax 联合路径已通 | 接 DMA/top，补 AXI memory smoke 与 leaf Genus 远程验证 |
-| B：算法 / 定点建模 | 默认 NR finalize、S64/S256 回归、可复现向量导出、cycle/bandwidth model 与 committed S4/D64 fixture 已闭环 | 支持 A 将 fixture 接入 row_engine/top AXI memory scoreboard，不改 exp/score 契约 |
+| B：算法 / 验证 | 默认 NR finalize、S64/S256 回归、可复现向量导出、cycle/bandwidth model 与 committed S4/D64 fixture 已闭环 | 支持 A 将 fixture 接入 top compute S4 smoke，并准备后续 S=256 scoreboard 材料 |
 
 ## 4. 开放对接请求
 
@@ -35,18 +35,25 @@
 |---|---|---|---|---|---|
 | REQ-005 | B | 已完成 | 可复现 golden/vector 导出 | 不依赖 NumPy；输出 16-bit word hex、64-bit beat hex、metadata JSON；默认对齐 fixed golden 32-entry + 1NR | `scripts/generate_test_vectors.py`, `docs/test_vector_format.md` |
 | REQ-006 | A | 已完成 | reciprocal RTL | 已对齐 32-entry ROM、1 次 NR、trace checkpoint、zero flag、固定 4 拍 valid | `rtl/fa_recip_approx.sv` |
-| REQ-007 | B | 已完成 | committed RTL end-to-end smoke fixture | `S=4,D=64,seed=100,stride=128`；Q/K/V/O_golden 同时提供 16-bit word hex 与 64-bit beat hex；比较工具支持 words16/beats64 DUT 输出与阈值退出 | `test_vectors/generated/s4_d64_seed100/`, `scripts/compare_vector_output.py` |
+| REQ-007 | B | 已完成 | committed RTL end-to-end smoke fixture 与 top smoke loader | `S=4,D=64,seed=100,stride=128`；Q/K/V/O_golden 同时提供 16-bit word hex、64-bit beat hex、SVH localparam/path include；比较工具支持 words16/beats64 DUT 输出与阈值退出 | `test_vectors/generated/s4_d64_seed100/`, `scripts/dump_fixture_sv.py`, `sim/include/s4_d64_seed100_vectors.svh`, `scripts/compare_vector_output.py` |
 
 ## 5. 当前阻塞/风险
 
 | 风险 | 影响 | 处理 |
 |---|---|---|
 | AXI DMA/top 未通 | 无法满足接口验收 | 先 DMA smoke，再接 top；暂不做多 outstanding 优化 |
-| committed smoke 尚未接 RTL | row_engine/top 端到端仍缺自动验收 | A 后续接入 `test_vectors/generated/s4_d64_seed100/`；B 提供 comparator 支持 |
+| committed smoke 尚未接 RTL | row_engine/top 端到端仍缺自动验收 | A 后续接入 `sim/include/s4_d64_seed100_vectors.svh` 或 fixture `*_beats64.hex`；B 提供 comparator/scoreboard 支持 |
 | corner case 不足 | causal/tile 边界 bug 不易暴露 | 后续按 scoreboard 覆盖缺口补 cases |
 | score/memory 测试仍是零延迟 | 接 buffer/DMA 后 valid 对齐可能出 bug | 后续 TB 加 memory latency/backpressure |
 
 ## 6. 最近推进记录
+
+### 2026-06-26 Round 5 B
+
+- 新增 `scripts/dump_fixture_sv.py`：读取 v1 metadata，校验 Q/K/V/O 的 16-bit words 与 64-bit beats 数量、stride、little-endian lane packing，并生成 include-friendly SVH。
+- 新增 `sim/include/s4_d64_seed100_vectors.svh`：提供 S4/D64 shape 常量、Q/K/V/O `$readmemh` path 常量、64-bit beat localparam arrays，以及 `S4_D64_SEED100_o_golden_word(row,col)`，供 top compute S4 smoke 快速加载 AXI memory 和比较 O。
+- 扩展 `scripts/test_compare_vector_output.py`：覆盖 committed SVH 可再生、O_golden `4*16` beats、自比 words16/beats64 均可用、DUT failure CLI 输出 `row/col/expected/got`。
+- `docs/test_vector_format.md` 记录 top smoke 接入方式：按 `row*STRIDE_BYTES + beat*8` 预加载 Q/K/V，dump O 为 words16 或 beats64 后调用 comparator；S=256 扩展复用同一 metadata/comparator，但默认不提交大型生成目录。
 
 ### 2026-06-26 Round 4 B
 
@@ -76,19 +83,12 @@
 - `tb_scheduler_softmax_finalize_row_scoreboard` 接入 `ready_o`/`div_zero_o`，代表性路径 0 warning 通过。
 - Genus 脚本新增 leaf top 入口，并输出 `check_design/area/timing/power/qor` report 以及 mapped Verilog/SDC。
 
-### 2026-06-17 Round 22 A/B/C
-
-- RTL：`fa_softmax_online_vec` lower-exp 改为 2-entry FIFO，补 `l=00E14DA2 -> recip=48B842A1`，`row_scoreboard_s4_det` case 接入。
-- 算法：新增 `row_scoreboard_s4_det_{Q,K,V}.hex`，每个 16384 行，脚本校验关键 Q/K/V 地址与 expected 对齐。
-- C：确认这是 baseline 前正确闭环；跑通后应转 generic exp/recip、可复现随机/full-row、再 tile/DMA/top。
-- 验证：`row_scoreboard_s4_det` 64-lane compare PASS；q1_neg4/q1_neg2/q0_i0 与 `tb_softmax_online_vec` 回归 PASS；脚本测试 18 项 OK；RTL/synth lint 0 errors/0 warnings。
-
 ## 7. 下一步
 
 | 成员 | 下一步 |
 |---|---|
-| A | 将 `test_vectors/generated/s4_d64_seed100/` 接入 row_engine/top AXI memory smoke，逐步替换零延迟 testbench 假设 |
-| B | 继续配合 scoreboard 阈值/格式对齐；如 RTL 暴露 causal/tile 边界缺口，再补 targeted cases |
+| A | 将 `sim/include/s4_d64_seed100_vectors.svh` 或 fixture `*_beats64.hex` 接入 top compute S4 AXI memory smoke，逐步替换零延迟 testbench 假设 |
+| B | 继续配合 scoreboard 阈值/格式对齐；S4 top smoke 稳定后按同一 v1 contract 扩到 S=256 regression artifact，不默认提交大型目录 |
 
 ## 8. 文档索引
 

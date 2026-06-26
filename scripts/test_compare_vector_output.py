@@ -16,12 +16,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.compare_vector_output import compare_vectors, load_dut_words
+from scripts.dump_fixture_sv import build_fixture_include
 from scripts.generate_test_vectors import pack_beat64
 
 
 FIXTURE_DIR = REPO_ROOT / "test_vectors" / "generated" / "s4_d64_seed100"
 CASE_NAME = "s4_d64_seed100"
 METADATA_PATH = FIXTURE_DIR / f"{CASE_NAME}_metadata.json"
+S4_INCLUDE_PATH = REPO_ROOT / "sim" / "include" / "s4_d64_seed100_vectors.svh"
 
 
 class TestCompareVectorOutput(unittest.TestCase):
@@ -134,6 +136,52 @@ class TestCompareVectorOutput(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("FAIL", result.stdout)
         self.assertIn("row=0 col=0", result.stdout)
+        self.assertIn("expected=", result.stdout)
+        self.assertIn("got=", result.stdout)
+
+    def test_golden_self_compare_passes_for_beats64_output_dump(self) -> None:
+        result = compare_vectors(
+            metadata_path=METADATA_PATH,
+            dut_hex_path=FIXTURE_DIR / f"{CASE_NAME}_O_golden_beats64.hex",
+            dut_format="beats64",
+            require_mae=0.0,
+            require_maxae=0.0,
+        )
+
+        self.assertTrue(result.passed)
+        self.assertEqual(256, result.elements)
+        self.assertEqual(0, result.max_lsb_error)
+        self.assertIsNone(result.first_failure)
+
+    def test_s4_sv_include_matches_metadata_and_beat_files(self) -> None:
+        include_text = build_fixture_include(METADATA_PATH, repo_root=REPO_ROOT)
+        metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+        q_beats = (FIXTURE_DIR / f"{CASE_NAME}_Q_beats64.hex").read_text(encoding="ascii").splitlines()
+        o_beats = (FIXTURE_DIR / f"{CASE_NAME}_O_golden_beats64.hex").read_text(encoding="ascii").splitlines()
+
+        self.assertIn("localparam int S4_D64_SEED100_SEQUENCE_LENGTH = 4;", include_text)
+        self.assertIn("localparam int S4_D64_SEED100_DIMENSION = 64;", include_text)
+        self.assertIn("localparam int S4_D64_SEED100_BEATS_PER_ROW = 16;", include_text)
+        self.assertIn("localparam int S4_D64_SEED100_O_GOLDEN_BEATS = 64;", include_text)
+        self.assertIn(
+            'localparam string S4_D64_SEED100_Q_BEATS64_HEX = "test_vectors/generated/s4_d64_seed100/s4_d64_seed100_Q_beats64.hex";',
+            include_text,
+        )
+        self.assertEqual(metadata["output_rows"] * metadata["beats_per_row"], len(o_beats))
+        self.assertIn(f"64'h{q_beats[0]}", include_text)
+        self.assertIn(f"64'h{o_beats[-1]}", include_text)
+
+    def test_s4_sv_include_lane_order_matches_words16_golden(self) -> None:
+        include_text = build_fixture_include(METADATA_PATH, repo_root=REPO_ROOT)
+        o_words = (FIXTURE_DIR / f"{CASE_NAME}_O_golden.hex").read_text(encoding="ascii").splitlines()
+        first_beat = (FIXTURE_DIR / f"{CASE_NAME}_O_golden_beats64.hex").read_text(encoding="ascii").splitlines()[0]
+
+        self.assertEqual(f"{o_words[3]}{o_words[2]}{o_words[1]}{o_words[0]}", first_beat)
+        self.assertIn("return beat[(lane * 16) +: 16];", include_text)
+
+    def test_committed_s4_sv_include_is_regenerated_output(self) -> None:
+        expected = build_fixture_include(METADATA_PATH, repo_root=REPO_ROOT)
+        self.assertEqual(expected, S4_INCLUDE_PATH.read_text(encoding="ascii"))
 
 
 if __name__ == "__main__":
