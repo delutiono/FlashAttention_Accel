@@ -27,7 +27,7 @@
 | 成员 | 当前焦点 | 下一步 |
 |---|---|---|
 | A：RTL / 验证 / 综合 | reciprocal/finalize/softmax 联合路径已通 | 接 DMA/top，补 AXI memory smoke 与 leaf Genus 远程验证 |
-| B：算法 / 定点建模 | 默认 NR finalize、S64/S256 回归、可复现向量导出与 cycle/bandwidth model 已闭环 | 支持 A 接 AXI smoke / cocotb scoreboard，不改 exp/score 契约 |
+| B：算法 / 定点建模 | 默认 NR finalize、S64/S256 回归、可复现向量导出、cycle/bandwidth model 与 committed S4/D64 fixture 已闭环 | 支持 A 将 fixture 接入 row_engine/top AXI memory scoreboard，不改 exp/score 契约 |
 
 ## 4. 开放对接请求
 
@@ -35,16 +35,25 @@
 |---|---|---|---|---|---|
 | REQ-005 | B | 已完成 | 可复现 golden/vector 导出 | 不依赖 NumPy；输出 16-bit word hex、64-bit beat hex、metadata JSON；默认对齐 fixed golden 32-entry + 1NR | `scripts/generate_test_vectors.py`, `docs/test_vector_format.md` |
 | REQ-006 | A | 已完成 | reciprocal RTL | 已对齐 32-entry ROM、1 次 NR、trace checkpoint、zero flag、固定 4 拍 valid | `rtl/fa_recip_approx.sv` |
+| REQ-007 | B | 已完成 | committed RTL end-to-end smoke fixture | `S=4,D=64,seed=100,stride=128`；Q/K/V/O_golden 同时提供 16-bit word hex 与 64-bit beat hex；比较工具支持 words16/beats64 DUT 输出与阈值退出 | `test_vectors/generated/s4_d64_seed100/`, `scripts/compare_vector_output.py` |
 
 ## 5. 当前阻塞/风险
 
 | 风险 | 影响 | 处理 |
 |---|---|---|
 | AXI DMA/top 未通 | 无法满足接口验收 | 先 DMA smoke，再接 top；暂不做多 outstanding 优化 |
-| corner case 不足 | causal/tile 边界 bug 不易暴露 | B 补 cases，A 后续接入 scoreboard |
+| committed smoke 尚未接 RTL | row_engine/top 端到端仍缺自动验收 | A 后续接入 `test_vectors/generated/s4_d64_seed100/`；B 提供 comparator 支持 |
+| corner case 不足 | causal/tile 边界 bug 不易暴露 | 后续按 scoreboard 覆盖缺口补 cases |
 | score/memory 测试仍是零延迟 | 接 buffer/DMA 后 valid 对齐可能出 bug | 后续 TB 加 memory latency/backpressure |
 
 ## 6. 最近推进记录
+
+### 2026-06-26 Round 4 B
+
+- 新增 committed fixture `test_vectors/generated/s4_d64_seed100/`：`S=4,D=64,seed=100,stride=128,causal=1`，包含 Q/K/V/O_golden 的 16-bit word hex、64-bit AXI beat hex 与 metadata JSON。
+- 新增 `scripts/compare_vector_output.py`：读取 metadata 与 golden O，比较 words16 或 beats64 DUT 输出，报告 MAE/MaxAE、最大 LSB 误差和首个失败 row/col，阈值失败非零退出。
+- 新增 `scripts/test_compare_vector_output.py`：覆盖 fixture 存在性、golden 自比、单点扰动失败与 beats64 little-endian lane unpack。
+- `docs/test_vector_format.md` 标明该 fixture 是 RTL `row_engine`/top AXI memory/cocotb 端到端验收基准，不是临时文件。
 
 ### 2026-06-26 Round 3 B
 
@@ -67,13 +76,6 @@
 - `tb_scheduler_softmax_finalize_row_scoreboard` 接入 `ready_o`/`div_zero_o`，代表性路径 0 warning 通过。
 - Genus 脚本新增 leaf top 入口，并输出 `check_design/area/timing/power/qor` report 以及 mapped Verilog/SDC。
 
-### 2026-06-17 Round 21 A/B/C
-
-- RTL：新增 64-lane row scoreboard checker 与 `tb_scheduler_softmax_finalize_row_scoreboard`，已复用比较 q0_i0、q1_neg2、q1_neg4。
-- 算法：新增 `row_scoreboard_s4_det/expected.txt`，记录 q3、4 个有效 K、64 lane O，补 fixed-point v0.2 待冻结清单。
-- C：指出该 expected 尚未闭环到 RTL；连续 lower-exp 与 generic recip 是下一轮主阻塞。
-- 验证：row scoreboard 内置 3 case PASS；脚本测试 18 项 OK；RTL/synth filelist lint 0 errors/0 warnings。
-
 ### 2026-06-17 Round 22 A/B/C
 
 - RTL：`fa_softmax_online_vec` lower-exp 改为 2-entry FIFO，补 `l=00E14DA2 -> recip=48B842A1`，`row_scoreboard_s4_det` case 接入。
@@ -85,8 +87,8 @@
 
 | 成员 | 下一步 |
 |---|---|
-| A | 接 DMA/top 与 AXI memory smoke，逐步替换零延迟 testbench 假设 |
-| B | 配合 A 将 v1 向量接入 RTL end-to-end/cocotb scoreboard，必要时补更小 committed smoke fixture |
+| A | 将 `test_vectors/generated/s4_d64_seed100/` 接入 row_engine/top AXI memory smoke，逐步替换零延迟 testbench 假设 |
+| B | 继续配合 scoreboard 阈值/格式对齐；如 RTL 暴露 causal/tile 边界缺口，再补 targeted cases |
 
 ## 8. 文档索引
 

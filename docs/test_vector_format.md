@@ -9,6 +9,7 @@ Use `scripts/generate_test_vectors.py` for new fixed-golden vectors:
 ```text
 python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 256 --dimension 64 --case-name baseline_s256_d64_seed100 --output-dir <dir>
 python -B scripts/generate_test_vectors.py --seeds 100,101,102,103,104 --sequence-length 256 --dimension 64 --case-name baseline_s256_d64 --output-dir <dir>
+python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 4 --dimension 64 --case-name s4_d64_seed100 --output-dir test_vectors/generated/s4_d64_seed100
 python -B scripts/generate_test_vectors.py --seed 7 --sequence-length 8 --dimension 8 --max-rows 4 --case-name smoke_s8_d8_seed7 --output-dir <dir>
 ```
 
@@ -56,6 +57,27 @@ Metadata fields used by RTL/cocotb consumers:
 ```
 
 Do not check large generated vector directories into the repository. Keep generated baseline artifacts in an agreed regression/output area and preserve the command line plus metadata JSON for reproducibility. Small hand-picked smoke samples may be committed only when they are explicitly part of a test fixture.
+
+### Committed S4/D64 End-to-End Fixture
+
+`test_vectors/generated/s4_d64_seed100/` is the committed v1 end-to-end acceptance fixture for RTL `row_engine`, top-level AXI memory scoreboards, and cocotb bring-up. It is intentionally small enough to keep in git and is not a temporary dump.
+
+The fixture was generated with:
+
+```text
+python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 4 --dimension 64 --case-name s4_d64_seed100 --output-dir test_vectors/generated/s4_d64_seed100 --stride-bytes 128
+```
+
+It contains `Q`, `K`, `V`, and `O_golden` as both 16-bit word hex and stride-padded 64-bit AXI beat hex, plus `s4_d64_seed100_metadata.json`. Use `O_golden` for deterministic output comparison while RTL `row_engine`/top memory plumbing is being closed.
+
+`scripts/compare_vector_output.py` compares a DUT output file against the fixture metadata and golden output:
+
+```text
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --dut-hex <dut_output.hex> --format words16 --require-mae 0 --require-maxae 0
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --dut-hex <dut_output_beats64.hex> --format beats64 --require-mae 0 --require-maxae 0
+```
+
+The comparator reports `MAE`, `MaxAE`, maximum LSB error, and the first failing row/column. A nonzero process exit means the requested threshold failed or the input format was invalid.
 
 ## Legacy File Set v0.1
 
