@@ -18,16 +18,16 @@
 | Baseline 范围 | 已冻结 | `S=256, d=64, batch=1, head=1, Q8.8 I/O, causal` |
 | Golden model | 已冻结 | fixed golden 默认 finalize 已切到 `32-entry + 1NR`；`exact` 仅作 CLI 对照；exp/score 契约未变 |
 | 数值回归 | 已完成 | S64/S256、seeds 100-104 均通过 `MAE<=0.03`、`MaxAE<=0.10`、candidate-vs-exact `<=1 LSB` |
-| RTL 骨架 | 进行中 | reciprocal 已替换为 `U9.23 -> U1.31` 32x1 NR，zero 同延迟返回错误标志；下一步接 DMA/top |
+| RTL 骨架 | 进行中 | Round7 已补 Q row buffer 与 K/V tile buffer leaf；下一步接入 top DMA/compute tile-loop 并扩 S256 回归 |
 | 语法检查 | 已完成 | `vlog -lint -sv -work <work> -f rtl/filelist.f`：0 errors，0 warnings |
-| 综合脚本 | 进行中 | `run_genus.tcl`/`run_leaf_genus.tcl` 支持 `STD_CELL_LIB`、`TOP`、report 与 mapped netlist/SDC 输出；未在 Cadence 环境验证 |
+| 综合/PPA | 进行中 | Genus scripts 已支持 `STD_CELL_LIB`、`TOP`、report 与 mapped netlist/SDC 输出；B 已补远程 runbook 与 report parser；仍需远程 Genus 真实报告 |
 
 ## 3. 分工焦点
 
 | 成员 | 当前焦点 | 下一步 |
 |---|---|---|
-| A：RTL / 验证 / 综合 | reciprocal/finalize/softmax 联合路径已通 | 接 DMA/top，补 AXI memory smoke 与 leaf Genus 远程验证 |
-| B：算法 / 验证 | 默认 NR finalize、S64/S256 回归、可复现向量导出、cycle/bandwidth model 与 committed S4/D64 fixture 已闭环 | 支持 A 将 fixture 接入 top compute S4 smoke，并准备后续 S=256 scoreboard 材料 |
+| A：RTL / 验证 / 综合 | top compute S4 smoke、tile-loop、Q row buffer 与 K/V tile buffer leaf 已通 | 将 buffer 接入 DMA read stream 与 top compute tile-loop，补 valid/backpressure 覆盖 |
+| B：算法 / 验证 / 综合脚本 | cycle/bandwidth model 已具备 tile-aware 参数；本轮补 Genus report parser 与远程 PPA runbook | 等远程 Genus artifacts 回传后汇总 area/timing/power/qor，并配合 S256 scoreboard 材料 |
 
 ## 4. 开放对接请求
 
@@ -42,11 +42,31 @@
 | 风险 | 影响 | 处理 |
 |---|---|---|
 | AXI DMA/top 未通 | 无法满足接口验收 | 先 DMA smoke，再接 top；暂不做多 outstanding 优化 |
-| committed smoke 尚未接 RTL | row_engine/top 端到端仍缺自动验收 | A 后续接入 `sim/include/s4_d64_seed100_vectors.svh` 或 fixture `*_beats64.hex`；B 提供 comparator/scoreboard 支持 |
+| buffer 尚未接 top | leaf buffer 已通，但 top 仍直接顺序读 Q/K/V | 下一轮把 Q/K/V buffer 接入 DMA read stream 与 compute tile-loop |
 | corner case 不足 | causal/tile 边界 bug 不易暴露 | 后续按 scoreboard 覆盖缺口补 cases |
 | score/memory 测试仍是零延迟 | 接 buffer/DMA 后 valid 对齐可能出 bug | 后续 TB 加 memory latency/backpressure |
+| 远程 PPA 尚未闭环 | 无法给出真实 area/timing/power/qor 结论 | 远程设置 `STD_CELL_LIB` 后跑 leaf/top Genus，回传 `synth/reports/<top>` 与 `synth/outputs/<top>`，再用 parser 生成 summary |
 
 ## 6. 最近推进记录
+
+### 2026-06-27 Round 7 B
+
+- 新增 `scripts/parse_genus_reports.py`：解析 `area.rpt`、`timing.rpt`、`power.rpt`、`qor.rpt`、`check_design.rpt`，支持文本摘要、`--json` 与 `--require-clean-check-design`；缺失报告标记为 missing，不假装远程 Genus 已完成。
+- 新增 `scripts/test_parse_genus_reports.py`：fake report 临时目录覆盖 missing、area/timing/power/qor 字段解析，以及 dirty `check_design.rpt` 非零退出策略；不依赖 Cadence。
+- 新增 `docs/synthesis_runbook.md`：记录远程 `STD_CELL_LIB` 设置、leaf/top Genus 命令、reports/outputs 收集清单和 parser 汇总命令；当前阶段不需要 Innovus。
+- 当前 PPA 状态：本地只完成 parser 与流程材料准备；真实 area/timing/power/qor 仍等待远程 Genus artifacts。
+
+### 2026-06-27 Round 7 A
+
+- `fa_q_buffer` 从空壳升级为可综合 Q row buffer：64-bit beat 流写入、4x int16 little-endian lane unpack、`load_done_o` sticky 完成标志与 `clear_i` 重新装载。
+- `fa_kv_buffer` 从空壳升级为可综合 K/V tile buffer：独立 K/V 写通道、`TILE_ROWS x D` 寄存器阵列、按 `row_index_i` 组合输出 K/V 行。
+- 新增 `tb_q_kv_buffer` 覆盖 `TILE_ROWS=2`、lane endian、row indexing、done/ready/clear 行为；作为后续 top DMA read stream 接入前的 leaf 证据。
+- 本轮 buffer 尚未接入 `fa_accel_top`，下一步连接到 compute tile-loop 后再跑 S4/S256 端到端回归。
+
+### 2026-06-27 Round 6
+
+- top compute S4 smoke 已完成，tile-loop 参数化已接入，cycle/bandwidth model 已更新为 tile-aware 估算。
+- 下一步聚焦 buffer 接入、S256 回归 artifact/scoreboard 扩展，以及远程 Genus 真实报告闭环。
 
 ### 2026-06-26 Round 5 B
 
@@ -69,26 +89,13 @@
 - 新增 `scripts/cycle_bandwidth_model.py`：估算 baseline read/write bytes、DMA beats、compute/DMA/total cycles，并给出 current functional 与 target parallel 两组参数的 `<300k` 判断。
 - 新增 unittest 覆盖向量可复现、hex/beat packing、metadata、bytes/beats 和 cycle budget；产物用于后续 RTL end-to-end、cocotb scoreboard 与 AXI memory model，不是临时 dump。
 
-### 2026-06-26 Round 2 B
-
-- fixed golden 默认 finalize 正式切到 `32-entry + 1NR`，exact 保留为 `--recip-mode exact` 对照；exp/score 契约未改。
-- 新增默认路径 bit-exact checkpoint、zero/container corners、S64 与 S256 seeds 100-104 门限；回归记录 mode/LUT/iterations/latency。
-- S64：`MAE=0.00394442`、`MaxAE=0.03223060`；S256：`MAE=0.00236523`、`MaxAE=0.03811298`；candidate-vs-exact 最大 `1 LSB`。
-- 给 A 的 RTL 接口：`l_u9_23 + in_valid -> recip_u1_31 + divide_by_zero + out_valid`，固定 4 拍，包括 zero。
-
-### 2026-06-26 Round 2 A
-
-- `fa_recip_approx` 替换 exact-point 表和变量除法，采用 32-entry seed ROM + 1 次 NR；`tb_recip_approx` 覆盖 zero、container corners、LUT 边界与 checkpoint。
-- `fa_finalize_vec` 对齐 reciprocal 固定延迟，新增 `div_zero_o`，`tb_finalize_vec` 和 `tb_softmax_finalize_vec` 已迁移。
-- `tb_scheduler_softmax_finalize_row_scoreboard` 接入 `ready_o`/`div_zero_o`，代表性路径 0 warning 通过。
-- Genus 脚本新增 leaf top 入口，并输出 `check_design/area/timing/power/qor` report 以及 mapped Verilog/SDC。
 
 ## 7. 下一步
 
 | 成员 | 下一步 |
 |---|---|
-| A | 将 `sim/include/s4_d64_seed100_vectors.svh` 或 fixture `*_beats64.hex` 接入 top compute S4 AXI memory smoke，逐步替换零延迟 testbench 假设 |
-| B | 继续配合 scoreboard 阈值/格式对齐；S4 top smoke 稳定后按同一 v1 contract 扩到 S=256 regression artifact，不默认提交大型目录 |
+| A | 将 Q/K/V buffer 接入 top DMA read stream 与 compute tile-loop；补 TB memory latency/backpressure 覆盖 |
+| B | S256 regression/scoreboard 材料扩展；远程 Genus artifacts 回传后用 parser 生成 PPA summary |
 
 ## 8. 文档索引
 
@@ -101,5 +108,6 @@
 | 定点规格 | v0.5 reciprocal 默认路径已冻结 | `docs/fixed_point_spec.md` |
 | 测试向量格式 | v1 导出契约已补齐 | `docs/test_vector_format.md` |
 | Debug dump 格式 | v0.1 已有 | `docs/debug_dump_format.md` |
+| 综合运行手册 | v0.1 已有 | `docs/synthesis_runbook.md` |
 | 架构规格 | 待创建 | `docs/architecture_spec.md` |
 | 验证计划 | 待创建 | `docs/verification_plan.md` |
