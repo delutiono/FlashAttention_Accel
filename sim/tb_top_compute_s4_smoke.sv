@@ -63,6 +63,9 @@ module tb_top_compute_s4_smoke;
   logic [63:0] k_beats [0:TOTAL_BEATS-1];
   logic [63:0] v_beats [0:TOTAL_BEATS-1];
   logic [63:0] o_golden_beats [0:TOTAL_BEATS-1];
+  logic        saw_q_buffer_load_done;
+  logic        saw_k_buffer_load_done;
+  logic        saw_v_buffer_load_done;
 
   fa_accel_top #(
     .COMPUTE_ROWS (ROWS),
@@ -156,6 +159,21 @@ module tb_top_compute_s4_smoke;
 
   initial clk = 1'b0;
   always #5 clk = ~clk;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      saw_q_buffer_load_done <= 1'b0;
+      saw_k_buffer_load_done <= 1'b0;
+      saw_v_buffer_load_done <= 1'b0;
+    end else begin
+      saw_q_buffer_load_done <= saw_q_buffer_load_done ||
+                                dut.u_q_buffer.load_done_o;
+      saw_k_buffer_load_done <= saw_k_buffer_load_done ||
+                                dut.u_kv_buffer.k_load_done_o;
+      saw_v_buffer_load_done <= saw_v_buffer_load_done ||
+                                dut.u_kv_buffer.v_load_done_o;
+    end
+  end
 
   task automatic fail(input string message);
     begin
@@ -268,6 +286,9 @@ module tb_top_compute_s4_smoke;
 
     if (status[0]) fail("busy remained high after compute done");
     if (!irq) fail("irq did not assert with irq_en and compute done");
+    if (!saw_q_buffer_load_done) fail("Q buffer was not loaded during compute smoke");
+    if (!saw_k_buffer_load_done) fail("K buffer was not loaded during compute smoke");
+    if (!saw_v_buffer_load_done) fail("V buffer was not loaded during compute smoke");
 
     axil_read(REG_CYCLES, cycles);
     if (cycles == 32'd0) fail("cycles did not increment");

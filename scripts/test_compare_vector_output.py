@@ -139,6 +139,54 @@ class TestCompareVectorOutput(unittest.TestCase):
         self.assertIn("expected=", result.stdout)
         self.assertIn("got=", result.stdout)
 
+    def test_cli_writes_summary_json_for_metadata_located_golden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            summary_path = Path(tmp_dir) / "summary.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(REPO_ROOT / "scripts" / "compare_vector_output.py"),
+                    "--metadata",
+                    str(METADATA_PATH),
+                    "--dut-hex",
+                    str(FIXTURE_DIR / f"{CASE_NAME}_O_golden.hex"),
+                    "--format",
+                    "words16",
+                    "--require-mae",
+                    "0",
+                    "--require-maxae",
+                    "0",
+                    "--dump-summary-json",
+                    str(summary_path),
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(summary_path.exists())
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
+        self.assertTrue(summary["passed"])
+        self.assertEqual("PASS", summary["status"])
+        self.assertEqual(256, summary["elements"])
+        self.assertEqual(0.0, summary["mae"])
+        self.assertEqual(0.0, summary["maxae"])
+        self.assertEqual(0, summary["max_lsb_error"])
+        self.assertIsNone(summary["first_failure"])
+        self.assertEqual("words16", summary["dut_format"])
+        self.assertEqual(str(METADATA_PATH), summary["metadata_path"])
+        self.assertEqual(str(FIXTURE_DIR / f"{CASE_NAME}_O_golden.hex"), summary["golden_hex_path"])
+        self.assertEqual(str(FIXTURE_DIR / f"{CASE_NAME}_O_golden.hex"), summary["dut_hex_path"])
+        self.assertEqual(0.0, summary["thresholds"]["require_mae"])
+        self.assertEqual(0.0, summary["thresholds"]["require_maxae"])
+        self.assertEqual(CASE_NAME, summary["case_name"])
+        self.assertEqual(64, summary["dimension"])
+        self.assertEqual(4, summary["output_rows"])
+        self.assertEqual(16, summary["beats_per_row"])
+
     def test_golden_self_compare_passes_for_beats64_output_dump(self) -> None:
         result = compare_vectors(
             metadata_path=METADATA_PATH,

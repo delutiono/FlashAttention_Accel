@@ -217,6 +217,45 @@ def compare_vectors(
     )
 
 
+def build_summary(
+    *,
+    result: CompareResult,
+    metadata_path: Path,
+    dut_hex_path: Path,
+    dut_format: DutFormat,
+    require_mae: float | None,
+    require_maxae: float | None,
+    golden_hex_path: Path | None,
+) -> dict[str, object]:
+    """Build a machine-readable comparison summary."""
+
+    metadata = _read_metadata(metadata_path)
+    resolved_golden_path = (
+        golden_hex_path if golden_hex_path is not None else _metadata_golden_path(metadata_path, metadata)
+    )
+    return {
+        "status": "PASS" if result.passed else "FAIL",
+        "passed": result.passed,
+        "elements": result.elements,
+        "mae": result.mae,
+        "maxae": result.maxae,
+        "max_lsb_error": result.max_lsb_error,
+        "first_failure": result.first_failure,
+        "metadata_path": str(metadata_path),
+        "golden_hex_path": str(resolved_golden_path),
+        "dut_hex_path": str(dut_hex_path),
+        "dut_format": dut_format,
+        "thresholds": {
+            "require_mae": require_mae,
+            "require_maxae": require_maxae,
+        },
+        "case_name": metadata.get("case_name"),
+        "dimension": _metadata_int(metadata, "dimension", metadata_path),
+        "output_rows": _metadata_int(metadata, "output_rows", metadata_path),
+        "beats_per_row": _metadata_int(metadata, "beats_per_row", metadata_path),
+    }
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--metadata", type=Path, required=True)
@@ -230,6 +269,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--require-mae", type=float, default=None)
     parser.add_argument("--require-maxae", type=float, default=None)
+    parser.add_argument(
+        "--dump-summary-json",
+        type=Path,
+        default=None,
+        help="Optional path to write a machine-readable comparison summary JSON.",
+    )
     return parser.parse_args()
 
 
@@ -269,6 +314,21 @@ def main() -> int:
         f"max_lsb_error={result.max_lsb_error} "
         f"{_format_first_failure(result.first_failure)}"
     )
+    if args.dump_summary_json is not None:
+        summary = build_summary(
+            result=result,
+            metadata_path=args.metadata,
+            dut_hex_path=args.dut_hex,
+            dut_format=args.format,
+            require_mae=args.require_mae,
+            require_maxae=args.require_maxae,
+            golden_hex_path=args.golden_hex,
+        )
+        args.dump_summary_json.parent.mkdir(parents=True, exist_ok=True)
+        args.dump_summary_json.write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     return 0 if result.passed else 1
 
 
