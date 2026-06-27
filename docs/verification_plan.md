@@ -41,6 +41,14 @@ Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps,
 
 The committed `test_vectors/generated/s5_d64_seed101/` fixture is a small scheduler boundary case for `KV_TILE_ROWS=2`. Its five rows force a `2 + 2 + 1` K/V tile sequence, so it is useful for checking last-tile row count, causal mask rollover, and output writeback after a non-full final tile.
 
+The matching cycle-model command is:
+
+```text
+python -B scripts/cycle_bandwidth_model.py --sequence-length 5 --dimension 64 --max-rows 5 --kv-tile-rows 2 --json
+```
+
+The expected scheduler-shape fields are `compute_rows=5`, `kv_tile_rows=2`, `kv_tile_count=3`, and `last_kv_tile_rows=1`. A corresponding RTL top smoke should use the same values, consume K/V tiles as `2 + 2 + 1`, and only treat the final tile's first row as valid.
+
 Use the metadata-located golden for self-checks and future DUT dumps:
 
 ```text

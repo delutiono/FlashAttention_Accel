@@ -38,6 +38,13 @@ def _ceil_div(numerator: int, denominator: int) -> int:
     return (numerator + denominator - 1) // denominator
 
 
+def _kv_tile_shape(output_rows: int, kv_tile_rows: int | None) -> tuple[int, int, int]:
+    effective_kv_tile_rows = kv_tile_rows if kv_tile_rows is not None else output_rows
+    kv_tile_count = _ceil_div(output_rows, effective_kv_tile_rows)
+    last_kv_tile_rows = output_rows - (kv_tile_count - 1) * effective_kv_tile_rows
+    return effective_kv_tile_rows, kv_tile_count, last_kv_tile_rows
+
+
 def _validate_config(
     *,
     sequence_length: int,
@@ -107,8 +114,8 @@ def estimate_case(
     beats_per_row = _ceil_div(stride_bytes, beat_bytes)
     causal_scores = output_rows * (output_rows + 1) // 2
     effective_compute_rows = output_rows
-    effective_kv_tile_rows = kv_tile_rows if kv_tile_rows is not None else output_rows
-    kv_tiles_per_compute = _ceil_div(output_rows, effective_kv_tile_rows)
+    effective_kv_tile_rows, kv_tile_count, last_kv_tile_rows = _kv_tile_shape(output_rows, kv_tile_rows)
+    kv_tiles_per_compute = kv_tile_count
 
     q_bytes = sequence_length * stride_bytes
     k_bytes = sequence_length * stride_bytes
@@ -150,6 +157,8 @@ def estimate_case(
         "output_rows": output_rows,
         "compute_rows": effective_compute_rows,
         "kv_tile_rows": effective_kv_tile_rows,
+        "kv_tile_count": kv_tile_count,
+        "last_kv_tile_rows": last_kv_tile_rows,
         "reuse_kv_tile": reuse_kv_tile,
         "kv_tiles_per_compute": kv_tiles_per_compute,
         "stride_bytes": stride_bytes,
@@ -198,7 +207,19 @@ def build_report(
     axi_data_width: int,
     cycle_budget: int,
 ) -> dict[str, Any]:
-    effective_compute_rows = sequence_length if compute_rows is None and max_rows is None else (compute_rows if compute_rows is not None else max_rows)
+    effective_compute_rows = _validate_config(
+        sequence_length=sequence_length,
+        dimension=dimension,
+        max_rows=max_rows,
+        compute_rows=compute_rows,
+        kv_tile_rows=kv_tile_rows,
+        stride_bytes=stride_bytes,
+        axi_data_width=axi_data_width,
+    )
+    effective_kv_tile_rows, kv_tile_count, last_kv_tile_rows = _kv_tile_shape(
+        effective_compute_rows,
+        kv_tile_rows,
+    )
     scenarios = [
         estimate_case(
             sequence_length=sequence_length,
@@ -220,7 +241,9 @@ def build_report(
             "dimension": dimension,
             "max_rows": max_rows,
             "compute_rows": effective_compute_rows,
-            "kv_tile_rows": kv_tile_rows,
+            "kv_tile_rows": effective_kv_tile_rows,
+            "kv_tile_count": kv_tile_count,
+            "last_kv_tile_rows": last_kv_tile_rows,
             "reuse_kv_tile": reuse_kv_tile,
             "stride_bytes": stride_bytes,
             "axi_data_width": axi_data_width,
@@ -231,6 +254,7 @@ def build_report(
             "o_write_rows": "compute_rows/max_rows if provided, otherwise S",
             "sequential_traffic": "Q read once, K/V read for every causal score without tile reuse",
             "tile_reuse_traffic": "Q read once, K/V rows read once across kv_tile_rows chunks for the compute_rows output tile",
+            "last_kv_tile_rows": "rows in the final K/V tile; less than kv_tile_rows means a partial final tile",
             "compute_model": "causal_scores * max(ceil(D/mac_lanes), ceil(D/value_lanes), softmax_overhead_per_score) + row overhead",
             "dma_model": "one cycle per AXI beat, added to compute cycles",
             "precision": "Q/K/V/O are signed int16 Q8.8 with stride padding",
@@ -273,9 +297,11 @@ def main() -> int:
     else:
         print(
             f"CONFIG S={args.sequence_length} D={args.dimension} "
-            f"compute_rows={args.compute_rows if args.compute_rows is not None else (args.max_rows if args.max_rows is not None else args.sequence_length)} "
+            f"compute_rows={report['config']['compute_rows']} "
             f"max_rows={args.max_rows if args.max_rows is not None else args.sequence_length} "
-            f"kv_tile_rows={args.kv_tile_rows if args.kv_tile_rows is not None else 'auto'} "
+            f"kv_tile_rows={report['config']['kv_tile_rows']} "
+            f"kv_tile_count={report['config']['kv_tile_count']} "
+            f"last_kv_tile_rows={report['config']['last_kv_tile_rows']} "
             f"reuse_kv_tile={str(args.reuse_kv_tile).lower()} "
             f"stride={args.stride_bytes} AXI_DATA_W={args.axi_data_width} "
             f"cycle_budget={args.cycle_budget}"
@@ -287,6 +313,8 @@ def main() -> int:
                 f"read_beats={scenario['read_beats']} write_beats={scenario['write_beats']} "
                 f"sequential_read_bytes={scenario['sequential_read_bytes']} "
                 f"tile_reuse_read_bytes={scenario['tile_reuse_read_bytes']} "
+                f"kv_tile_count={scenario['kv_tile_count']} "
+                f"last_kv_tile_rows={scenario['last_kv_tile_rows']} "
                 f"kv_tiles_per_compute={scenario['kv_tiles_per_compute']} "
                 f"compute_cycles={scenario['compute_cycles']} dma_cycles={scenario['dma_cycles']} "
                 f"sequential_total_cycles={scenario['sequential_total_cycles']} "

@@ -164,8 +164,12 @@ module fa_accel_top #(
   logic [63:0] compute_rd_addr;
   logic [63:0] compute_wr_data;
   logic [7:0]  compute_row_last_key_idx;
+  logic [7:0]  compute_tile_nominal_last_key_idx;
+  logic [7:0]  compute_tile_last_key_idx;
+  logic [7:0]  compute_tile_last_offset;
   logic        compute_key_is_row_last;
   logic        compute_key_is_tile_last;
+  logic        compute_tile_is_full;
 
   function automatic logic [63:0] top_row_addr(
     input logic [63:0] base,
@@ -357,8 +361,17 @@ module fa_accel_top #(
   assign row_engine_valid_i   = (top_state == TOP_ST_COMPUTE_ENGINE_ISSUE) &&
                                 row_engine_ready;
   assign compute_row_last_key_idx = causal_en ? compute_q_idx : TOP_COMPUTE_LAST_ROW;
+  assign compute_tile_nominal_last_key_idx =
+      compute_kv_tile_base_idx + 8'(KV_TILE_ROWS - 1);
+  assign compute_tile_last_key_idx =
+      (compute_tile_nominal_last_key_idx > compute_row_last_key_idx) ?
+      compute_row_last_key_idx : compute_tile_nominal_last_key_idx;
+  assign compute_tile_last_offset =
+      (compute_tile_last_key_idx > compute_kv_tile_base_idx) ?
+      (compute_tile_last_key_idx - compute_kv_tile_base_idx) : 8'd0;
   assign compute_key_is_row_last  = (compute_k_idx == compute_row_last_key_idx);
-  assign compute_key_is_tile_last = (compute_key_in_tile_idx == TOP_KV_TILE_LAST_OFFSET);
+  assign compute_key_is_tile_last = (compute_key_in_tile_idx == compute_tile_last_offset);
+  assign compute_tile_is_full     = (compute_tile_last_offset == TOP_KV_TILE_LAST_OFFSET);
   assign row_engine_row_start     = (compute_k_idx == 8'd0);
   assign row_engine_last          = compute_key_is_row_last;
   assign q_buffer_clear           = (top_state == TOP_ST_COMPUTE_LOAD_Q_ISSUE);
@@ -561,7 +574,9 @@ module fa_accel_top #(
 
         TOP_ST_COMPUTE_LOAD_K_RUN: begin
           if (rd_done) begin
-            if (rd_error || (compute_key_is_tile_last && !kv_buffer_k_load_done)) begin
+            if (rd_error ||
+                (compute_key_is_tile_last && compute_tile_is_full &&
+                 !kv_buffer_k_load_done)) begin
               error <= 1'b1;
               top_state <= TOP_ST_COMPUTE_COMPLETE;
             end else if (compute_key_is_tile_last) begin
@@ -584,7 +599,9 @@ module fa_accel_top #(
 
         TOP_ST_COMPUTE_LOAD_V_RUN: begin
           if (rd_done) begin
-            if (rd_error || (compute_key_is_tile_last && !kv_buffer_v_load_done)) begin
+            if (rd_error ||
+                (compute_key_is_tile_last && compute_tile_is_full &&
+                 !kv_buffer_v_load_done)) begin
               error <= 1'b1;
               top_state <= TOP_ST_COMPUTE_COMPLETE;
             end else if (compute_key_is_tile_last) begin
