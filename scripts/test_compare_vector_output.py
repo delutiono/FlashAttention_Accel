@@ -24,6 +24,9 @@ FIXTURE_DIR = REPO_ROOT / "test_vectors" / "generated" / "s4_d64_seed100"
 CASE_NAME = "s4_d64_seed100"
 METADATA_PATH = FIXTURE_DIR / f"{CASE_NAME}_metadata.json"
 S4_INCLUDE_PATH = REPO_ROOT / "sim" / "include" / "s4_d64_seed100_vectors.svh"
+S5_FIXTURE_DIR = REPO_ROOT / "test_vectors" / "generated" / "s5_d64_seed101"
+S5_CASE_NAME = "s5_d64_seed101"
+S5_METADATA_PATH = S5_FIXTURE_DIR / f"{S5_CASE_NAME}_metadata.json"
 
 
 class TestCompareVectorOutput(unittest.TestCase):
@@ -230,6 +233,67 @@ class TestCompareVectorOutput(unittest.TestCase):
     def test_committed_s4_sv_include_is_regenerated_output(self) -> None:
         expected = build_fixture_include(METADATA_PATH, repo_root=REPO_ROOT)
         self.assertEqual(expected, S4_INCLUDE_PATH.read_text(encoding="ascii"))
+
+    def test_committed_s5_d64_fixture_covers_non_full_kv_tile_contract(self) -> None:
+        metadata = json.loads(S5_METADATA_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual("test_vector_format_v1", metadata["format_version"])
+        self.assertEqual(S5_CASE_NAME, metadata["case_name"])
+        self.assertEqual(101, metadata["seed"])
+        self.assertEqual(5, metadata["sequence_length"])
+        self.assertEqual(64, metadata["dimension"])
+        self.assertEqual(5, metadata["output_rows"])
+        self.assertEqual(128, metadata["stride_bytes"])
+        self.assertEqual(16, metadata["beats_per_row"])
+        self.assertTrue(metadata["causal"])
+        self.assertEqual(1, metadata["sequence_length"] % 2)
+
+        for file_info in metadata["files"].values():
+            path = S5_FIXTURE_DIR / file_info["path"]
+            self.assertTrue(path.exists(), path)
+
+        q_words = (S5_FIXTURE_DIR / f"{S5_CASE_NAME}_Q.hex").read_text(encoding="ascii").splitlines()
+        q_beats = (S5_FIXTURE_DIR / f"{S5_CASE_NAME}_Q_beats64.hex").read_text(encoding="ascii").splitlines()
+        o_words = (S5_FIXTURE_DIR / f"{S5_CASE_NAME}_O_golden.hex").read_text(encoding="ascii").splitlines()
+        o_beats = (S5_FIXTURE_DIR / f"{S5_CASE_NAME}_O_golden_beats64.hex").read_text(encoding="ascii").splitlines()
+
+        self.assertEqual(5 * 64, len(q_words))
+        self.assertEqual(5 * 16, len(q_beats))
+        self.assertEqual(5 * 64, len(o_words))
+        self.assertEqual(5 * 16, len(o_beats))
+        self.assertEqual(pack_beat64([int(word, 16) for word in q_words[:4]]), q_beats[0])
+
+    def test_committed_s5_golden_self_compare_passes_for_words16_and_beats64(self) -> None:
+        for dut_format, suffix in (("words16", "O_golden.hex"), ("beats64", "O_golden_beats64.hex")):
+            with self.subTest(dut_format=dut_format):
+                result = compare_vectors(
+                    metadata_path=S5_METADATA_PATH,
+                    dut_hex_path=S5_FIXTURE_DIR / f"{S5_CASE_NAME}_{suffix}",
+                    dut_format=dut_format,
+                    require_mae=0.0,
+                    require_maxae=0.0,
+                )
+
+                self.assertTrue(result.passed)
+                self.assertEqual(5 * 64, result.elements)
+                self.assertEqual(0.0, result.mae)
+                self.assertEqual(0.0, result.maxae)
+                self.assertEqual(0, result.max_lsb_error)
+                self.assertIsNone(result.first_failure)
+
+    def test_s5_sv_include_can_be_generated_from_metadata_contract(self) -> None:
+        include_text = build_fixture_include(S5_METADATA_PATH, repo_root=REPO_ROOT)
+        o_beats = (S5_FIXTURE_DIR / f"{S5_CASE_NAME}_O_golden_beats64.hex").read_text(encoding="ascii").splitlines()
+
+        self.assertIn("localparam int S5_D64_SEED101_SEQUENCE_LENGTH = 5;", include_text)
+        self.assertIn("localparam int S5_D64_SEED101_DIMENSION = 64;", include_text)
+        self.assertIn("localparam int S5_D64_SEED101_BEATS_PER_ROW = 16;", include_text)
+        self.assertIn("localparam int S5_D64_SEED101_O_GOLDEN_BEATS = 80;", include_text)
+        self.assertIn(
+            'localparam string S5_D64_SEED101_Q_BEATS64_HEX = "test_vectors/generated/s5_d64_seed101/s5_d64_seed101_Q_beats64.hex";',
+            include_text,
+        )
+        self.assertIn(f"64'h{o_beats[-1]}", include_text)
 
 
 if __name__ == "__main__":

@@ -246,8 +246,28 @@ module tb_top_compute_s4_smoke;
   logic [31:0] status;
   logic [31:0] cycles;
   logic [63:0] got_word;
+  string dump_o_beats64_path;
   int unsigned idx;
   int unsigned poll_count;
+
+  task automatic dump_o_beats64(input string path);
+    int fd;
+    logic [63:0] dump_word;
+    int unsigned dump_idx;
+    begin
+      fd = $fopen(path, "w");
+      if (fd == 0) begin
+        fail({"failed to open O dump file: ", path});
+      end
+
+      for (dump_idx = 0; dump_idx < TOTAL_BEATS; dump_idx++) begin
+        u_mem.read_word(O_BASE + (dump_idx * 8), dump_word);
+        $fdisplay(fd, "%016x", dump_word);
+      end
+      $fclose(fd);
+      $display("Dumped O beats64 to %s", path);
+    end
+  endtask
 
   initial begin
     reset_dut();
@@ -300,6 +320,10 @@ module tb_top_compute_s4_smoke;
                "S4 compute O beat %0d mismatch got=0x%016x expected=0x%016x",
                idx, got_word, o_golden_beats[idx]);
       end
+    end
+
+    if ($value$plusargs("DUMP_O_BEATS64=%s", dump_o_beats64_path)) begin
+      dump_o_beats64(dump_o_beats64_path);
     end
 
     $display("tb_top_compute_s4_smoke PASS full S=4 D=64");

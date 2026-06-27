@@ -1,0 +1,84 @@
+{
+  "axi_data_width": 64,
+  "beat64_endian": "little-endian bytes; WDATA[15:0] is lowest-column int16",
+  "beats_per_row": 16,
+  "case_name": "s5_d64_seed101",
+  "causal": true,
+  "dimension": 64,
+  "files": {
+    "K_16b_hex": {
+      "columns": 64,
+      "elements": 320,
+      "path": "s5_d64_seed101_K.hex",
+      "rows": 5,
+      "words_per_line": 1
+    },
+    "K_beats64_hex": {
+      "beats": 80,
+      "beats_per_row": 16,
+      "columns": 64,
+      "path": "s5_d64_seed101_K_beats64.hex",
+      "rows": 5
+    },
+    "O_golden_16b_hex": {
+      "columns": 64,
+      "elements": 320,
+      "path": "s5_d64_seed101_O_golden.hex",
+      "rows": 5,
+      "words_per_line": 1
+    },
+    "O_golden_beats64_hex": {
+      "beats": 80,
+      "beats_per_row": 16,
+      "columns": 64,
+      "path": "s5_d64_seed101_O_golden_beats64.hex",
+      "rows": 5
+    },
+    "Q_16b_hex": {
+      "columns": 64,
+      "elements": 320,
+      "path": "s5_d64_seed101_Q.hex",
+      "rows": 5,
+      "words_per_line": 1
+    },
+    "Q_beats64_hex": {
+      "beats": 80,
+      "beats_per_row": 16,
+      "columns": 64,
+      "path": "s5_d64_seed101_Q_beats64.hex",
+      "rows": 5
+    },
+    "V_16b_hex": {
+      "columns": 64,
+      "elements": 320,
+      "path": "s5_d64_seed101_V.hex",
+      "rows": 5,
+      "words_per_line": 1
+    },
+    "V_beats64_hex": {
+      "beats": 80,
+      "beats_per_row": 16,
+      "columns": 64,
+      "path": "s5_d64_seed101_V_beats64.hex",
+      "rows": 5
+    }
+  },
+  "format_version": "test_vector_format_v1",
+  "generator": "scripts/generate_test_vectors.py",
+  "golden_source": "model.golden_fixed.attention_fixed",
+  "layout": "row_major",
+  "max_rows": null,
+  "numeric_format": "Q8.8 signed int16",
+  "output_rows": 5,
+  "qkv_source": "scripts.run_numeric_regression.generate_qkv",
+  "reciprocal": {
+    "lut_entries": 32,
+    "mode": "nr",
+    "nr_iterations": 1,
+    "valid_latency": 4
+  },
+  "seed": 101,
+  "sequence_length": 5,
+  "stride_bytes": 128,
+  "word_hex": "one uppercase two's-complement int16 word per line"
+}

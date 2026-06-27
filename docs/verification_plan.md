@@ -37,6 +37,17 @@ Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps,
 
 5. A passing smoke requires `status=PASS`, `mae=0`, `maxae=0`, and `max_lsb_error=0` in the summary JSON.
 
+## S5 Tile Boundary Fixture
+
+The committed `test_vectors/generated/s5_d64_seed101/` fixture is a small scheduler boundary case for `KV_TILE_ROWS=2`. Its five rows force a `2 + 2 + 1` K/V tile sequence, so it is useful for checking last-tile row count, causal mask rollover, and output writeback after a non-full final tile.
+
+Use the metadata-located golden for self-checks and future DUT dumps:
+
+```text
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json --dut-hex test_vectors/generated/s5_d64_seed101/s5_d64_seed101_O_golden.hex --format words16 --require-mae 0 --require-maxae 0
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json --dut-hex test_vectors/generated/s5_d64_seed101/s5_d64_seed101_O_golden_beats64.hex --format beats64 --require-mae 0 --require-maxae 0
+```
+
 ## S256 Scoreboard Extension
 
 1. Generate full-size vectors into an external regression artifact directory:
