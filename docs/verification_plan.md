@@ -81,11 +81,42 @@ python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16
 python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex test_vectors/generated/s16_d64_seed102/s16_d64_seed102_O_golden_beats64.hex --format beats64 --require-mae 0 --require-maxae 0
 ```
 
+The expected cycle-model shape for the preferred S16 gate is:
+
+```text
+python -B scripts/cycle_bandwidth_model.py --sequence-length 16 --dimension 64 --compute-rows 16 --kv-tile-rows 4 --json
+```
+
+The important fields are `compute_rows=16`, `kv_tile_count=4`, `last_kv_tile_rows=4`, and `tile_reuse_read_bytes=6144`.
+These cycle-model numbers describe the target tile-reuse/PPA direction. The current functional top smoke allows K/V row reads anywhere from one full K/V pass through the causal per-query reload upper bound, so future RTL can reduce traffic without invalidating the correctness scoreboard.
+
+Run the existing S16 top scoreboard before S256:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_top_compute_s16_scoreboard.ps1
+```
+
+The default artifact locations are:
+
+```text
+build/top_compute_s16/o_beats64.hex
+build/top_compute_s16/summary.json
+```
+
+The comparator gate should require bit-exact output:
+
+```text
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex build/top_compute_s16/o_beats64.hex --format beats64 --require-mae 0 --require-maxae 0 --dump-summary-json build/top_compute_s16/summary.json
+```
+
 This fixture should pass before spending simulator time on S256 because it catches multi-tile rollover, repeated Q row reuse, K/V tile reload cadence, and O row writeback across more than one tile group.
 
 ## S256 Scoreboard Extension
 
-1. Generate full-size vectors into an external regression artifact directory:
+The full baseline gate should expand from S16 to S256 in this order:
+
+1. Pass S16 bit-exact scoreboard first, including the `build/top_compute_s16/summary.json` record.
+2. Generate full-size vectors into an external regression artifact directory:
 
    ```text
    powershell -ExecutionPolicy Bypass -File scripts/make_s256_vectors.ps1 -OutputDir artifacts/vectors/s256_d64_seed100
@@ -97,8 +128,21 @@ This fixture should pass before spending simulator time on S256 because it catch
    python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 256 --dimension 64 --case-name s256_d64_seed100 --output-dir artifacts/vectors/s256_d64_seed100 --stride-bytes 128
    ```
 
-2. Preserve the generated `s256_d64_seed100_metadata.json` with the regression run. Do not commit the generated directory unless a later review explicitly chooses a small fixture subset.
-3. Load Q/K/V `*_beats64.hex` into the AXI memory model using metadata fields:
+3. Preserve the generated `s256_d64_seed100_metadata.json` with the regression run. Do not commit the generated directory unless a later review explicitly chooses a small fixture subset.
+4. Emit the matching run manifest and cycle-model target path without creating large artifacts:
+
+   ```text
+   python -B scripts/print_s256_regression_manifest.py
+   python -B scripts/print_s256_regression_manifest.py --json
+   ```
+
+5. Run the cycle model and keep the JSON beside the simulator logs:
+
+   ```text
+   python -B scripts/cycle_bandwidth_model.py --sequence-length 256 --dimension 64 --compute-rows 256 --kv-tile-rows 16 --json > artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
+   ```
+
+6. Load Q/K/V `*_beats64.hex` into the AXI memory model using metadata fields:
 
    ```text
    sequence_length = 256
@@ -108,15 +152,16 @@ This fixture should pass before spending simulator time on S256 because it catch
    beats_per_row = 16
    ```
 
-4. Run top compute for the full causal S256 case. If RTL is still tile-limited, record the tile parameters and partial output rows in the run manifest.
-5. Dump O in `beats64` format from the O base region. A `words16` dump is also acceptable if the simulator has a direct word dump path.
-6. Compare DUT output:
+7. Run top compute for the full causal S256 case locally or on the remote simulator. If RTL is still tile-limited, record the tile parameters and partial output rows in the run manifest.
+8. Dump O in `beats64` format from the O base region. A `words16` dump is also acceptable if the simulator has a direct word dump path.
+9. Compare DUT output:
 
    ```text
    python -B scripts/compare_vector_output.py --metadata artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json --dut-hex <run_dir>/s256_top_O_beats64.hex --format beats64 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s256_top_compare.json
    ```
 
-7. Archive the summary JSON with simulator logs. The key fields are `status`, `elements`, `mae`, `maxae`, `max_lsb_error`, and `first_failure`.
+10. Archive the summary JSON with simulator logs. The key fields are `status`, `elements`, `mae`, `maxae`, `max_lsb_error`, and `first_failure`.
+11. Only after the S256 scoreboard gate passes, run remote Genus/PPA and parse the returned reports.
 
 ## Failure Localization
 

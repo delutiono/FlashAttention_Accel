@@ -152,6 +152,32 @@ class CycleBandwidthModelTest(unittest.TestCase):
             self.assertEqual(5 * 128 * 3, case["tile_reuse_read_bytes"])
             self.assertEqual(5 * 16 * 3, case["tile_reuse_read_beats"])
 
+    def test_s16_kv_tile_rows_4_reports_complete_tile_shape_and_traffic(self) -> None:
+        report = build_report(
+            sequence_length=16,
+            dimension=64,
+            max_rows=None,
+            compute_rows=16,
+            kv_tile_rows=4,
+            reuse_kv_tile=True,
+            stride_bytes=128,
+            axi_data_width=64,
+            cycle_budget=300_000,
+        )
+        self.assertEqual(16, report["config"]["compute_rows"])
+        self.assertEqual(4, report["config"]["kv_tile_rows"])
+        self.assertEqual(4, report["config"]["kv_tile_count"])
+        self.assertEqual(4, report["config"]["last_kv_tile_rows"])
+        for case in report["scenarios"]:
+            self.assertEqual(16, case["compute_rows"])
+            self.assertEqual(4, case["kv_tile_rows"])
+            self.assertEqual(4, case["kv_tile_count"])
+            self.assertEqual(4, case["last_kv_tile_rows"])
+            self.assertEqual(4, case["kv_tiles_per_compute"])
+            self.assertEqual(16 * 128 * 3, case["tile_reuse_read_bytes"])
+            self.assertEqual(16 * 16 * 3, case["tile_reuse_read_beats"])
+            self.assertEqual(case["tile_reuse_read_bytes"], case["read_bytes"])
+
     def test_disable_kv_tile_reuse_uses_sequential_budget_status(self) -> None:
         report = build_report(
             sequence_length=256,
