@@ -8,6 +8,7 @@ work/
 work_tmp/
 work_lint/
 work_lint*/
+work_*/
 work_red*/
 work_tdd*/
 work_tb*/
@@ -26,3 +27,6 @@ transcript
 
 # Generated regression logs
 logs/*.log
+
+# Locally generated vector/regression artifacts
+artifacts/

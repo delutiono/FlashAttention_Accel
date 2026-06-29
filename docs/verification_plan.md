@@ -116,7 +116,7 @@ This fixture should pass before spending simulator time on S256 because it catch
 The full baseline gate should expand from S16 to S256 in this order:
 
 1. Pass S16 bit-exact scoreboard first, including the `build/top_compute_s16/summary.json` record.
-2. Generate full-size vectors into an external regression artifact directory:
+2. Generate full-size vectors into an external regression artifact directory. The default location is under `artifacts/`, which is intentionally not part of the committed regression fixture set:
 
    ```text
    powershell -ExecutionPolicy Bypass -File scripts/make_s256_vectors.ps1 -OutputDir artifacts/vectors/s256_d64_seed100
@@ -128,12 +128,22 @@ The full baseline gate should expand from S16 to S256 in this order:
    python -B scripts/generate_test_vectors.py --seed 100 --sequence-length 256 --dimension 64 --case-name s256_d64_seed100 --output-dir artifacts/vectors/s256_d64_seed100 --stride-bytes 128
    ```
 
-3. Preserve the generated `s256_d64_seed100_metadata.json` with the regression run. Do not commit the generated directory unless a later review explicitly chooses a small fixture subset.
-4. Emit the matching run manifest and cycle-model target path without creating large artifacts:
+3. Preserve the generated `s256_d64_seed100_metadata.json` with the regression run. Do not commit the generated S256 vector directory, DUT dumps, simulator logs, or generated run summaries unless a later review explicitly chooses a small fixture subset.
+4. Emit the matching JSON run manifest and cycle-model target path without creating large artifacts:
 
    ```text
    python -B scripts/print_s256_regression_manifest.py
    python -B scripts/print_s256_regression_manifest.py --json
+   ```
+
+   The JSON manifest records the recommended paths:
+
+   ```text
+   artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json
+   artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex
+   artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json
+   artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
+   artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log
    ```
 
 5. Run the cycle model and keep the JSON beside the simulator logs:
@@ -152,7 +162,7 @@ The full baseline gate should expand from S16 to S256 in this order:
    beats_per_row = 16
    ```
 
-7. Run top compute for the full causal S256 case locally or on the remote simulator. If RTL is still tile-limited, record the tile parameters and partial output rows in the run manifest.
+7. Run top compute for the full causal S256 case locally or on the remote simulator. If local long simulation exceeds the acceptable turnaround time, move this step to the remote server and use the manifest paths as the artifact contract. If RTL is still tile-limited, record the tile parameters and partial output rows in the run manifest.
 8. Dump O in `beats64` format from the O base region. A `words16` dump is also acceptable if the simulator has a direct word dump path.
 9. Compare DUT output:
 
@@ -161,7 +171,8 @@ The full baseline gate should expand from S16 to S256 in this order:
    ```
 
 10. Archive the summary JSON with simulator logs. The key fields are `status`, `elements`, `mae`, `maxae`, `max_lsb_error`, and `first_failure`.
-11. Only after the S256 scoreboard gate passes, run remote Genus/PPA and parse the returned reports.
+11. When using the remote server, return at least the compare summary JSON, simulator log, cycle-model JSON, and any Genus report directory produced by that run. Large vector dumps may stay remote if the summary passes; return the DUT dump only when debugging a mismatch.
+12. Only after the S256 scoreboard gate passes, run remote Genus/PPA and parse the returned reports.
 
 ## Failure Localization
 
