@@ -51,6 +51,38 @@ For each `TOP`, collect:
 
 Package the matching `reports/<top>` and `outputs/<top>` directories together when returning remote results. If Genus fails before writing all reports, still return the partial directory so the parser can mark missing files explicitly.
 
+For the full top-level baseline run, the minimum return package is:
+
+```text
+synth/reports/fa_accel_top/
+synth/outputs/fa_accel_top/
+synth/reports/fa_accel_top/ppa_summary.json
+```
+
+If the S256 simulator run was also completed on the remote server, package the verification records with the Genus records:
+
+```text
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log
+artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
+synth/reports/fa_accel_top/
+synth/outputs/fa_accel_top/
+synth/reports/fa_accel_top/ppa_summary.json
+```
+
+The generated `artifacts/` tree is not a source change and should not be committed. Return the DUT O dump, such as `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex`, only when the comparator fails or output-level debug is needed.
+
+Example package command from the repository root:
+
+```sh
+tar -czf fa_accel_s256_genus_return_$(date +%Y%m%d_%H%M%S).tar.gz \
+  artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json \
+  artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log \
+  artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json \
+  synth/reports/fa_accel_top \
+  synth/outputs/fa_accel_top
+```
+
 ## PPA Summary
 
 After copying remote artifacts back to the repo, summarize each report directory:

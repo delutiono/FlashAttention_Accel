@@ -30,6 +30,7 @@ def build_manifest(
     metadata = vector_dir / f"{case_name}_metadata.json"
     simulator_log = run_dir / f"{case_name}_top_sim.log"
     genus_reports_dir = Path("synth/reports/fa_accel_top")
+    genus_outputs_dir = Path("synth/outputs/fa_accel_top")
     ppa_summary_json = genus_reports_dir / "ppa_summary.json"
 
     return {
@@ -51,7 +52,11 @@ def build_manifest(
                 _path_text(simulator_log),
                 _path_text(cycle_model_json),
                 _path_text(genus_reports_dir),
+                _path_text(genus_outputs_dir),
                 _path_text(ppa_summary_json),
+            ],
+            "return_only_on_mismatch": [
+                _path_text(dut_o_beats64),
             ],
         },
         "artifact_paths": {
@@ -63,6 +68,7 @@ def build_manifest(
             "cycle_model_json": _path_text(cycle_model_json),
             "simulator_log": _path_text(simulator_log),
             "genus_reports_dir": _path_text(genus_reports_dir),
+            "genus_outputs_dir": _path_text(genus_outputs_dir),
             "ppa_summary_json": _path_text(ppa_summary_json),
         },
         "commands": {
@@ -91,6 +97,11 @@ def build_manifest(
                 "--require-mae 0 "
                 "--require-maxae 0 "
                 f"--dump-summary-json {_path_text(compare_summary_json)}"
+            ),
+            "parse_genus_ppa": (
+                "python -B scripts/parse_genus_reports.py "
+                f"{_path_text(genus_reports_dir)} "
+                f"--json > {_path_text(ppa_summary_json)}"
             ),
         },
     }

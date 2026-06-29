@@ -174,6 +174,49 @@ The full baseline gate should expand from S16 to S256 in this order:
 11. When using the remote server, return at least the compare summary JSON, simulator log, cycle-model JSON, and any Genus report directory produced by that run. Large vector dumps may stay remote if the summary passes; return the DUT dump only when debugging a mismatch.
 12. Only after the S256 scoreboard gate passes, run remote Genus/PPA and parse the returned reports.
 
+## Remote Return Package
+
+Generated S256 vectors, DUT dumps, simulator logs, cycle-model JSON, and Genus output are run artifacts. Keep them under `artifacts/`, `build/`, `synth/reports/`, or `synth/outputs/` and do not commit them by default.
+
+After a remote S256 verification plus Genus run, return this minimum package:
+
+```text
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log
+artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
+synth/reports/fa_accel_top/
+synth/outputs/fa_accel_top/
+synth/reports/fa_accel_top/ppa_summary.json
+```
+
+Return `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex` only when the comparator reports a mismatch or when line-by-line output debug is needed.
+
+The manifest prints the same contract:
+
+```text
+python -B scripts/print_s256_regression_manifest.py --json
+```
+
+One portable packaging command from the repository root is:
+
+```sh
+tar -czf s256_genus_return_$(date +%Y%m%d_%H%M%S).tar.gz \
+  artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json \
+  artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log \
+  artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json \
+  synth/reports/fa_accel_top \
+  synth/outputs/fa_accel_top
+```
+
+If the S256 compare fails, include the DUT dump in the package:
+
+```sh
+tar -czf s256_debug_return_$(date +%Y%m%d_%H%M%S).tar.gz \
+  artifacts/runs/s256_d64_seed100 \
+  synth/reports/fa_accel_top \
+  synth/outputs/fa_accel_top
+```
+
 ## Failure Localization
 
 - If `first_failure` is non-null, start with `row` and `col`.

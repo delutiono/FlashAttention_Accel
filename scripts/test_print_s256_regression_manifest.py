@@ -122,6 +122,39 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
         self.assertEqual("artifacts/runs/s256_d64_seed123", payload["artifact_paths"]["run_dir"])
         self.assertIn("artifacts/runs/s256_d64_seed123", payload["commands"]["compare_dut_beats64"])
 
+    def test_remote_return_contract_lists_required_ppa_and_debug_artifacts(self) -> None:
+        manifest = build_manifest(
+            seed=100,
+            sequence_length=256,
+            dimension=64,
+            kv_tile_rows=16,
+            case_name="s256_d64_seed100",
+            artifact_root=Path("artifacts/vectors"),
+            run_dir=Path("artifacts/runs/s256_d64_seed100"),
+        )
+
+        paths = manifest["artifact_paths"]
+        policy = manifest["artifact_policy"]
+
+        self.assertEqual("synth/reports/fa_accel_top", paths["genus_reports_dir"])
+        self.assertEqual("synth/outputs/fa_accel_top", paths["genus_outputs_dir"])
+        self.assertEqual("synth/reports/fa_accel_top/ppa_summary.json", paths["ppa_summary_json"])
+
+        self.assertEqual(
+            [
+                paths["compare_summary_json"],
+                paths["simulator_log"],
+                paths["cycle_model_json"],
+                paths["genus_reports_dir"],
+                paths["genus_outputs_dir"],
+                paths["ppa_summary_json"],
+            ],
+            policy["return_from_remote"],
+        )
+        self.assertEqual([paths["dut_o_beats64"]], policy["return_only_on_mismatch"])
+        self.assertFalse(policy["commit_vectors"])
+        self.assertFalse(policy["commit_run_outputs"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -170,13 +170,12 @@ module tb_top_compute_s32_smoke #(
   always #5 clk = ~clk;
 
   initial begin : static_config_checks
-    if (ROWS != 32) fail("S32 smoke should run ROWS=32 by default");
-    if (dut.COMPUTE_ROWS != ROWS) fail("top compute S32 smoke COMPUTE_ROWS override did not apply");
-    if (dut.KV_TILE_ROWS != KV_TILE_ROWS) fail("top compute S32 smoke KV_TILE_ROWS override did not apply");
+    if (dut.COMPUTE_ROWS != ROWS) fail("top compute smoke COMPUTE_ROWS override did not apply");
+    if (dut.KV_TILE_ROWS != KV_TILE_ROWS) fail("top compute smoke KV_TILE_ROWS override did not apply");
     if (!((Q_LIMIT <= K_BASE) && (K_LIMIT <= V_BASE) && (V_LIMIT <= O_BASE))) begin
-      fail("S32 smoke Q/K/V/O base ranges overlap");
+      fail("top compute smoke Q/K/V/O base ranges overlap");
     end
-    if (O_LIMIT > MEM_LIMIT) fail("S32 smoke axi_mem_model MEM_WORDS is too small");
+    if (O_LIMIT > MEM_LIMIT) fail("top compute smoke axi_mem_model MEM_WORDS is too small");
   end
 
   always_ff @(posedge clk or negedge rst_n) begin
@@ -359,9 +358,9 @@ module tb_top_compute_s32_smoke #(
     poll_count = 0;
     do begin
       axil_read(REG_STATUS, status);
-      if (status[2]) fail("top reported compute S32 smoke error");
+      if (status[2]) fail("top reported compute smoke error");
       poll_count++;
-      if (poll_count > 250000) fail("timeout waiting for top compute S32 smoke done");
+      if (poll_count > 250000) fail("timeout waiting for top compute smoke done");
     end while (!status[1]);
 
     if (status[0]) fail("busy remained high after compute done");
@@ -370,23 +369,23 @@ module tb_top_compute_s32_smoke #(
     if (!saw_k_buffer_load_done) fail("K buffer was not loaded during compute smoke");
     if (!saw_v_buffer_load_done) fail("V buffer was not loaded during compute smoke");
     if (saw_oob_kv_read) begin
-      $fatal(1, "S32 smoke observed %0d out-of-range K/V row DMA reads",
+      $fatal(1, "top compute smoke observed %0d out-of-range K/V row DMA reads",
              oob_kv_read_count);
     end
     if (q_row_read_count != ROWS) begin
-      $fatal(1, "S32 expected %0d Q row reads, observed %0d",
+      $fatal(1, "top compute smoke expected %0d Q row reads, observed %0d",
              ROWS, q_row_read_count);
     end
     if ((k_row_read_count < ROWS) || (k_row_read_count > MAX_CAUSAL_ROW_READS)) begin
-      $fatal(1, "S32 expected K row reads in [%0d,%0d], observed %0d",
+      $fatal(1, "top compute smoke expected K row reads in [%0d,%0d], observed %0d",
              ROWS, MAX_CAUSAL_ROW_READS, k_row_read_count);
     end
     if ((v_row_read_count < ROWS) || (v_row_read_count > MAX_CAUSAL_ROW_READS)) begin
-      $fatal(1, "S32 expected V row reads in [%0d,%0d], observed %0d",
+      $fatal(1, "top compute smoke expected V row reads in [%0d,%0d], observed %0d",
              ROWS, MAX_CAUSAL_ROW_READS, v_row_read_count);
     end
     if (o_row_write_count != ROWS) begin
-      $fatal(1, "S32 expected %0d O row writes, observed %0d",
+      $fatal(1, "top compute smoke expected %0d O row writes, observed %0d",
              ROWS, o_row_write_count);
     end
 
@@ -397,7 +396,7 @@ module tb_top_compute_s32_smoke #(
       u_mem.read_word(O_BASE + (idx * 8), got_word);
       if (got_word !== o_golden_beats[idx]) begin
         $fatal(1,
-               "S32 compute O beat %0d mismatch got=0x%016x expected=0x%016x",
+               "top compute O beat %0d mismatch got=0x%016x expected=0x%016x",
                idx, got_word, o_golden_beats[idx]);
       end
     end
@@ -406,7 +405,7 @@ module tb_top_compute_s32_smoke #(
       dump_o_beats64(dump_o_beats64_path);
     end
 
-    $display("tb_top_compute_s32_smoke PASS S=%0d D=64 KV_TILE_ROWS=%0d", ROWS, KV_TILE_ROWS);
+    $display("tb_top_compute_smoke PASS S=%0d D=64 KV_TILE_ROWS=%0d", ROWS, KV_TILE_ROWS);
     $finish;
   end
 
