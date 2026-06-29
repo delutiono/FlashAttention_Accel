@@ -1,9 +1,14 @@
 `timescale 1ns/1ps
 
 module axi_mem_model #(
-  parameter int unsigned ADDR_W    = 64,
-  parameter int unsigned DATA_W    = 64,
-  parameter int unsigned MEM_WORDS = 4096
+  parameter int unsigned ADDR_W                = 64,
+  parameter int unsigned DATA_W                = 64,
+  parameter int unsigned MEM_WORDS             = 4096,
+  parameter int unsigned AR_READY_STALL_CYCLES = 0,
+  parameter int unsigned AW_READY_STALL_CYCLES = 0,
+  parameter int unsigned W_READY_STALL_CYCLES  = 0,
+  parameter int unsigned R_VALID_DELAY_CYCLES  = 0,
+  parameter int unsigned B_VALID_DELAY_CYCLES  = 0
 ) (
   input  logic                clk,
   input  logic                rst_n,
@@ -46,12 +51,19 @@ module axi_mem_model #(
   logic [8:0]        rd_beats_q;
   logic [8:0]        rd_count_q;
   logic              rd_error_q;
+  logic [31:0]       ar_ready_stall_count_q;
+  logic [31:0]       r_valid_delay_count_q;
 
   logic              wr_active;
   logic [ADDR_W-1:0] wr_addr_q;
   logic [8:0]        wr_beats_q;
   logic [8:0]        wr_count_q;
   logic              wr_error_q;
+  logic              wr_resp_pending_q;
+  logic [1:0]        wr_resp_q;
+  logic [31:0]       aw_ready_stall_count_q;
+  logic [31:0]       w_ready_stall_count_q;
+  logic [31:0]       b_valid_delay_count_q;
 
   function automatic logic addr_in_range(input logic [ADDR_W-1:0] addr);
     logic [ADDR_W-ADDR_LSB-1:0] word_addr;
@@ -107,9 +119,12 @@ module axi_mem_model #(
     end
   endgenerate
 
-  assign s_axi_arready = !rd_active;
-  assign s_axi_awready = !wr_active && !s_axi_bvalid;
-  assign s_axi_wready  = wr_active && !s_axi_bvalid;
+  assign s_axi_arready = !rd_active &&
+                         (ar_ready_stall_count_q >= AR_READY_STALL_CYCLES);
+  assign s_axi_awready = !wr_active && !wr_resp_pending_q && !s_axi_bvalid &&
+                         (aw_ready_stall_count_q >= AW_READY_STALL_CYCLES);
+  assign s_axi_wready  = wr_active && !s_axi_bvalid &&
+                         (w_ready_stall_count_q >= W_READY_STALL_CYCLES);
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -118,26 +133,40 @@ module axi_mem_model #(
       rd_beats_q   <= '0;
       rd_count_q   <= '0;
       rd_error_q   <= 1'b0;
+      ar_ready_stall_count_q <= '0;
+      r_valid_delay_count_q  <= '0;
       s_axi_rdata  <= '0;
       s_axi_rresp  <= 2'b00;
       s_axi_rlast  <= 1'b0;
       s_axi_rvalid <= 1'b0;
     end else begin
+      if (!rd_active && s_axi_arvalid && !s_axi_arready) begin
+        ar_ready_stall_count_q <= ar_ready_stall_count_q + 32'd1;
+      end else if (!s_axi_arvalid || (s_axi_arvalid && s_axi_arready)) begin
+        ar_ready_stall_count_q <= '0;
+      end
+
       if (s_axi_arvalid && s_axi_arready) begin
         rd_active  <= 1'b1;
         rd_addr_q  <= s_axi_araddr;
         rd_beats_q <= {1'b0, s_axi_arlen} + 9'd1;
         rd_count_q <= '0;
         rd_error_q <= (s_axi_arsize != 3'd3) || (s_axi_arburst != 2'b01);
+        r_valid_delay_count_q <= '0;
       end
 
       if (!s_axi_rvalid && rd_active) begin
-        s_axi_rdata  <= load_word(rd_addr_q);
-        s_axi_rresp  <= (rd_error_q || !addr_in_range(rd_addr_q)) ? 2'b10 : 2'b00;
-        s_axi_rlast  <= (rd_count_q == rd_beats_q - 9'd1);
-        s_axi_rvalid <= 1'b1;
+        if (r_valid_delay_count_q < R_VALID_DELAY_CYCLES) begin
+          r_valid_delay_count_q <= r_valid_delay_count_q + 32'd1;
+        end else begin
+          s_axi_rdata  <= load_word(rd_addr_q);
+          s_axi_rresp  <= (rd_error_q || !addr_in_range(rd_addr_q)) ? 2'b10 : 2'b00;
+          s_axi_rlast  <= (rd_count_q == rd_beats_q - 9'd1);
+          s_axi_rvalid <= 1'b1;
+        end
       end else if (s_axi_rvalid && s_axi_rready) begin
         s_axi_rvalid <= 1'b0;
+        r_valid_delay_count_q <= '0;
         if (s_axi_rlast) begin
           rd_active <= 1'b0;
         end else begin
@@ -155,11 +184,40 @@ module axi_mem_model #(
       wr_beats_q   <= '0;
       wr_count_q   <= '0;
       wr_error_q   <= 1'b0;
+      wr_resp_pending_q <= 1'b0;
+      wr_resp_q     <= 2'b00;
+      aw_ready_stall_count_q <= '0;
+      w_ready_stall_count_q  <= '0;
+      b_valid_delay_count_q  <= '0;
       s_axi_bresp  <= 2'b00;
       s_axi_bvalid <= 1'b0;
     end else begin
       if (s_axi_bvalid && s_axi_bready) begin
         s_axi_bvalid <= 1'b0;
+      end
+
+      if (!wr_active && !wr_resp_pending_q && !s_axi_bvalid &&
+          s_axi_awvalid && !s_axi_awready) begin
+        aw_ready_stall_count_q <= aw_ready_stall_count_q + 32'd1;
+      end else if (!s_axi_awvalid || (s_axi_awvalid && s_axi_awready)) begin
+        aw_ready_stall_count_q <= '0;
+      end
+
+      if (wr_active && s_axi_wvalid && !s_axi_wready) begin
+        w_ready_stall_count_q <= w_ready_stall_count_q + 32'd1;
+      end else if (!s_axi_wvalid || (s_axi_wvalid && s_axi_wready)) begin
+        w_ready_stall_count_q <= '0;
+      end
+
+      if (wr_resp_pending_q && !s_axi_bvalid) begin
+        if (b_valid_delay_count_q < B_VALID_DELAY_CYCLES) begin
+          b_valid_delay_count_q <= b_valid_delay_count_q + 32'd1;
+        end else begin
+          s_axi_bresp <= wr_resp_q;
+          s_axi_bvalid <= 1'b1;
+          wr_resp_pending_q <= 1'b0;
+          b_valid_delay_count_q <= '0;
+        end
       end
 
       if (s_axi_awvalid && s_axi_awready) begin
@@ -176,9 +234,16 @@ module axi_mem_model #(
                       (s_axi_wlast != (wr_count_q == wr_beats_q - 9'd1));
         if (wr_count_q == wr_beats_q - 9'd1) begin
           wr_active    <= 1'b0;
-          s_axi_bresp  <= (wr_error_q || !addr_in_range(wr_addr_q) ||
+          wr_resp_q    <= (wr_error_q || !addr_in_range(wr_addr_q) ||
                            !s_axi_wlast) ? 2'b10 : 2'b00;
-          s_axi_bvalid <= 1'b1;
+          if (B_VALID_DELAY_CYCLES == 0) begin
+            s_axi_bresp  <= (wr_error_q || !addr_in_range(wr_addr_q) ||
+                             !s_axi_wlast) ? 2'b10 : 2'b00;
+            s_axi_bvalid <= 1'b1;
+          end else begin
+            wr_resp_pending_q <= 1'b1;
+            b_valid_delay_count_q <= '0;
+          end
         end else begin
           wr_addr_q  <= wr_addr_q + ADDR_INCR;
           wr_count_q <= wr_count_q + 9'd1;

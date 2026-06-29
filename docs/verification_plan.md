@@ -5,6 +5,8 @@ Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps,
 ## Current Baseline
 
 - S4/D64 committed fixture: `test_vectors/generated/s4_d64_seed100/`
+- S5/D64 committed fixture: `test_vectors/generated/s5_d64_seed101/`
+- S16/D64 committed fixture: `test_vectors/generated/s16_d64_seed102/`
 - Golden source: `model.golden_fixed.attention_fixed`
 - Vector format: v1 metadata plus `words16` and stride-padded `beats64` files
 - Comparator: `scripts/compare_vector_output.py`
@@ -55,6 +57,31 @@ Use the metadata-located golden for self-checks and future DUT dumps:
 python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json --dut-hex test_vectors/generated/s5_d64_seed101/s5_d64_seed101_O_golden.hex --format words16 --require-mae 0 --require-maxae 0
 python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json --dut-hex test_vectors/generated/s5_d64_seed101/s5_d64_seed101_O_golden_beats64.hex --format beats64 --require-mae 0 --require-maxae 0
 ```
+
+## S16 Multi-Tile Fixture
+
+The committed `test_vectors/generated/s16_d64_seed102/` fixture is the medium bring-up step between boundary smoke and the full baseline. It keeps the baseline dimension `D=64` and stride `128`, but raises the sequence to 16 rows so a top-level scheduler can exercise multiple complete K/V tiles without committing the full S256 artifact.
+
+Suggested RTL use:
+
+- `KV_TILE_ROWS=4` gives four complete tiles: `4 + 4 + 4 + 4`.
+- `KV_TILE_ROWS=8` gives two complete tiles: `8 + 8`.
+- `COMPUTE_ROWS=16` checks every causal output row in the committed fixture.
+
+Generate or refresh the fixture with:
+
+```text
+python -B scripts/generate_test_vectors.py --seed 102 --sequence-length 16 --dimension 64 --case-name s16_d64_seed102 --output-dir test_vectors/generated/s16_d64_seed102 --stride-bytes 128
+```
+
+Use the metadata-located golden for self-checks and future DUT dumps:
+
+```text
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex test_vectors/generated/s16_d64_seed102/s16_d64_seed102_O_golden.hex --format words16 --require-mae 0 --require-maxae 0
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex test_vectors/generated/s16_d64_seed102/s16_d64_seed102_O_golden_beats64.hex --format beats64 --require-mae 0 --require-maxae 0
+```
+
+This fixture should pass before spending simulator time on S256 because it catches multi-tile rollover, repeated Q row reuse, K/V tile reload cadence, and O row writeback across more than one tile group.
 
 ## S256 Scoreboard Extension
 
@@ -129,6 +156,7 @@ Only run or report Genus/PPA after the selected scoreboard target passes:
 ## Remaining Baseline Gaps
 
 - Full S256 top-compute scoreboard evidence with real DUT O dumps.
+- RTL top-compute scoreboard coverage for the committed S16 multi-tile fixture.
 - Agreement on where non-committed large vectors and run artifacts live in CI or shared storage.
 - Tile-reuse RTL/PPA correlation against `cycle_bandwidth_model.py`.
 - Remote Genus reports for the final top parameters and constraints.

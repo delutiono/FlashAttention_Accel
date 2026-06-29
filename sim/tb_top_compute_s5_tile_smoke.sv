@@ -2,7 +2,13 @@
 
 import fa_pkg::*;
 
-module tb_top_compute_s5_tile_smoke;
+module tb_top_compute_s5_tile_smoke #(
+  parameter int unsigned AXI_MEM_AR_READY_STALL_CYCLES = 0,
+  parameter int unsigned AXI_MEM_AW_READY_STALL_CYCLES = 0,
+  parameter int unsigned AXI_MEM_W_READY_STALL_CYCLES  = 0,
+  parameter int unsigned AXI_MEM_R_VALID_DELAY_CYCLES  = 0,
+  parameter int unsigned AXI_MEM_B_VALID_DELAY_CYCLES  = 0
+);
   localparam logic [63:0] Q_BASE = 64'h0000_0000_0000_1000;
   localparam logic [63:0] K_BASE = 64'h0000_0000_0000_2000;
   localparam logic [63:0] V_BASE = 64'h0000_0000_0000_3000;
@@ -69,6 +75,13 @@ module tb_top_compute_s5_tile_smoke;
   logic        saw_k_buffer_load_done;
   logic        saw_v_buffer_load_done;
   logic        saw_oob_kv_read;
+  logic        saw_ar_ready_stall;
+  logic        saw_aw_ready_stall;
+  logic        saw_w_ready_stall;
+  logic        saw_r_valid_delay;
+  logic        saw_b_valid_delay;
+  logic        waiting_for_first_r;
+  logic        waiting_for_b;
   int unsigned oob_kv_read_count;
 
   fa_accel_top #(
@@ -131,7 +144,13 @@ module tb_top_compute_s5_tile_smoke;
     end
   end
 
-  axi_mem_model u_mem (
+  axi_mem_model #(
+    .AR_READY_STALL_CYCLES (AXI_MEM_AR_READY_STALL_CYCLES),
+    .AW_READY_STALL_CYCLES (AXI_MEM_AW_READY_STALL_CYCLES),
+    .W_READY_STALL_CYCLES  (AXI_MEM_W_READY_STALL_CYCLES),
+    .R_VALID_DELAY_CYCLES  (AXI_MEM_R_VALID_DELAY_CYCLES),
+    .B_VALID_DELAY_CYCLES  (AXI_MEM_B_VALID_DELAY_CYCLES)
+  ) u_mem (
     .clk,
     .rst_n,
     .s_axi_araddr  (m_axi_araddr),
@@ -170,6 +189,13 @@ module tb_top_compute_s5_tile_smoke;
       saw_k_buffer_load_done <= 1'b0;
       saw_v_buffer_load_done <= 1'b0;
       saw_oob_kv_read        <= 1'b0;
+      saw_ar_ready_stall     <= 1'b0;
+      saw_aw_ready_stall     <= 1'b0;
+      saw_w_ready_stall      <= 1'b0;
+      saw_r_valid_delay      <= 1'b0;
+      saw_b_valid_delay      <= 1'b0;
+      waiting_for_first_r    <= 1'b0;
+      waiting_for_b          <= 1'b0;
       oob_kv_read_count      <= 0;
     end else begin
       saw_q_buffer_load_done <= saw_q_buffer_load_done ||
@@ -185,6 +211,30 @@ module tb_top_compute_s5_tile_smoke;
             (m_axi_araddr < O_BASE)))) begin
         saw_oob_kv_read   <= 1'b1;
         oob_kv_read_count <= oob_kv_read_count + 1;
+      end
+      saw_ar_ready_stall <= saw_ar_ready_stall ||
+                            (m_axi_arvalid && !m_axi_arready);
+      saw_aw_ready_stall <= saw_aw_ready_stall ||
+                            (m_axi_awvalid && !m_axi_awready);
+      saw_w_ready_stall  <= saw_w_ready_stall ||
+                            (m_axi_wvalid && !m_axi_wready);
+
+      if (m_axi_arvalid && m_axi_arready) begin
+        waiting_for_first_r <= 1'b1;
+      end else if (m_axi_rvalid && m_axi_rready) begin
+        waiting_for_first_r <= 1'b0;
+      end
+      if (waiting_for_first_r && !m_axi_rvalid) begin
+        saw_r_valid_delay <= 1'b1;
+      end
+
+      if (m_axi_wvalid && m_axi_wready && m_axi_wlast) begin
+        waiting_for_b <= 1'b1;
+      end else if (m_axi_bvalid && m_axi_bready) begin
+        waiting_for_b <= 1'b0;
+      end
+      if (waiting_for_b && !m_axi_bvalid) begin
+        saw_b_valid_delay <= 1'b1;
       end
     end
   end
@@ -327,6 +377,21 @@ module tb_top_compute_s5_tile_smoke;
     if (saw_oob_kv_read) begin
       $fatal(1, "S5 smoke observed %0d out-of-range K/V row DMA reads",
              oob_kv_read_count);
+    end
+    if ((AXI_MEM_AR_READY_STALL_CYCLES != 0) && !saw_ar_ready_stall) begin
+      fail("AR ready stall parameter was nonzero but no AR backpressure was observed");
+    end
+    if ((AXI_MEM_AW_READY_STALL_CYCLES != 0) && !saw_aw_ready_stall) begin
+      fail("AW ready stall parameter was nonzero but no AW backpressure was observed");
+    end
+    if ((AXI_MEM_W_READY_STALL_CYCLES != 0) && !saw_w_ready_stall) begin
+      fail("W ready stall parameter was nonzero but no W backpressure was observed");
+    end
+    if ((AXI_MEM_R_VALID_DELAY_CYCLES != 0) && !saw_r_valid_delay) begin
+      fail("R valid delay parameter was nonzero but no read-data delay was observed");
+    end
+    if ((AXI_MEM_B_VALID_DELAY_CYCLES != 0) && !saw_b_valid_delay) begin
+      fail("B valid delay parameter was nonzero but no write-response delay was observed");
     end
 
     axil_read(REG_CYCLES, cycles);
