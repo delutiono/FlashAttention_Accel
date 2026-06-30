@@ -3,7 +3,7 @@ package fa_pkg;
   localparam int unsigned FA_D = 64;
   localparam int unsigned FA_ELEM_W = 16;
   localparam int unsigned FA_ADDR_W = 64;
-  localparam int unsigned FA_AXI_DATA_W = 64;
+  localparam int unsigned FA_AXI_DATA_W = 128;
   localparam int unsigned FA_AXI_STRB_W = FA_AXI_DATA_W / 8;
   localparam int unsigned FA_STRIDE_DEFAULT = FA_D * (FA_ELEM_W / 8);
 

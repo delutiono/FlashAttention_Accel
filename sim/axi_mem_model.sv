@@ -43,6 +43,7 @@ module axi_mem_model #(
   localparam int unsigned STRB_W = DATA_W / 8;
   localparam int unsigned ADDR_LSB = $clog2(STRB_W);
   localparam logic [ADDR_W-1:0] ADDR_INCR = STRB_W;
+  localparam logic [2:0] AXI_SIZE = $clog2(STRB_W);
 
   logic [DATA_W-1:0] mem [0:MEM_WORDS-1];
 
@@ -151,7 +152,7 @@ module axi_mem_model #(
         rd_addr_q  <= s_axi_araddr;
         rd_beats_q <= {1'b0, s_axi_arlen} + 9'd1;
         rd_count_q <= '0;
-        rd_error_q <= (s_axi_arsize != 3'd3) || (s_axi_arburst != 2'b01);
+        rd_error_q <= (s_axi_arsize != AXI_SIZE) || (s_axi_arburst != 2'b01);
         r_valid_delay_count_q <= '0;
       end
 
@@ -225,7 +226,7 @@ module axi_mem_model #(
         wr_addr_q  <= s_axi_awaddr;
         wr_beats_q <= {1'b0, s_axi_awlen} + 9'd1;
         wr_count_q <= '0;
-        wr_error_q <= (s_axi_awsize != 3'd3) || (s_axi_awburst != 2'b01);
+        wr_error_q <= (s_axi_awsize != AXI_SIZE) || (s_axi_awburst != 2'b01);
       end
 
       if (s_axi_wvalid && s_axi_wready) begin

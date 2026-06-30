@@ -26,7 +26,7 @@ def build_manifest(
     vector_dir = artifact_root / case_name
     cycle_model_json = run_dir / f"cycle_model_{case_name}_kv{kv_tile_rows}.json"
     compare_summary_json = run_dir / f"{case_name}_top_compare.json"
-    dut_o_beats64 = run_dir / f"{case_name}_top_O_beats64.hex"
+    dut_o_beats128 = run_dir / f"{case_name}_top_O_beats128.hex"
     metadata = vector_dir / f"{case_name}_metadata.json"
     simulator_log = run_dir / f"{case_name}_top_sim.log"
     genus_reports_dir = Path("synth/reports/fa_accel_top")
@@ -41,7 +41,7 @@ def build_manifest(
             "dimension": dimension,
             "kv_tile_rows": kv_tile_rows,
             "stride_bytes": 128,
-            "dut_dump_format": "beats64",
+            "dut_dump_format": "beats128",
         },
         "artifact_policy": {
             "commit_vectors": False,
@@ -56,14 +56,14 @@ def build_manifest(
                 _path_text(ppa_summary_json),
             ],
             "return_only_on_mismatch": [
-                _path_text(dut_o_beats64),
+                _path_text(dut_o_beats128),
             ],
         },
         "artifact_paths": {
             "vector_dir": _path_text(vector_dir),
             "run_dir": _path_text(run_dir),
             "metadata_json": _path_text(metadata),
-            "dut_o_beats64": _path_text(dut_o_beats64),
+            "dut_o_beats128": _path_text(dut_o_beats128),
             "compare_summary_json": _path_text(compare_summary_json),
             "cycle_model_json": _path_text(cycle_model_json),
             "simulator_log": _path_text(simulator_log),
@@ -81,6 +81,11 @@ def build_manifest(
                 f"--output-dir {_path_text(vector_dir)} "
                 "--stride-bytes 128"
             ),
+            "pack_vectors_128": (
+                "python -B scripts/pack_vectors_128.py "
+                f"--metadata {_path_text(metadata)} "
+                f"--output-dir {_path_text(vector_dir)}"
+            ),
             "cycle_model_json": (
                 "python -B scripts/cycle_bandwidth_model.py "
                 f"--sequence-length {sequence_length} "
@@ -89,11 +94,11 @@ def build_manifest(
                 f"--kv-tile-rows {kv_tile_rows} "
                 f"--json > {_path_text(cycle_model_json)}"
             ),
-            "compare_dut_beats64": (
+            "compare_dut_beats128": (
                 "python -B scripts/compare_vector_output.py "
                 f"--metadata {_path_text(metadata)} "
-                f"--dut-hex {_path_text(dut_o_beats64)} "
-                "--format beats64 "
+                f"--dut-hex {_path_text(dut_o_beats128)} "
+                "--format beats128 "
                 "--require-mae 0 "
                 "--require-maxae 0 "
                 f"--dump-summary-json {_path_text(compare_summary_json)}"

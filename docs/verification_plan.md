@@ -2,13 +2,15 @@
 
 Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps, and PPA gating. Large generated vectors and simulator dumps are regression artifacts; do not commit them by default.
 
+For the current closure checklist and remote artifact status gate, see `docs/baseline_status.md` and `scripts/check_baseline_artifacts.py`.
+
 ## Current Baseline
 
 - S4/D64 committed fixture: `test_vectors/generated/s4_d64_seed100/`
 - S5/D64 committed fixture: `test_vectors/generated/s5_d64_seed101/`
 - S16/D64 committed fixture: `test_vectors/generated/s16_d64_seed102/`
 - Golden source: `model.golden_fixed.attention_fixed`
-- Vector format: v1 metadata plus `words16` and stride-padded `beats64` files
+- Vector format: v1 metadata plus `words16` and canonical stride-padded `beats64` files; mainline AXI scoreboards derive `beats128` files with `scripts/pack_vectors_128.py`
 - Comparator: `scripts/compare_vector_output.py`
 - Numeric regression: S256 Python fixed-point regression
 - Performance estimate: tile-aware `scripts/cycle_bandwidth_model.py`
@@ -16,10 +18,11 @@ Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps,
 
 ## S4 Top Smoke
 
-1. Load `s4_d64_seed100_Q_beats64.hex`, `K_beats64.hex`, and `V_beats64.hex` into the AXI memory model using the metadata stride:
+1. Pack the committed fixture to 128-bit beats and load `s4_d64_seed100_Q_beats128.hex`, `K_beats128.hex`, and `V_beats128.hex` into the AXI memory model using the metadata stride:
 
    ```text
-   address = BASE + row * stride_bytes + beat * 8
+   python -B scripts/pack_vectors_128.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --output-dir build/top_compute_s4
+   address = BASE + row * stride_bytes + beat * 16
    ```
 
 2. Run the top smoke with `sequence_length=4`, `dimension=64`, `causal=1`, and the agreed Q/K/V/O base addresses.
@@ -27,14 +30,14 @@ Status: baseline run plan for reusable end-to-end scoreboards, DUT output dumps,
 
    ```text
    <run_dir>/s4_top_O_words16.hex
-   <run_dir>/s4_top_O_beats64.hex
+   <run_dir>/s4_top_O_beats128.hex
    ```
 
 4. Compare against the metadata-located golden:
 
    ```text
    python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --dut-hex <run_dir>/s4_top_O_words16.hex --format words16 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s4_top_compare_words16.json
-   python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --dut-hex <run_dir>/s4_top_O_beats64.hex --format beats64 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s4_top_compare_beats64.json
+   python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s4_d64_seed100/s4_d64_seed100_metadata.json --dut-hex <run_dir>/s4_top_O_beats128.hex --format beats128 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s4_top_compare_beats128.json
    ```
 
 5. A passing smoke requires `status=PASS`, `mae=0`, `maxae=0`, and `max_lsb_error=0` in the summary JSON.
@@ -99,14 +102,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_top_compute_s16_
 The default artifact locations are:
 
 ```text
-build/top_compute_s16/o_beats64.hex
+build/top_compute_s16/o_beats128.hex
 build/top_compute_s16/summary.json
 ```
 
 The comparator gate should require bit-exact output:
 
 ```text
-python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex build/top_compute_s16/o_beats64.hex --format beats64 --require-mae 0 --require-maxae 0 --dump-summary-json build/top_compute_s16/summary.json
+python -B scripts/compare_vector_output.py --metadata test_vectors/generated/s16_d64_seed102/s16_d64_seed102_metadata.json --dut-hex build/top_compute_s16/o_beats128.hex --format beats128 --require-mae 0 --require-maxae 0 --dump-summary-json build/top_compute_s16/summary.json
 ```
 
 This fixture should pass before spending simulator time on S256 because it catches multi-tile rollover, repeated Q row reuse, K/V tile reload cadence, and O row writeback across more than one tile group.
@@ -140,7 +143,7 @@ The full baseline gate should expand from S16 to S256 in this order:
 
    ```text
    artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json
-   artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex
+   artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats128.hex
    artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json
    artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
    artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log
@@ -152,22 +155,28 @@ The full baseline gate should expand from S16 to S256 in this order:
    python -B scripts/cycle_bandwidth_model.py --sequence-length 256 --dimension 64 --compute-rows 256 --kv-tile-rows 16 --json > artifacts/runs/s256_d64_seed100/cycle_model_s256_d64_seed100_kv16.json
    ```
 
-6. Load Q/K/V `*_beats64.hex` into the AXI memory model using metadata fields:
+6. Pack the generated canonical beats into mainline AXI files, then load Q/K/V `*_beats128.hex` into the AXI memory model:
+
+   ```text
+   python -B scripts/pack_vectors_128.py --metadata artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json --output-dir artifacts/vectors/s256_d64_seed100
+   ```
+
+   The baseline metadata fields remain:
 
    ```text
    sequence_length = 256
    dimension = 64
    output_rows = 256
    stride_bytes = 128
-   beats_per_row = 16
+   beats_per_row = 16 canonical 64-bit beats, or 8 mainline 128-bit beats
    ```
 
 7. Run top compute for the full causal S256 case locally or on the remote simulator. If local long simulation exceeds the acceptable turnaround time, move this step to the remote server and use the manifest paths as the artifact contract. If RTL is still tile-limited, record the tile parameters and partial output rows in the run manifest.
-8. Dump O in `beats64` format from the O base region. A `words16` dump is also acceptable if the simulator has a direct word dump path.
+8. Dump O in `beats128` format from the O base region. A `words16` dump is also acceptable if the simulator has a direct word dump path.
 9. Compare DUT output:
 
    ```text
-   python -B scripts/compare_vector_output.py --metadata artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json --dut-hex <run_dir>/s256_top_O_beats64.hex --format beats64 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s256_top_compare.json
+   python -B scripts/compare_vector_output.py --metadata artifacts/vectors/s256_d64_seed100/s256_d64_seed100_metadata.json --dut-hex <run_dir>/s256_top_O_beats128.hex --format beats128 --require-mae 0 --require-maxae 0 --dump-summary-json <run_dir>/s256_top_compare.json
    ```
 
 10. Archive the summary JSON with simulator logs. The key fields are `status`, `elements`, `mae`, `maxae`, `max_lsb_error`, and `first_failure`.
@@ -189,7 +198,7 @@ synth/outputs/fa_accel_top/
 synth/reports/fa_accel_top/ppa_summary.json
 ```
 
-Return `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex` only when the comparator reports a mismatch or when line-by-line output debug is needed.
+Return `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats128.hex` only when the comparator reports a mismatch or when line-by-line output debug is needed.
 
 The manifest prints the same contract:
 
@@ -220,11 +229,11 @@ tar -czf s256_debug_return_$(date +%Y%m%d_%H%M%S).tar.gz \
 ## Failure Localization
 
 - If `first_failure` is non-null, start with `row` and `col`.
-- For `beats64` dumps, locate the beat with:
+- For `beats128` dumps, locate the beat with:
 
   ```text
-  beat_index = row * beats_per_row + floor(col / 4)
-  lane = col % 4
+  beat_index = row * 8 + floor(col / 8)
+  lane = col % 8
   ```
 
 - Confirm whether Q/K/V memory preload is correct at the same row and lane before debugging compute state.

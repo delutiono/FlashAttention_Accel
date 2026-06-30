@@ -1,7 +1,7 @@
 param(
   [string]$WorkLib = "work_top_compute_s5_stall_scoreboard",
   [string]$BuildDir = "build/top_compute_s5_stall",
-  [string]$DumpFile = "o_beats64.hex",
+  [string]$DumpFile = "o_beats128.hex",
   [string]$SummaryFile = "summary.json",
   [int]$ArReadyStallCycles = 1,
   [int]$AwReadyStallCycles = 1,
@@ -27,12 +27,22 @@ function Invoke-Checked {
   }
 }
 
+function Convert-ToSimPath {
+  param([string]$Path)
+  return $Path.Replace("\", "/")
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
-$dumpPath = Join-Path $BuildDir $DumpFile
-$summaryPath = Join-Path $BuildDir $SummaryFile
+$metadataPath = "test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json"
+$qPath128 = Convert-ToSimPath (Join-Path $BuildDir "s5_d64_seed101_Q_beats128.hex")
+$kPath128 = Convert-ToSimPath (Join-Path $BuildDir "s5_d64_seed101_K_beats128.hex")
+$vPath128 = Convert-ToSimPath (Join-Path $BuildDir "s5_d64_seed101_V_beats128.hex")
+$oGoldenPath128 = Convert-ToSimPath (Join-Path $BuildDir "s5_d64_seed101_O_golden_beats128.hex")
+$dumpPath = Convert-ToSimPath (Join-Path $BuildDir $DumpFile)
+$summaryPath = Convert-ToSimPath (Join-Path $BuildDir $SummaryFile)
 
 if (Test-Path $dumpPath) {
   Remove-Item $dumpPath
@@ -42,23 +52,32 @@ if (Test-Path $summaryPath) {
 }
 
 Invoke-Checked vlib $WorkLib
-Invoke-Checked vlog "-sv" "-work" $WorkLib "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s5_tile_smoke.sv"
+Invoke-Checked python "-B" "scripts/pack_vectors_128.py" `
+  "--metadata" $metadataPath `
+  "--output-dir" $BuildDir
+Invoke-Checked vlog "-sv" "-work" $WorkLib "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s32_smoke.sv"
 Invoke-Checked vsim "-c" "-lib" $WorkLib `
+  "-gROWS=5" `
+  "-gKV_TILE_ROWS=2" `
   "-gAXI_MEM_AR_READY_STALL_CYCLES=$ArReadyStallCycles" `
   "-gAXI_MEM_AW_READY_STALL_CYCLES=$AwReadyStallCycles" `
   "-gAXI_MEM_W_READY_STALL_CYCLES=$WReadyStallCycles" `
   "-gAXI_MEM_R_VALID_DELAY_CYCLES=$RValidDelayCycles" `
   "-gAXI_MEM_B_VALID_DELAY_CYCLES=$BValidDelayCycles" `
-  "tb_top_compute_s5_tile_smoke" `
-  "+DUMP_O_BEATS64=$dumpPath" `
+  "tb_top_compute_s32_smoke" `
+  "+Q_BEATS128=$qPath128" `
+  "+K_BEATS128=$kPath128" `
+  "+V_BEATS128=$vPath128" `
+  "+O_GOLDEN_BEATS128=$oGoldenPath128" `
+  "+DUMP_O_BEATS128=$dumpPath" `
   "-do" "run -all; quit -f"
 Invoke-Checked python "-B" "scripts/compare_vector_output.py" `
-  "--metadata" "test_vectors/generated/s5_d64_seed101/s5_d64_seed101_metadata.json" `
+  "--metadata" $metadataPath `
   "--dut-hex" $dumpPath `
-  "--format" "beats64" `
+  "--format" "beats128" `
   "--require-mae" "0" `
   "--require-maxae" "0" `
   "--dump-summary-json" $summaryPath
 
-Write-Host "DUT O beats64 dump: $dumpPath"
+Write-Host "DUT O beats128 dump: $dumpPath"
 Write-Host "Scoreboard summary: $summaryPath"

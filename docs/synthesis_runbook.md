@@ -7,7 +7,9 @@ This runbook captures the remote Genus flow for collecting real PPA data. The lo
 - RTL/file list: `rtl/` and `synth/filelist.f`
 - Constraints: `synth/constraints.sdc`
 - Genus scripts: `synth/run_leaf_genus.tcl`, `synth/run_genus.tcl`
-- Liberty timing library: set by `STD_CELL_LIB`
+- Standard-cell Liberty timing library: set by `STD_CELL_LIB`
+- Optional mainline SRAM macro RTL/Liberty/LEF filelists:
+  `SRAM_WRAPPER_FILELIST`, `SRAM_LIB_FILELIST`, and `SRAM_LEF_FILELIST`
 
 Innovus is not required for the current baseline PPA loop. The immediate deliverables are Genus mapped netlist/SDC plus area/timing/power/QoR/check-design reports.
 
@@ -19,6 +21,9 @@ For bash/sh:
 
 ```sh
 export STD_CELL_LIB=/path/to/stdcell.lib
+export SRAM_WRAPPER_FILELIST=$PWD/synth/fa_sram_macro_files.list
+export SRAM_LIB_FILELIST=$PWD/synth/fa_sram_tt_libs.list
+export SRAM_LEF_FILELIST=$PWD/synth/fa_sram_lefs.list
 cd synth
 TOP=recip genus -batch -files run_leaf_genus.tcl
 TOP=fa_accel_top genus -batch -files run_genus.tcl
@@ -28,6 +33,9 @@ For csh/tcsh, use `setenv` without `=`:
 
 ```csh
 setenv STD_CELL_LIB /path/to/stdcell.lib
+setenv SRAM_WRAPPER_FILELIST $PWD/synth/fa_sram_macro_files.list
+setenv SRAM_LIB_FILELIST $PWD/synth/fa_sram_tt_libs.list
+setenv SRAM_LEF_FILELIST $PWD/synth/fa_sram_lefs.list
 cd synth
 setenv TOP recip
 genus -batch -files run_leaf_genus.tcl
@@ -36,6 +44,10 @@ genus -batch -files run_genus.tcl
 ```
 
 Leaf aliases currently supported by `run_leaf_genus.tcl` are `exp`, `recip`, `softmax`, and `finalize`. Full module names such as `fa_recip_approx` are also accepted.
+
+`synth/run_genus.tcl` defaults the mainline SRAM filelists to the repository copies above when they exist, so the explicit exports are mainly useful when the remote server uses absolute paths or a combined filelist. `SRAM_WRAPPER_FILELIST` should contain the project wrapper RTL plus selected SRAM blackbox Verilog, `SRAM_LIB_FILELIST` should contain the selected SRAM Liberty files, and `SRAM_LEF_FILELIST` should contain SRAM macro LEFs. If your Genus physical flow also requires standard-cell LEFs, create a combined LEF list on the remote server that includes `sky130_fd_sc_hs__nom.tlef`, any required `sky130_fd_sc_hs` cell LEF, and `synth/fa_sram_lefs.list`, then point `SRAM_LEF_FILELIST` at that combined list.
+
+Current boundary: the mainline SRAM wrapper layer and filelists are ready for physical synthesis flows, but `fa_q_buffer` and `fa_kv_buffer` still use register arrays. A PPA run can therefore validate the 128-bit AXI mainline and script plumbing now; a final SRAM-macro PPA claim should wait until the mainline buffers instantiate the `fa_sram_*` wrapper modules or an equivalent compliant SRAM-backed adapter.
 
 ## Expected Artifacts
 
@@ -70,7 +82,7 @@ synth/outputs/fa_accel_top/
 synth/reports/fa_accel_top/ppa_summary.json
 ```
 
-The generated `artifacts/` tree is not a source change and should not be committed. Return the DUT O dump, such as `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex`, only when the comparator fails or output-level debug is needed.
+The generated `artifacts/` tree is not a source change and should not be committed. Return the DUT O dump, such as `artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats128.hex`, only when the comparator fails or output-level debug is needed.
 
 Example package command from the repository root:
 

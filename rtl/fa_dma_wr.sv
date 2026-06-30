@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 
-module fa_dma_wr (
+module fa_dma_wr #(
+  parameter int unsigned DATA_W = 64
+) (
   input  logic        clk,
   input  logic        rst_n,
 
@@ -9,7 +11,7 @@ module fa_dma_wr (
   input  logic [63:0] cmd_addr,
   input  logic [8:0]  cmd_beats,
 
-  input  logic [63:0] in_data,
+  input  logic [DATA_W-1:0] in_data,
   input  logic        in_valid,
   output logic        in_ready,
   input  logic        in_last,
@@ -25,8 +27,8 @@ module fa_dma_wr (
   output logic        m_axi_awvalid,
   input  logic        m_axi_awready,
 
-  output logic [63:0] m_axi_wdata,
-  output logic [7:0]  m_axi_wstrb,
+  output logic [DATA_W-1:0] m_axi_wdata,
+  output logic [DATA_W/8-1:0] m_axi_wstrb,
   output logic        m_axi_wlast,
   output logic        m_axi_wvalid,
   input  logic        m_axi_wready,
@@ -41,15 +43,19 @@ module fa_dma_wr (
   logic [8:0] in_count;
   logic [8:0] w_count;
   logic       wbuf_valid;
-  logic [63:0] wbuf_data;
+  localparam int unsigned STRB_W = DATA_W / 8;
+  localparam logic [31:0] BYTES_PER_BEAT = DATA_W / 8;
+  localparam logic [2:0] AXI_SIZE = $clog2(STRB_W);
+
+  logic [DATA_W-1:0] wbuf_data;
   logic       wbuf_last;
 
   assign cmd_ready     = !active;
   assign in_ready      = active && (in_count < beats_q) && !wbuf_valid;
-  assign m_axi_awsize  = 3'd3;
+  assign m_axi_awsize  = AXI_SIZE;
   assign m_axi_awburst = 2'b01;
   assign m_axi_wdata   = wbuf_data;
-  assign m_axi_wstrb   = 8'hff;
+  assign m_axi_wstrb   = {STRB_W{1'b1}};
   assign m_axi_wlast   = wbuf_last;
   assign m_axi_wvalid  = wbuf_valid;
   assign m_axi_bready  = active && aw_done &&
@@ -115,7 +121,7 @@ module fa_dma_wr (
       if (m_axi_wvalid && m_axi_wready) begin
         wbuf_valid <= 1'b0;
         w_count    <= w_count + 9'd1;
-        byte_count <= byte_count + 32'd8;
+        byte_count <= byte_count + BYTES_PER_BEAT;
       end
 
       if (m_axi_bvalid && m_axi_bready) begin

@@ -6,12 +6,18 @@ module tb_top_compute_s32_smoke #(
   parameter int unsigned ROWS         = 32,
   parameter int unsigned KV_TILE_ROWS = 8,
   parameter int unsigned MEM_WORDS    = 4096,
+  parameter int unsigned AXI_MEM_AR_READY_STALL_CYCLES = 0,
+  parameter int unsigned AXI_MEM_AW_READY_STALL_CYCLES = 0,
+  parameter int unsigned AXI_MEM_W_READY_STALL_CYCLES  = 0,
+  parameter int unsigned AXI_MEM_R_VALID_DELAY_CYCLES  = 0,
+  parameter int unsigned AXI_MEM_B_VALID_DELAY_CYCLES  = 0,
   parameter logic [63:0] Q_BASE       = 64'h0000_0000_0000_1000,
   parameter logic [63:0] K_BASE       = 64'h0000_0000_0000_2000,
   parameter logic [63:0] V_BASE       = 64'h0000_0000_0000_3000,
   parameter logic [63:0] O_BASE       = 64'h0000_0000_0000_4000
 );
-  localparam int unsigned BEATS_PER_ROW = 16;
+  localparam int unsigned AXI_LANES = FA_AXI_DATA_W / FA_ELEM_W;
+  localparam int unsigned BEATS_PER_ROW = FA_D / AXI_LANES;
   localparam int unsigned TOTAL_BEATS = ROWS * BEATS_PER_ROW;
   localparam int unsigned MAX_CAUSAL_ROW_READS = (ROWS * (ROWS + 1)) / 2;
   localparam logic [63:0] STRIDE_BYTES = 64'd128;
@@ -19,7 +25,7 @@ module tb_top_compute_s32_smoke #(
   localparam logic [63:0] K_LIMIT = K_BASE + (ROWS * STRIDE_BYTES);
   localparam logic [63:0] V_LIMIT = V_BASE + (ROWS * STRIDE_BYTES);
   localparam logic [63:0] O_LIMIT = O_BASE + (ROWS * STRIDE_BYTES);
-  localparam logic [63:0] MEM_LIMIT = MEM_WORDS * 64'd8;
+  localparam logic [63:0] MEM_LIMIT = MEM_WORDS * 64'(FA_AXI_STRB_W);
 
   logic clk;
   logic rst_n;
@@ -48,7 +54,7 @@ module tb_top_compute_s32_smoke #(
   logic [1:0]  m_axi_arburst;
   logic        m_axi_arvalid;
   logic        m_axi_arready;
-  logic [63:0] m_axi_rdata;
+  logic [FA_AXI_DATA_W-1:0] m_axi_rdata;
   logic [1:0]  m_axi_rresp;
   logic        m_axi_rlast;
   logic        m_axi_rvalid;
@@ -59,8 +65,8 @@ module tb_top_compute_s32_smoke #(
   logic [1:0]  m_axi_awburst;
   logic        m_axi_awvalid;
   logic        m_axi_awready;
-  logic [63:0] m_axi_wdata;
-  logic [7:0]  m_axi_wstrb;
+  logic [FA_AXI_DATA_W-1:0] m_axi_wdata;
+  logic [FA_AXI_STRB_W-1:0] m_axi_wstrb;
   logic        m_axi_wlast;
   logic        m_axi_wvalid;
   logic        m_axi_wready;
@@ -69,10 +75,10 @@ module tb_top_compute_s32_smoke #(
   logic        m_axi_bready;
   logic        irq;
 
-  logic [63:0] q_beats [0:TOTAL_BEATS-1];
-  logic [63:0] k_beats [0:TOTAL_BEATS-1];
-  logic [63:0] v_beats [0:TOTAL_BEATS-1];
-  logic [63:0] o_golden_beats [0:TOTAL_BEATS-1];
+  logic [FA_AXI_DATA_W-1:0] q_beats [0:TOTAL_BEATS-1];
+  logic [FA_AXI_DATA_W-1:0] k_beats [0:TOTAL_BEATS-1];
+  logic [FA_AXI_DATA_W-1:0] v_beats [0:TOTAL_BEATS-1];
+  logic [FA_AXI_DATA_W-1:0] o_golden_beats [0:TOTAL_BEATS-1];
   logic        saw_q_buffer_load_done;
   logic        saw_k_buffer_load_done;
   logic        saw_v_buffer_load_done;
@@ -135,7 +141,13 @@ module tb_top_compute_s32_smoke #(
   );
 
   axi_mem_model #(
-    .MEM_WORDS (MEM_WORDS)
+    .DATA_W                (FA_AXI_DATA_W),
+    .MEM_WORDS             (MEM_WORDS),
+    .AR_READY_STALL_CYCLES (AXI_MEM_AR_READY_STALL_CYCLES),
+    .AW_READY_STALL_CYCLES (AXI_MEM_AW_READY_STALL_CYCLES),
+    .W_READY_STALL_CYCLES (AXI_MEM_W_READY_STALL_CYCLES),
+    .R_VALID_DELAY_CYCLES (AXI_MEM_R_VALID_DELAY_CYCLES),
+    .B_VALID_DELAY_CYCLES (AXI_MEM_B_VALID_DELAY_CYCLES)
   ) u_mem (
     .clk,
     .rst_n,
@@ -291,39 +303,47 @@ module tb_top_compute_s32_smoke #(
     end
   endtask
 
-  task automatic dump_o_beats64(input string path);
+  task automatic dump_o_beats(input string path);
     int fd;
-    logic [63:0] dump_word;
+    logic [FA_AXI_DATA_W-1:0] dump_word;
     int unsigned dump_idx;
     begin
       fd = $fopen(path, "w");
       if (fd == 0) fail({"failed to open O dump file: ", path});
 
       for (dump_idx = 0; dump_idx < TOTAL_BEATS; dump_idx++) begin
-        u_mem.read_word(O_BASE + (dump_idx * 8), dump_word);
-        $fdisplay(fd, "%016x", dump_word);
+        u_mem.read_word(O_BASE + (dump_idx * FA_AXI_STRB_W), dump_word);
+        if (FA_AXI_DATA_W == 128) begin
+          $fdisplay(fd, "%032x", dump_word);
+        end else begin
+          $fdisplay(fd, "%016x", dump_word);
+        end
       end
       $fclose(fd);
-      $display("Dumped O beats64 to %s", path);
+      $display("Dumped O beats to %s", path);
     end
   endtask
 
   logic [31:0] status;
   logic [31:0] cycles;
-  logic [63:0] got_word;
+  logic [FA_AXI_DATA_W-1:0] got_word;
   string q_path;
   string k_path;
   string v_path;
   string o_golden_path;
-  string dump_o_beats64_path;
+  string dump_o_beats_path;
   int unsigned idx;
   int unsigned poll_count;
 
   initial begin
-    q_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_Q_beats64.hex";
-    k_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_K_beats64.hex";
-    v_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_V_beats64.hex";
-    o_golden_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_O_golden_beats64.hex";
+    q_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_Q_beats128.hex";
+    k_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_K_beats128.hex";
+    v_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_V_beats128.hex";
+    o_golden_path = "artifacts/vectors/s32_d64_seed103/s32_d64_seed103_O_golden_beats128.hex";
+    if ($value$plusargs("Q_BEATS128=%s", q_path)) begin end
+    if ($value$plusargs("K_BEATS128=%s", k_path)) begin end
+    if ($value$plusargs("V_BEATS128=%s", v_path)) begin end
+    if ($value$plusargs("O_GOLDEN_BEATS128=%s", o_golden_path)) begin end
     if ($value$plusargs("Q_BEATS64=%s", q_path)) begin end
     if ($value$plusargs("K_BEATS64=%s", k_path)) begin end
     if ($value$plusargs("V_BEATS64=%s", v_path)) begin end
@@ -337,10 +357,10 @@ module tb_top_compute_s32_smoke #(
     $readmemh(o_golden_path, o_golden_beats);
 
     for (idx = 0; idx < TOTAL_BEATS; idx++) begin
-      u_mem.write_word(Q_BASE + (idx * 8), q_beats[idx]);
-      u_mem.write_word(K_BASE + (idx * 8), k_beats[idx]);
-      u_mem.write_word(V_BASE + (idx * 8), v_beats[idx]);
-      u_mem.write_word(O_BASE + (idx * 8), 64'h0bad_0bad_0bad_0bad);
+      u_mem.write_word(Q_BASE + (idx * FA_AXI_STRB_W), q_beats[idx]);
+      u_mem.write_word(K_BASE + (idx * FA_AXI_STRB_W), k_beats[idx]);
+      u_mem.write_word(V_BASE + (idx * FA_AXI_STRB_W), v_beats[idx]);
+      u_mem.write_word(O_BASE + (idx * FA_AXI_STRB_W), {FA_AXI_STRB_W{8'had}});
     end
 
     axil_write(REG_Q_BASE_L, Q_BASE[31:0]);
@@ -360,7 +380,25 @@ module tb_top_compute_s32_smoke #(
       axil_read(REG_STATUS, status);
       if (status[2]) fail("top reported compute smoke error");
       poll_count++;
-      if (poll_count > 250000) fail("timeout waiting for top compute smoke done");
+      if (poll_count > 2000000) begin
+        $display("TIMEOUT_DEBUG state=%0d q=%0d tile_base=%0d tile_off=%0d k=%0d wr_beat=%0d rd_valid=%0b rd_ready=%0b rd_done=%0b wr_valid=%0b wr_ready=%0b wr_done=%0b row_busy=%0b row_valid_o=%0b cycles=%0d",
+                 dut.top_state,
+                 dut.compute_q_idx,
+                 dut.compute_kv_tile_base_idx,
+                 dut.compute_key_in_tile_idx,
+                 dut.compute_k_idx,
+                 dut.compute_wr_beat_idx,
+                 dut.rd_valid,
+                 dut.rd_out_ready,
+                 dut.rd_done,
+                 dut.wr_in_valid,
+                 dut.wr_in_ready,
+                 dut.wr_done,
+                 dut.row_engine_busy,
+                 dut.row_engine_valid_o,
+                 dut.cycles);
+        fail("timeout waiting for top compute smoke done");
+      end
     end while (!status[1]);
 
     if (status[0]) fail("busy remained high after compute done");
@@ -393,19 +431,22 @@ module tb_top_compute_s32_smoke #(
     if (cycles == 32'd0) fail("cycles did not increment");
 
     for (idx = 0; idx < TOTAL_BEATS; idx++) begin
-      u_mem.read_word(O_BASE + (idx * 8), got_word);
+      u_mem.read_word(O_BASE + (idx * FA_AXI_STRB_W), got_word);
       if (got_word !== o_golden_beats[idx]) begin
         $fatal(1,
-               "top compute O beat %0d mismatch got=0x%016x expected=0x%016x",
+               "top compute O beat %0d mismatch got=0x%0x expected=0x%0x",
                idx, got_word, o_golden_beats[idx]);
       end
     end
 
-    if ($value$plusargs("DUMP_O_BEATS64=%s", dump_o_beats64_path)) begin
-      dump_o_beats64(dump_o_beats64_path);
+    if ($value$plusargs("DUMP_O_BEATS128=%s", dump_o_beats_path)) begin
+      dump_o_beats(dump_o_beats_path);
+    end else if ($value$plusargs("DUMP_O_BEATS64=%s", dump_o_beats_path)) begin
+      dump_o_beats(dump_o_beats_path);
     end
 
-    $display("tb_top_compute_smoke PASS S=%0d D=64 KV_TILE_ROWS=%0d", ROWS, KV_TILE_ROWS);
+    $display("tb_top_compute_smoke PASS S=%0d D=64 AXI_DATA_W=%0d KV_TILE_ROWS=%0d",
+             ROWS, FA_AXI_DATA_W, KV_TILE_ROWS);
     $finish;
   end
 

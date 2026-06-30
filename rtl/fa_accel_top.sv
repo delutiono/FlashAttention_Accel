@@ -86,7 +86,7 @@ module fa_accel_top #(
   logic        rd_cmd_valid;
   logic        rd_cmd_ready;
   logic [63:0] rd_cmd_addr;
-  logic [63:0] rd_data;
+  logic [FA_AXI_DATA_W-1:0] rd_data;
   logic        rd_valid;
   logic        rd_out_ready;
   logic        rd_last;
@@ -97,7 +97,7 @@ module fa_accel_top #(
   logic        wr_cmd_valid;
   logic        wr_cmd_ready;
   logic [63:0] wr_cmd_addr;
-  logic [63:0] wr_in_data;
+  logic [FA_AXI_DATA_W-1:0] wr_in_data;
   logic        wr_in_valid;
   logic        wr_in_ready;
   logic        wr_in_last;
@@ -162,7 +162,7 @@ module fa_accel_top #(
   logic [7:0] compute_k_idx;
   logic [TOP_ROW_BEAT_IDX_W-1:0] compute_wr_beat_idx;
   logic [63:0] compute_rd_addr;
-  logic [63:0] compute_wr_data;
+  logic [FA_AXI_DATA_W-1:0] compute_wr_data;
   logic [7:0]  compute_row_last_key_idx;
   logic [7:0]  compute_tile_nominal_last_key_idx;
   logic [7:0]  compute_tile_last_key_idx;
@@ -325,7 +325,7 @@ module fa_accel_top #(
   end
 
   always_comb begin
-    compute_wr_data = 64'h0;
+    compute_wr_data = '0;
     for (int lane = 0; lane < TOP_AXI_LANES; lane++) begin
       compute_wr_data[(lane * 16) +: 16] =
           compute_o_row[(compute_wr_beat_idx * TOP_AXI_LANES) + lane];
@@ -382,13 +382,15 @@ module fa_accel_top #(
   assign kv_buffer_v_beat_valid   = (top_state == TOP_ST_COMPUTE_LOAD_V_RUN) && rd_valid;
   assign kv_buffer_row_index      = compute_key_in_tile_idx[TOP_KV_TILE_IDX_W-1:0];
 
-  fa_dma_rd u_dma_rd (
+  fa_dma_rd #(
+    .DATA_W        (FA_AXI_DATA_W)
+  ) u_dma_rd (
     .clk           (clk),
     .rst_n         (dma_rst_n),
     .cmd_valid     (rd_cmd_valid),
     .cmd_ready     (rd_cmd_ready),
     .cmd_addr      (rd_cmd_addr),
-    .cmd_beats     (9'd16),
+    .cmd_beats     (9'(TOP_ROW_BEATS)),
     .out_data      (rd_data),
     .out_valid     (rd_valid),
     .out_ready     (rd_out_ready),
@@ -409,13 +411,15 @@ module fa_accel_top #(
     .m_axi_rready  (m_axi_rready)
   );
 
-  fa_dma_wr u_dma_wr (
+  fa_dma_wr #(
+    .DATA_W        (FA_AXI_DATA_W)
+  ) u_dma_wr (
     .clk           (clk),
     .rst_n         (dma_rst_n),
     .cmd_valid     (wr_cmd_valid),
     .cmd_ready     (wr_cmd_ready),
     .cmd_addr      (wr_cmd_addr),
-    .cmd_beats     (9'd16),
+    .cmd_beats     (9'(TOP_ROW_BEATS)),
     .in_data       (wr_in_data),
     .in_valid      (wr_in_valid),
     .in_ready      (wr_in_ready),

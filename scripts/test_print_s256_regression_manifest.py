@@ -6,8 +6,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 
@@ -16,6 +16,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.print_s256_regression_manifest import build_manifest
+
+
+def make_tmp_path() -> Path:
+    tmp_parent = REPO_ROOT / "build" / "test_tmp"
+    tmp_parent.mkdir(parents=True, exist_ok=True)
+    path = tmp_parent / f"print_manifest_{uuid.uuid4().hex}"
+    path.mkdir()
+    return path
 
 
 class PrintS256RegressionManifestTest(unittest.TestCase):
@@ -39,8 +47,8 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
             manifest["artifact_paths"]["metadata_json"],
         )
         self.assertEqual(
-            "artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats64.hex",
-            manifest["artifact_paths"]["dut_o_beats64"],
+            "artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats128.hex",
+            manifest["artifact_paths"]["dut_o_beats128"],
         )
         self.assertEqual(
             "artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json",
@@ -48,8 +56,10 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
         )
         self.assertIn("--output-dir artifacts/vectors/s256_d64_seed100", manifest["commands"]["generate_vectors"])
         self.assertIn("--kv-tile-rows 16", manifest["commands"]["cycle_model_json"])
-        self.assertIn("--format beats64", manifest["commands"]["compare_dut_beats64"])
-        self.assertIn("--dump-summary-json artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json", manifest["commands"]["compare_dut_beats64"])
+        self.assertEqual("beats128", manifest["config"]["dut_dump_format"])
+        self.assertIn("scripts/pack_vectors_128.py", manifest["commands"]["pack_vectors_128"])
+        self.assertIn("--format beats128", manifest["commands"]["compare_dut_beats128"])
+        self.assertIn("--dump-summary-json artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json", manifest["commands"]["compare_dut_beats128"])
 
     def test_kv_tile_rows_override_updates_cycle_model_command_and_path(self) -> None:
         manifest = build_manifest(
@@ -73,32 +83,31 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
         self.assertIn("cycle_model_s256_d64_seed123_kv32.json", manifest["commands"]["cycle_model_json"])
 
     def test_cli_json_does_not_create_artifacts(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            artifact_root = tmp_path / "vectors"
-            run_dir = tmp_path / "runs" / "s256_d64_seed100"
+        tmp_path = make_tmp_path()
+        artifact_root = tmp_path / "vectors"
+        run_dir = tmp_path / "runs" / "s256_d64_seed100"
 
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-B",
-                    str(REPO_ROOT / "scripts" / "print_s256_regression_manifest.py"),
-                    "--json",
-                    "--artifact-root",
-                    str(artifact_root),
-                    "--run-dir",
-                    str(run_dir),
-                ],
-                check=False,
-                text=True,
-                capture_output=True,
-            )
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(REPO_ROOT / "scripts" / "print_s256_regression_manifest.py"),
+                "--json",
+                "--artifact-root",
+                str(artifact_root),
+                "--run-dir",
+                str(run_dir),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
 
-            self.assertEqual(0, result.returncode, result.stderr)
-            payload = json.loads(result.stdout)
-            self.assertEqual((artifact_root / "s256_d64_seed100").as_posix(), payload["artifact_paths"]["vector_dir"])
-            self.assertFalse(artifact_root.exists())
-            self.assertFalse(run_dir.exists())
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual((artifact_root / "s256_d64_seed100").as_posix(), payload["artifact_paths"]["vector_dir"])
+        self.assertFalse(artifact_root.exists())
+        self.assertFalse(run_dir.exists())
 
     def test_cli_case_name_override_updates_default_run_dir(self) -> None:
         result = subprocess.run(
@@ -120,7 +129,7 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual("artifacts/runs/s256_d64_seed123", payload["artifact_paths"]["run_dir"])
-        self.assertIn("artifacts/runs/s256_d64_seed123", payload["commands"]["compare_dut_beats64"])
+        self.assertIn("artifacts/runs/s256_d64_seed123", payload["commands"]["compare_dut_beats128"])
 
     def test_remote_return_contract_lists_required_ppa_and_debug_artifacts(self) -> None:
         manifest = build_manifest(
@@ -151,7 +160,7 @@ class PrintS256RegressionManifestTest(unittest.TestCase):
             ],
             policy["return_from_remote"],
         )
-        self.assertEqual([paths["dut_o_beats64"]], policy["return_only_on_mismatch"])
+        self.assertEqual([paths["dut_o_beats128"]], policy["return_only_on_mismatch"])
         self.assertFalse(policy["commit_vectors"])
         self.assertFalse(policy["commit_run_outputs"])
 

@@ -7,10 +7,10 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Callable, Literal
 
 
-DutFormat = Literal["words16", "beats64"]
+DutFormat = Literal["words16", "beats64", "beats128"]
 
 
 @dataclass(frozen=True)
@@ -55,6 +55,16 @@ def _parse_beat64_line(line: str, *, path: Path, line_number: int) -> list[int]:
     return [_int16_from_word((beat >> (16 * lane)) & 0xFFFF) for lane in range(4)]
 
 
+def _parse_beat128_line(line: str, *, path: Path, line_number: int) -> list[int]:
+    if len(line) != 32:
+        raise ValueError(f"{path}:{line_number}: expected a 32-digit 128-bit beat hex word")
+    try:
+        beat = int(line, 16)
+    except ValueError as exc:
+        raise ValueError(f"{path}:{line_number}: invalid 128-bit beat hex word {line!r}") from exc
+    return [_int16_from_word((beat >> (16 * lane)) & 0xFFFF) for lane in range(8)]
+
+
 def _read_words16(path: Path) -> list[int]:
     return [
         _parse_word16_line(line, path=path, line_number=index + 1)
@@ -62,12 +72,13 @@ def _read_words16(path: Path) -> list[int]:
     ]
 
 
-def _read_beats64(
+def _read_beats(
     path: Path,
     *,
     dimension: int,
     rows: int,
     beats_per_row: int,
+    parse_beat_line: Callable[[str, int], list[int]],
 ) -> list[int]:
     lines = _parse_hex_lines(path)
     expected_beats = rows * beats_per_row
@@ -79,15 +90,41 @@ def _read_beats64(
         row_words: list[int] = []
         for beat_index in range(beats_per_row):
             line_index = row * beats_per_row + beat_index
-            row_words.extend(
-                _parse_beat64_line(
-                    lines[line_index],
-                    path=path,
-                    line_number=line_index + 1,
-                )
-            )
+            row_words.extend(parse_beat_line(lines[line_index], line_index + 1))
         words.extend(row_words[:dimension])
     return words
+
+
+def _read_beats64(
+    path: Path,
+    *,
+    dimension: int,
+    rows: int,
+    beats_per_row: int,
+) -> list[int]:
+    return _read_beats(
+        path,
+        dimension=dimension,
+        rows=rows,
+        beats_per_row=beats_per_row,
+        parse_beat_line=lambda line, line_number: _parse_beat64_line(line, path=path, line_number=line_number),
+    )
+
+
+def _read_beats128(
+    path: Path,
+    *,
+    dimension: int,
+    rows: int,
+    beats_per_row: int,
+) -> list[int]:
+    return _read_beats(
+        path,
+        dimension=dimension,
+        rows=rows,
+        beats_per_row=beats_per_row,
+        parse_beat_line=lambda line, line_number: _parse_beat128_line(line, path=path, line_number=line_number),
+    )
 
 
 def load_dut_words(
@@ -108,6 +145,13 @@ def load_dut_words(
         return words
     if dut_format == "beats64":
         return _read_beats64(
+            path,
+            dimension=dimension,
+            rows=rows,
+            beats_per_row=beats_per_row,
+        )
+    if dut_format == "beats128":
+        return _read_beats128(
             path,
             dimension=dimension,
             rows=rows,
@@ -146,6 +190,19 @@ def _metadata_int(metadata: dict[str, object], key: str, metadata_path: Path) ->
     return value
 
 
+def _dut_beats_per_row(metadata: dict[str, object], metadata_path: Path, dut_format: DutFormat) -> int:
+    if dut_format == "beats128":
+        stride_bytes = metadata.get("stride_bytes")
+        if not isinstance(stride_bytes, int):
+            raise ValueError(f"{metadata_path}: missing integer field 'stride_bytes' for beats128 DUT format")
+        if stride_bytes % 16:
+            raise ValueError(
+                f"{metadata_path}: stride_bytes must be 16-byte aligned for beats128 DUT format, got {stride_bytes}"
+            )
+        return stride_bytes // 16
+    return _metadata_int(metadata, "beats_per_row", metadata_path)
+
+
 def compare_vectors(
     *,
     metadata_path: Path,
@@ -160,7 +217,7 @@ def compare_vectors(
     metadata = _read_metadata(metadata_path)
     dimension = _metadata_int(metadata, "dimension", metadata_path)
     rows = _metadata_int(metadata, "output_rows", metadata_path)
-    beats_per_row = _metadata_int(metadata, "beats_per_row", metadata_path)
+    dut_beats_per_row = _dut_beats_per_row(metadata, metadata_path, dut_format)
 
     golden_path = golden_hex_path if golden_hex_path is not None else _metadata_golden_path(metadata_path, metadata)
     golden = load_dut_words(
@@ -168,14 +225,14 @@ def compare_vectors(
         dut_format="words16",
         dimension=dimension,
         rows=rows,
-        beats_per_row=beats_per_row,
+        beats_per_row=0,
     )
     dut = load_dut_words(
         dut_hex_path,
         dut_format=dut_format,
         dimension=dimension,
         rows=rows,
-        beats_per_row=beats_per_row,
+        beats_per_row=dut_beats_per_row,
     )
     if len(golden) != len(dut):
         raise ValueError(f"golden/DUT element count mismatch: {len(golden)} != {len(dut)}")
@@ -252,7 +309,7 @@ def build_summary(
         "case_name": metadata.get("case_name"),
         "dimension": _metadata_int(metadata, "dimension", metadata_path),
         "output_rows": _metadata_int(metadata, "output_rows", metadata_path),
-        "beats_per_row": _metadata_int(metadata, "beats_per_row", metadata_path),
+        "beats_per_row": _dut_beats_per_row(metadata, metadata_path, dut_format),
     }
 
 
@@ -260,7 +317,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--metadata", type=Path, required=True)
     parser.add_argument("--dut-hex", type=Path, required=True)
-    parser.add_argument("--format", choices=("words16", "beats64"), default="words16")
+    parser.add_argument("--format", choices=("words16", "beats64", "beats128"), default="words16")
     parser.add_argument(
         "--golden-hex",
         type=Path,
