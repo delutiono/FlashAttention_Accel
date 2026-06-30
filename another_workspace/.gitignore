@@ -1,0 +1,9 @@
+# Generated simulation files
+sim/*.vvp
+sim/*.vcd
+sim/*.log
+sim/*.bak
+sim/o_tb.hex
+
+# PDK files (large)
+sim/*.lib
