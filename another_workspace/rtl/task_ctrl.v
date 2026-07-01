@@ -10,6 +10,8 @@ module task_ctrl (
     input  wire run_done,
     input  wire all_idle,
     input  wire error_in,
+    input  wire task_chain_enable,
+    input  wire task_queue_not_empty,
     output reg  task_busy,
     output reg  task_done_pulse,
     output reg  task_error,
@@ -87,9 +89,17 @@ always @(posedge clk) begin
                 end
             end
             ST_DONE: begin
-                task_done_pulse <= 1'b1;
-                task_busy <= 1'b0;
-                state_reg <= ST_IDLE;
+                if (task_chain_enable && task_queue_not_empty) begin
+                    state_reg <= ST_INIT;
+                    init_start <= 1'b1;
+                    run_enable <= 1'b1;
+                    global_clear <= 1'b1;
+                    task_error <= 1'b0;
+                end else begin
+                    task_done_pulse <= 1'b1;
+                    task_busy <= 1'b0;
+                    state_reg <= ST_IDLE;
+                end
             end
             default: begin
                 task_busy <= 1'b0;

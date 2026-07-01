@@ -39,10 +39,13 @@ RTL_FILES = \
 	$(RTL_DIR)/sky130_sram_0kbytes_1rw1r_64x64_8.v
 
 TB_FILE = $(SIM_DIR)/tb_fa_top.sv
+TB_FILE_512 = $(SIM_DIR)/tb_fa_top_512.sv
 VVP_OUT = $(SIM_DIR)/tb_fa_top.vvp
+VVP_OUT_512 = $(SIM_DIR)/tb_fa_top_512.vvp
 SIM_LOG  = $(SIM_DIR)/sim_output.log
+SIM_LOG_512 = $(SIM_DIR)/sim_output_512.log
 
-.PHONY: compile sim clean
+.PHONY: compile sim compile_512 sim_512 clean
 
 compile:
 	iverilog -g2012 -o $(VVP_OUT) $(RTL_FILES) $(TB_FILE)
@@ -50,5 +53,12 @@ compile:
 sim: compile
 	vvp $(VVP_OUT) | tee $(SIM_LOG)
 
+compile_512:
+	iverilog -g2012 -o $(VVP_OUT_512) $(RTL_FILES) $(TB_FILE_512)
+
+sim_512: compile_512
+	vvp $(VVP_OUT_512) | tee $(SIM_LOG_512)
+
 clean:
 	rm -f $(VVP_OUT) $(SIM_LOG) $(SIM_DIR)/o_tb.hex
+	rm -f $(VVP_OUT_512) $(SIM_LOG_512) $(SIM_DIR)/o_tb_512.hex

@@ -13,6 +13,7 @@ module score_exp_pipe #(
     input  wire signed [47:0]      in_dot,
     input  wire [15:0]             in_scale,
     input  wire signed [31:0]      in_m_old,
+    input  wire                    in_mask_valid,
     input  wire [TOKEN_WIDTH-1:0]  in_token,
     output reg                     out_valid,
     output reg signed [31:0]       out_score,
@@ -31,11 +32,13 @@ reg signed [48:0]      scaled_s1;
 reg signed [31:0]      score_s2;
 reg signed [31:0]      m_old_s0, m_old_s1, m_old_s2;
 reg [TOKEN_WIDTH-1:0]  token_s0, token_s1, token_s2;
+reg                    mask_v0, mask_v1, mask_v2;
 reg signed [31:0]      score_side_s0, score_side_s1;
 reg signed [31:0]      m_side_s0, m_side_s1;
 reg [TOKEN_WIDTH-1:0]  token_side_s0, token_side_s1;
 reg                    score_wins_s0, score_wins_s1;
 reg                    exp_zero_s0, exp_zero_s1;
+reg                    mask_side_s0, mask_side_s1;
 
 wire signed [31:0] score_sat_s1;
 wire signed [31:0] m_new_comb;
@@ -76,6 +79,8 @@ score_exp_banked_rom u_exp_rom (
 always @(posedge clk) begin
     if (!rst_n) begin
         v0 <= 1'b0; v1 <= 1'b0; v2 <= 1'b0;
+        mask_v0 <= 1'b0; mask_v1 <= 1'b0; mask_v2 <= 1'b0;
+        mask_side_s0 <= 1'b0; mask_side_s1 <= 1'b0;
         out_valid <= 1'b0;
         out_score <= 32'sd0;
         out_m_new <= 32'sd0;
@@ -92,35 +97,40 @@ always @(posedge clk) begin
             product_s0 <= $signed(in_dot) * $signed({1'b0, in_scale});
             m_old_s0 <= in_m_old;
             token_s0 <= in_token;
+            mask_v0 <= in_mask_valid;
         end
         if (v0) begin
             // Q16.16 * Q0.16 -> Q16.32，round-to-nearest 后回到 Q16.16。
             scaled_s1 <= round_shift16(product_s0);
             m_old_s1 <= m_old_s0;
             token_s1 <= token_s0;
+            mask_v1 <= mask_v0;
         end
         if (v1) begin
             score_s2 <= score_sat_s1;
             m_old_s2 <= m_old_s1;
             token_s2 <= token_s1;
+            mask_v2 <= mask_v1;
         end
         if (v2) begin
             score_side_s0 <= score_s2;
-            m_side_s0 <= m_new_comb;
+            m_side_s0 <= mask_v2 ? m_old_s2 : m_new_comb;
             token_side_s0 <= token_s2;
-            score_wins_s0 <= (score_s2 > m_old_s2);
-            exp_zero_s0 <= exp_zero_comb;
+            score_wins_s0 <= mask_v2 ? 1'b0 : (score_s2 > m_old_s2);
+            exp_zero_s0 <= mask_v2 ? 1'b1 : exp_zero_comb;
+            mask_side_s0 <= mask_v2;
         end
         score_side_s1 <= score_side_s0;
         m_side_s1 <= m_side_s0;
         token_side_s1 <= token_side_s0;
         score_wins_s1 <= score_wins_s0;
         exp_zero_s1 <= exp_zero_s0;
+        mask_side_s1 <= mask_side_s0;
         if (rom_valid) begin
             out_score <= score_side_s1;
             out_m_new <= m_side_s1;
-            out_alpha <= score_wins_s1 ? (exp_zero_s1 ? 16'd0 : rom_data) : 16'h8000;
-            out_beta <= score_wins_s1 ? 16'h8000 : (exp_zero_s1 ? 16'd0 : rom_data);
+            out_alpha <= mask_side_s1 ? 16'h8000 : (score_wins_s1 ? (exp_zero_s1 ? 16'd0 : rom_data) : 16'h8000);
+            out_beta  <= mask_side_s1 ? 16'd0   : (score_wins_s1 ? 16'h8000 : (exp_zero_s1 ? 16'd0 : rom_data));
             out_token <= token_side_s1;
         end
     end

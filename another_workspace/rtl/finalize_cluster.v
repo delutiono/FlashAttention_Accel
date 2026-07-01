@@ -6,6 +6,7 @@
 module finalize_cluster (
     input  wire                 clk,
     input  wire                 rst_n,
+    input  wire [1:0]           format_sel,
     input  wire                 req_valid,
     output wire                 req_ready,
     input  wire [2:0]           req_context,
@@ -95,6 +96,10 @@ wire recip_start = !inv_busy_reg && (req_count_reg != 4'd0) &&
 wire recip_done = inv_out_valid;
 wire proc_start = (state_reg == ST_IDLE) && (inv_count_reg != 4'd0) && (!o_valid || o_ready);
 
+wire [5:0] output_shift;
+assign output_shift = (format_sel == 2'd1) ? 6'd50 :
+                      (format_sel == 2'd2) ? 6'd48 : 6'd52;
+
 assign req_ready = (req_count_reg != 4'd8);
 
 reciprocal_approx #(.TOKEN_WIDTH(3)) u_recip (
@@ -110,7 +115,8 @@ output_norm_pipe #(.TOKEN_WIDTH(5), .LANES(2)) u_norm (
     .in_valid(norm_in_valid_reg), .in_ready(norm_in_ready),
     .in_acc(norm_acc_reg), .in_inv(inv_reg), .in_token(norm_token_reg),
     .out_valid(norm_out_valid), .out_ready(norm_out_ready),
-    .out_data(norm_out_data), .out_token(norm_out_token)
+    .out_data(norm_out_data), .out_token(norm_out_token),
+    .output_shift(output_shift)
 );
 
 assign norm_out_ready = (pack_slot_reg != 3'd3) || (!o_valid) || o_ready;

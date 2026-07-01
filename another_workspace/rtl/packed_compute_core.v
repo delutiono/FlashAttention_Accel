@@ -6,6 +6,7 @@
 module packed_compute_core (
     input  wire                clk,
     input  wire                rst_n,
+    input  wire [7:0]          valid_len,
     input  wire                q_load_valid,
     input  wire [1:0]          q_load_pair,
     input  wire [4:0]          q_load_addr,
@@ -42,12 +43,12 @@ module packed_compute_core (
     input  wire [2:0]          score_v_row,
     input  wire signed [31:0]  score_m_old,
     input  wire [15:0]         score_scale,
-    input  wire [7:0]          score_user_token,
+    input  wire [9:0]          score_user_token,
     input  wire [2:0]          score_context,
     input  wire                score_last,
     output wire                complete_valid,
     output wire [2:0]          complete_context,
-    output wire [7:0]          complete_user_token,
+    output wire [9:0]          complete_user_token,
     output wire                complete_last,
     output wire signed [31:0]  complete_m,
     output wire signed [47:0]  complete_l,
@@ -70,40 +71,42 @@ localparam integer TOKEN_USER_LSB = 8;
 wire dot_ready;
 wire dot_valid;
 wire signed [47:0] dot_value;
-wire [15:0] dot_token;
+wire [17:0] dot_token;
 wire exp_valid;
 wire signed [31:0] exp_score;
 wire signed [31:0] exp_m_new;
 wire [15:0] exp_alpha;
 wire [15:0] exp_beta;
-wire [15:0] exp_token;
+wire [17:0] exp_token;
 wire fifo_ready;
 wire fifo_valid;
 wire signed [31:0] fifo_m_new;
 wire [15:0] fifo_alpha;
 wire [15:0] fifo_beta;
-wire [15:0] fifo_token;
+wire [17:0] fifo_token;
 wire update_ready;
-wire [15:0] update_complete_token;
+wire [17:0] update_complete_token;
 reg [3:0] pipeline_reserved_reg;
 reg signed [31:0] issue_m_mem [0:7];
 reg [15:0] issue_scale_mem [0:7];
+reg        pad_mask_mem [0:7];
 reg [2:0] issue_meta_wr_ptr_reg;
 reg [2:0] issue_meta_rd_ptr_reg;
 reg [3:0] issue_meta_count_reg;
 wire score_fire;
+wire pad_mask_fire;
 wire [4:0] reserved_total;
 
-function [15:0] pack_score_token;
-    input [7:0] user_token;
+function [17:0] pack_score_token;
+    input [9:0] user_token;
     input last;
     input v_page;
     input [2:0] v_row;
     input [2:0] ctx;
     reg [15:0] value;
     begin
-        value = 16'd0;
-        value[TOKEN_USER_LSB +: 8] = user_token;
+        value = 18'd0;
+        value[TOKEN_USER_LSB +: 10] = user_token;
         value[TOKEN_LAST_BIT] = last;
         value[TOKEN_V_PAGE_BIT] = v_page;
         value[TOKEN_V_ROW_LSB +: 3] = v_row;
@@ -115,7 +118,8 @@ endfunction
 assign reserved_total = {1'b0, pipeline_reserved_reg} + {1'b0, token_fifo_occupancy};
 assign score_ready = dot_ready && (reserved_total < 5'd8) && (issue_meta_count_reg < 4'd8);
 assign score_fire = score_valid && score_ready;
-assign complete_user_token = update_complete_token[TOKEN_USER_LSB +: 8];
+assign pad_mask_fire = (valid_len != 0) && (score_user_token >= valid_len);
+assign complete_user_token = update_complete_token[TOKEN_USER_LSB +: 10];
 
 always @(posedge clk) begin
     if (!rst_n) begin
@@ -132,6 +136,7 @@ always @(posedge clk) begin
         if (score_fire) begin
             issue_m_mem[issue_meta_wr_ptr_reg] <= score_m_old;
             issue_scale_mem[issue_meta_wr_ptr_reg] <= score_scale;
+            pad_mask_mem[issue_meta_wr_ptr_reg] <= pad_mask_fire;
             issue_meta_wr_ptr_reg <= issue_meta_wr_ptr_reg + 3'd1;
         end
         if (dot_valid)
@@ -158,7 +163,7 @@ always @(posedge clk) begin
     end
 end
 
-dot_frontend #(.TOKEN_WIDTH(16)) u_dot (
+dot_frontend #(.TOKEN_WIDTH(18)) u_dot (
     .clk(clk), .rst_n(rst_n),
     .q_load_valid(q_load_valid), .q_load_pair(q_load_pair), .q_load_addr(q_load_addr),
     .q_load_wmask(q_load_wmask), .q_load_data(q_load_data),
@@ -175,16 +180,17 @@ dot_frontend #(.TOKEN_WIDTH(16)) u_dot (
     .out_valid(dot_valid), .out_dot(dot_value), .out_token(dot_token)
 );
 
-score_exp_pipe #(.TOKEN_WIDTH(16)) u_score_exp (
+score_exp_pipe #(.TOKEN_WIDTH(18)) u_score_exp (
     .clk(clk), .rst_n(rst_n), .in_valid(dot_valid), .in_ready(),
     .in_dot(dot_value), .in_scale(issue_scale_mem[issue_meta_rd_ptr_reg]),
     .in_m_old(issue_m_mem[issue_meta_rd_ptr_reg]),
     .in_token(dot_token), .out_valid(exp_valid), .out_score(exp_score),
+	    .in_mask_valid(pad_mask_mem[issue_meta_rd_ptr_reg]),
     .out_m_new(exp_m_new), .out_alpha(exp_alpha), .out_beta(exp_beta),
     .out_token(exp_token)
 );
 
-update_token_fifo #(.DEPTH(8), .TOKEN_WIDTH(16)) u_fifo (
+update_token_fifo #(.DEPTH(8), .TOKEN_WIDTH(18)) u_fifo (
     .clk(clk), .rst_n(rst_n), .in_valid(exp_valid), .in_ready(fifo_ready),
     .in_m_new(exp_m_new), .in_alpha(exp_alpha), .in_beta(exp_beta), .in_token(exp_token),
     .out_valid(fifo_valid), .out_ready(update_ready), .out_m_new(fifo_m_new),
@@ -192,7 +198,7 @@ update_token_fifo #(.DEPTH(8), .TOKEN_WIDTH(16)) u_fifo (
     .occupancy(token_fifo_occupancy)
 );
 
-update_state_cluster #(.TOKEN_WIDTH(16)) u_update (
+update_state_cluster #(.TOKEN_WIDTH(18)) u_update (
     .clk(clk), .rst_n(rst_n),
     .v_load_valid(v_load_valid), .v_load_pair(v_load_pair), .v_load_addr(v_load_addr),
     .v_load_wmask(v_load_wmask), .v_load_data(v_load_data),

@@ -3,14 +3,13 @@
 
 // 2-lane ACC 归一化流水。
 // ACC: signed Q*.30, INV: unsigned Q2.30, product: signed Q*.60。
-// OUTPUT_SHIFT=52 对应输出 Q8.8；右移前做对称舍入，最后饱和到 int16。
+// output_shift 动态控制输出格式：52=Q8.8, 50=Q6.10, 48=Q4.12。
 module output_norm_pipe #(
     parameter TOKEN_WIDTH = 8,
     parameter LANES = 2,
     parameter ACC_WIDTH = 48,
     parameter INV_WIDTH = 32,
-    parameter OUT_WIDTH = 16,
-    parameter OUTPUT_SHIFT = 52
+    parameter OUT_WIDTH = 16
 ) (
     input  wire                         clk,
     input  wire                         rst_n,
@@ -19,6 +18,7 @@ module output_norm_pipe #(
     input  wire signed [ACC_WIDTH*LANES-1:0] in_acc,
     input  wire [INV_WIDTH-1:0]         in_inv,
     input  wire [TOKEN_WIDTH-1:0]       in_token,
+    input  wire [5:0]                   output_shift,
     output wire                         out_valid,
     input  wire                         out_ready,
     output wire [OUT_WIDTH*LANES-1:0]   out_data,
@@ -26,7 +26,7 @@ module output_norm_pipe #(
 );
 
 localparam PRODUCT_WIDTH = ACC_WIDTH + INV_WIDTH;
-localparam SHIFTED_WIDTH = PRODUCT_WIDTH - OUTPUT_SHIFT;
+localparam SHIFTED_WIDTH = 32;
 
 reg valid_m_reg;
 reg valid_r_reg;
@@ -52,31 +52,29 @@ endgenerate
 
 function signed [SHIFTED_WIDTH-1:0] round_shift_product;
     input signed [PRODUCT_WIDTH-1:0] value;
-    reg signed [PRODUCT_WIDTH-1:0] biased;
+    input [5:0] shift;
+    reg signed [PRODUCT_WIDTH:0] extended;
     begin
+        // Rounding: add 2^(shift-1) then truncate via arithmetic shift.
+        // Use 81-bit extended to avoid overflow from rounding.
+        extended = {value[PRODUCT_WIDTH-1], value};
         if (value[PRODUCT_WIDTH-1])
-            biased = value + $signed({{(PRODUCT_WIDTH-OUTPUT_SHIFT){1'b0}}, 1'b1, {(OUTPUT_SHIFT-1){1'b0}}}) - {{(PRODUCT_WIDTH-1){1'b0}}, 1'b1};
+            extended = extended + ($signed(1) <<< (shift - 1)) - 1;
         else
-            biased = value + $signed({{(PRODUCT_WIDTH-OUTPUT_SHIFT){1'b0}}, 1'b1, {(OUTPUT_SHIFT-1){1'b0}}});
-        round_shift_product = biased[PRODUCT_WIDTH-1:OUTPUT_SHIFT];
+            extended = extended + ($signed(1) <<< (shift - 1));
+        round_shift_product = extended >>> shift;
     end
 endfunction
 
-function signed [OUT_WIDTH-1:0] sat_q8_8;
+function signed [OUT_WIDTH-1:0] sat_int16;
     input signed [SHIFTED_WIDTH-1:0] value;
-    reg signed [SHIFTED_WIDTH-1:0] max_v;
-    reg signed [SHIFTED_WIDTH-1:0] min_v;
     begin
-        max_v = {{(SHIFTED_WIDTH-15){1'b0}}, 15'h7fff};
-        min_v = {1'b1, {(SHIFTED_WIDTH-1){1'b0}}};
-        if (SHIFTED_WIDTH > OUT_WIDTH)
-            min_v = {{(SHIFTED_WIDTH-OUT_WIDTH){1'b1}}, 1'b1, {(OUT_WIDTH-1){1'b0}}};
-        if (value > max_v)
-            sat_q8_8 = 16'sh7fff;
-        else if (value < min_v)
-            sat_q8_8 = -16'sh8000;
+        if ($signed(value) > 32'sh7fff)
+            sat_int16 = 16'sh7fff;
+        else if ($signed(value) < -32'sh8000)
+            sat_int16 = -16'sh8000;
         else
-            sat_q8_8 = value[OUT_WIDTH-1:0];
+            sat_int16 = value[15:0];
     end
 endfunction
 
@@ -107,8 +105,8 @@ always @(posedge clk) begin
             end
         end
         for (i = 0; i < LANES; i = i + 1) begin
-            shifted_reg[i] <= round_shift_product(product_reg[i]);
-            sat_reg[i] <= sat_q8_8(shifted_reg[i]);
+            shifted_reg[i] <= round_shift_product(product_reg[i], output_shift);
+            sat_reg[i] <= sat_int16(shifted_reg[i]);
         end
     end
 end

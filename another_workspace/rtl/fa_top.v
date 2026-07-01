@@ -58,16 +58,22 @@ wire soft_reset_pulse;
 wire irq_enable;
 wire irq_pending;
 wire causal_enable_cfg;
+wire [1:0]  format_sel_cfg;
 wire [63:0] q_base_addr;
 wire [63:0] k_base_addr;
 wire [63:0] v_base_addr;
 wire [63:0] o_base_addr;
 wire [31:0] stride_bytes_cfg;
+wire [5:0]  seq_len_cfg;
+wire [7:0]  valid_len_cfg;
 wire [31:0] neg_large_cfg;
 wire [15:0] score_scale_cfg;
 wire task_busy;
 wire task_done_pulse;
 wire task_error;
+wire task_chain_enable;
+wire task_queue_not_empty;
+wire task_dequeue;
 wire global_clear;
 wire run_enable;
 wire init_start;
@@ -109,8 +115,8 @@ wire dma_wr_last;
 wire active_q_page;
 wire active_k_page;
 wire active_v_page;
-wire [4:0] active_q_group;
-wire [4:0] active_kv_tile;
+wire [5:0] active_q_group;
+wire [5:0] active_kv_tile;
 wire q_group_ready;
 wire kv_tile_ready;
 wire q_load_start;
@@ -161,12 +167,12 @@ wire [2:0] score_k_row;
 wire score_v_page;
 wire [2:0] score_v_row;
 wire signed [31:0] score_m_old;
-wire [7:0] score_user_token;
+wire [9:0] score_user_token;
 wire [2:0] score_context;
 wire score_last;
 wire complete_valid;
 wire [2:0] complete_context;
-wire [7:0] complete_user_token;
+wire [9:0] complete_user_token;
 wire complete_last;
 wire signed [31:0] complete_m;
 wire signed [47:0] complete_l;
@@ -215,10 +221,13 @@ axi_lite_regs u_regs (
     .start_pulse(start_pulse), .soft_reset_pulse(soft_reset_pulse),
     .irq_enable(irq_enable), .irq_pending(irq_pending),
     .causal_enable(causal_enable_cfg),
+    .format_sel(format_sel_cfg),
     .q_base_addr(q_base_addr), .k_base_addr(k_base_addr),
     .v_base_addr(v_base_addr), .o_base_addr(o_base_addr),
-    .stride_bytes(stride_bytes_cfg), .neg_large(neg_large_cfg),
-    .score_scale(score_scale_cfg), .task_busy(task_busy),
+    .stride_bytes(stride_bytes_cfg), .seq_len(seq_len_cfg), .valid_len(valid_len_cfg), .neg_large(neg_large_cfg),
+    .score_scale(score_scale_cfg), .task_chain_enable(task_chain_enable),
+    .task_queue_not_empty(task_queue_not_empty), .task_dequeue(task_dequeue),
+    .task_busy(task_busy),
     .task_done(task_done_pulse), .task_error(task_error),
     .perf_read_data(perf_read_data)
 );
@@ -228,6 +237,7 @@ task_ctrl u_task (
     .soft_reset_pulse(soft_reset_pulse), .init_done(1'b1),
     .run_done(sched_done || pm_done), .all_idle(!pm_busy && !o_store_busy),
     .error_in(pm_error || k_load_error || v_load_error || fin_error_zero_l),
+    .task_chain_enable(task_chain_enable), .task_queue_not_empty(task_queue_not_empty),
     .task_busy(task_busy), .task_done_pulse(task_done_pulse),
     .task_error(task_error), .global_clear(global_clear),
     .run_enable(run_enable), .init_start(init_start)
@@ -245,6 +255,7 @@ perf_counters u_perf (
 
 page_manager u_page (
     .clk(clk), .rst_n(rst_n), .start(init_start), .run_enable(run_enable),
+    .num_groups(seq_len_cfg),
     .busy(pm_busy), .done(pm_done), .error(pm_error),
     .cmd_valid(pm_cmd_valid), .cmd_ready(pm_cmd_ready), .cmd_kind(pm_cmd_kind),
     .cmd_page(pm_cmd_page), .cmd_base_addr(pm_cmd_base_addr),
@@ -257,7 +268,8 @@ page_manager u_page (
     .q_group_ready(q_group_ready), .kv_tile_ready(kv_tile_ready),
     .scheduler_tile_done(sched_tile_done), .scheduler_group_done(sched_group_done),
     .q_load_start(q_load_start), .k_load_start(k_load_start), .v_load_start(v_load_start),
-    .o_store_start(o_store_start), .finalize_start(finalize_start)
+    .o_store_start(o_store_start), .finalize_start(finalize_start),
+    .task_chain_enable(task_chain_enable), .task_queue_not_empty(task_queue_not_empty), .task_dequeue(task_dequeue)
 );
 
 dma_engine u_dma (
@@ -316,6 +328,7 @@ v_load_adapter u_v_adapter (
 
 score_scheduler u_sched (
     .clk(clk), .rst_n(rst_n), .start(init_start), .run_enable(run_enable),
+    .num_groups(seq_len_cfg),
     .busy(), .done(sched_done), .q_group_ready(q_group_ready), .kv_tile_ready(kv_tile_ready),
     .active_q_page(active_q_page), .active_k_page(active_k_page), .active_v_page(active_v_page),
     .active_q_group(active_q_group), .active_kv_tile(active_kv_tile),
@@ -336,7 +349,7 @@ score_scheduler u_sched (
 );
 
 packed_compute_core u_core (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .valid_len(valid_len_cfg),
     .q_load_valid(1'b0), .q_load_pair(2'd0), .q_load_addr(5'd0),
     .q_load_wmask(16'd0), .q_load_data(128'd0),
     .q_ext_valid(q_rw_valid), .q_ext_write(q_rw_write), .q_ext_pair(q_rw_pair),
@@ -363,6 +376,7 @@ packed_compute_core u_core (
 
 finalize_cluster u_finalize (
     .clk(clk), .rst_n(rst_n), .req_valid(fin_req_valid), .req_ready(fin_req_ready),
+    .format_sel(format_sel_cfg),
     .req_context(fin_req_context), .req_q_page(fin_req_q_page), .req_q_row(fin_req_row),
     .req_l(fin_req_l), .acc_req_valid(fin_acc_req_valid), .acc_req_ready(fin_acc_req_ready),
     .acc_req_context(fin_acc_req_context), .acc_req_quarter(fin_acc_req_quarter),
