@@ -46,7 +46,13 @@ module axi_lite_regs #(
     input  wire                    task_busy,
     input  wire                    task_done,
     input  wire                    task_error,
-    input  wire [31:0]             perf_read_data
+    input  wire [31:0]             perf_read_data,
+    output wire                    stream_en,
+    output wire                    dropout_en,
+    output wire [31:0]             dropout_seed,
+    output wire [15:0]             dropout_prob,
+    output wire [2:0]              num_heads,
+    output wire [31:0]             head_stride
 );
 
 localparam [ADDR_WIDTH-1:0] REG_CTRL            = 12'h000;
@@ -69,6 +75,10 @@ localparam [ADDR_WIDTH-1:0] REG_CYCLES          = 12'h040;
 localparam [ADDR_WIDTH-1:0] REG_TASK_PARAM_ADDR = 12'h044;
 localparam [ADDR_WIDTH-1:0] REG_TASK_PARAM_DATA = 12'h048;
 localparam [ADDR_WIDTH-1:0] REG_TASK_QUEUE_CTRL = 12'h04C;
+    localparam [ADDR_WIDTH-1:0] REG_DROPOUT_SEED    = 12'h050;
+    localparam [ADDR_WIDTH-1:0] REG_DROPOUT_PROB    = 12'h054;
+    localparam [ADDR_WIDTH-1:0] REG_NUM_HEADS       = 12'h058;
+    localparam [ADDR_WIDTH-1:0] REG_HEAD_STRIDE     = 12'h05C;
 
 reg [ADDR_WIDTH-1:0] awaddr_reg;
 reg                  aw_hold_reg;
@@ -105,6 +115,10 @@ reg [31:0]           task_q_lo, task_q_hi;
 reg [31:0]           task_k_lo, task_k_hi;
 reg [31:0]           task_v_lo, task_v_hi;
 reg [31:0]           task_o_lo, task_o_hi;
+    reg [31:0]           dropout_seed_reg;
+    reg [15:0]           dropout_prob_reg;
+    reg [2:0]            num_heads_reg;
+    reg [31:0]           head_stride_reg;
 
 wire write_fire;
 wire read_fire;
@@ -130,6 +144,12 @@ assign neg_large = neg_large_reg;
 assign score_scale = scale_reg[15:0];
 assign task_chain_enable = cfg_reg[3];
 assign task_queue_not_empty = (task_queue_count != 4'd0);
+    assign stream_en = cfg_reg[4];
+    assign dropout_en = cfg_reg[5];
+    assign dropout_seed = dropout_seed_reg;
+    assign dropout_prob = dropout_prob_reg;
+    assign num_heads = num_heads_reg;
+    assign head_stride = head_stride_reg;
 
 function [31:0] apply_wstrb;
     input [31:0] old_value;
@@ -179,6 +199,10 @@ always @(posedge clk) begin
         task_k_lo <= 32'd0; task_k_hi <= 32'd0;
         task_v_lo <= 32'd0; task_v_hi <= 32'd0;
         task_o_lo <= 32'd0; task_o_hi <= 32'd0;
+        dropout_seed_reg <= 32'd0;
+        dropout_prob_reg <= 16'd0;
+        num_heads_reg <= 3'd1;
+        head_stride_reg <= 32'd0;
     end else begin
         start_pulse <= 1'b0;
         soft_reset_pulse <= 1'b0;
@@ -268,6 +292,10 @@ always @(posedge clk) begin
                         end
                     end
                 end
+                REG_DROPOUT_SEED: if (s_wstrb[0]) dropout_seed_reg <= s_wdata;
+                REG_DROPOUT_PROB: if (s_wstrb[0]) dropout_prob_reg <= s_wdata[15:0];
+                REG_NUM_HEADS: if (s_wstrb[0]) num_heads_reg <= s_wdata[2:0];
+                REG_HEAD_STRIDE: head_stride_reg <= apply_wstrb(head_stride_reg, s_wdata, s_wstrb);
                 default: begin end
             endcase
             s_bvalid <= 1'b1;
@@ -301,6 +329,10 @@ always @(posedge clk) begin
                 REG_TASK_PARAM_ADDR: s_rdata <= {26'd0, task_param_word_reg, task_param_entry_reg};
                 REG_TASK_PARAM_DATA: s_rdata <= task_ram[{task_param_word_reg, task_param_entry_reg}];
                 REG_TASK_QUEUE_CTRL: s_rdata <= {28'd0, task_queue_count};
+                REG_DROPOUT_SEED:    s_rdata <= dropout_seed_reg;
+                REG_DROPOUT_PROB:    s_rdata <= {16'd0, dropout_prob_reg};
+                REG_NUM_HEADS:       s_rdata <= {29'd0, num_heads_reg};
+                REG_HEAD_STRIDE:     s_rdata <= head_stride_reg;
                 default:             s_rdata <= 32'd0;
             endcase
         end else if (s_rvalid && s_rready) begin

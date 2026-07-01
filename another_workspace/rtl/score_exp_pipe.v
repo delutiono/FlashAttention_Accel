@@ -14,6 +14,9 @@ module score_exp_pipe #(
     input  wire [15:0]             in_scale,
     input  wire signed [31:0]      in_m_old,
     input  wire                    in_mask_valid,
+    input  wire                    in_dropout_en,
+    input  wire [31:0]             in_dropout_seed,
+    input  wire [15:0]             in_dropout_prob,
     input  wire [TOKEN_WIDTH-1:0]  in_token,
     output reg                     out_valid,
     output reg signed [31:0]       out_score,
@@ -33,12 +36,16 @@ reg signed [31:0]      score_s2;
 reg signed [31:0]      m_old_s0, m_old_s1, m_old_s2;
 reg [TOKEN_WIDTH-1:0]  token_s0, token_s1, token_s2;
 reg                    mask_v0, mask_v1, mask_v2;
+reg                    dropout_v0, dropout_v1, dropout_v2;
+reg [31:0]             lfsr;
+reg [31:0]             last_seed;
 reg signed [31:0]      score_side_s0, score_side_s1;
 reg signed [31:0]      m_side_s0, m_side_s1;
 reg [TOKEN_WIDTH-1:0]  token_side_s0, token_side_s1;
 reg                    score_wins_s0, score_wins_s1;
 reg                    exp_zero_s0, exp_zero_s1;
 reg                    mask_side_s0, mask_side_s1;
+reg                    dropout_side_s0, dropout_side_s1;
 
 wire signed [31:0] score_sat_s1;
 wire signed [31:0] m_new_comb;
@@ -81,6 +88,10 @@ always @(posedge clk) begin
         v0 <= 1'b0; v1 <= 1'b0; v2 <= 1'b0;
         mask_v0 <= 1'b0; mask_v1 <= 1'b0; mask_v2 <= 1'b0;
         mask_side_s0 <= 1'b0; mask_side_s1 <= 1'b0;
+        dropout_v0 <= 1'b0; dropout_v1 <= 1'b0; dropout_v2 <= 1'b0;
+        dropout_side_s0 <= 1'b0; dropout_side_s1 <= 1'b0;
+        lfsr <= 32'd1;
+        last_seed <= 32'd0;
         out_valid <= 1'b0;
         out_score <= 32'sd0;
         out_m_new <= 32'sd0;
@@ -98,6 +109,14 @@ always @(posedge clk) begin
             m_old_s0 <= in_m_old;
             token_s0 <= in_token;
             mask_v0 <= in_mask_valid;
+            // LFSR: x^32 + x^22 + x^2 + x + 1
+            if (in_dropout_seed != last_seed) begin
+                lfsr <= in_dropout_seed;
+                last_seed <= in_dropout_seed;
+            end else if (in_dropout_en) begin
+                lfsr <= {lfsr[30:0], lfsr[31]} ^ (lfsr[31] ? 32'h0040_0003 : 32'd0);
+            end
+            dropout_v0 <= in_dropout_en && (lfsr[15:0] < in_dropout_prob);
         end
         if (v0) begin
             // Q16.16 * Q0.16 -> Q16.32，round-to-nearest 后回到 Q16.16。
@@ -105,12 +124,14 @@ always @(posedge clk) begin
             m_old_s1 <= m_old_s0;
             token_s1 <= token_s0;
             mask_v1 <= mask_v0;
+            dropout_v1 <= dropout_v0;
         end
         if (v1) begin
             score_s2 <= score_sat_s1;
             m_old_s2 <= m_old_s1;
             token_s2 <= token_s1;
             mask_v2 <= mask_v1;
+            dropout_v2 <= dropout_v1;
         end
         if (v2) begin
             score_side_s0 <= score_s2;
@@ -119,6 +140,7 @@ always @(posedge clk) begin
             score_wins_s0 <= mask_v2 ? 1'b0 : (score_s2 > m_old_s2);
             exp_zero_s0 <= mask_v2 ? 1'b1 : exp_zero_comb;
             mask_side_s0 <= mask_v2;
+            dropout_side_s0 <= dropout_v2;
         end
         score_side_s1 <= score_side_s0;
         m_side_s1 <= m_side_s0;
@@ -126,11 +148,12 @@ always @(posedge clk) begin
         score_wins_s1 <= score_wins_s0;
         exp_zero_s1 <= exp_zero_s0;
         mask_side_s1 <= mask_side_s0;
+        dropout_side_s1 <= dropout_side_s0;
         if (rom_valid) begin
             out_score <= score_side_s1;
             out_m_new <= m_side_s1;
-            out_alpha <= mask_side_s1 ? 16'h8000 : (score_wins_s1 ? (exp_zero_s1 ? 16'd0 : rom_data) : 16'h8000);
-            out_beta  <= mask_side_s1 ? 16'd0   : (score_wins_s1 ? 16'h8000 : (exp_zero_s1 ? 16'd0 : rom_data));
+            out_alpha <= (mask_side_s1 || dropout_side_s1) ? 16'h8000 : (score_wins_s1 ? (exp_zero_s1 ? 16'd0 : rom_data) : 16'h8000);
+            out_beta  <= (mask_side_s1 || dropout_side_s1) ? 16'd0   : (score_wins_s1 ? 16'h8000 : (exp_zero_s1 ? 16'd0 : rom_data));
             out_token <= token_side_s1;
         end
     end
