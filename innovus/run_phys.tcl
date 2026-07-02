@@ -1,127 +1,112 @@
-# Innovus physical synthesis script for fa_accel_top
-# Target: sky130 HS, TT corner, 25C, 1.80V
-# Innovus version: v25.12
-# Usage: innovus -batch -file innovus/run_phys.tcl
+# Innovus Physical Synthesis Run Script (Legacy UI)
+# FlashAttention Accelerator - Sky130 HS
+#
+# Usage:
+#   innovus -batch -file innovus/run_phys.tcl
 
-# ==========================================
-# 0. Setup variables — EDIT these paths
-# ==========================================
-set DESIGN_NAME    fa_accel_top
-set NETLIST_FILE   synth/fa_accel_top_netlist_full.v
-set SDC_FILE       innovus/constraints.sdc
-set LEF_FILE       sky130_fd_sc_hs.lef
-set LIB_FILE       sky130_fd_sc_hs__tt_025C_1v80_slim.lib
-set REPORT_DIR     reports
+# =============================================================
+#  Paths
+# =============================================================
+set LIB_FILE  "/home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib"
+set NETLIST   "$env(PWD)/synth/fa_accel_top_synth_netlist.v"
+set SDC_FILE  "$env(PWD)/innovus/constraints.sdc"
+set TECH_LEF  "/home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/techlef/sky130_fd_sc_hs__nom.tlef"
+set CELL_LEF  "/home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lef/sky130_fd_sc_hs.lef"
 
-file mkdir ${REPORT_DIR}
+set DESIGN_NAME fa_accel_top_synth
+set RESULTS_DIR "./results"
+file mkdir $RESULTS_DIR
 
-# ==========================================
-# 1. Read design
-# ==========================================
-set init_verilog   ${NETLIST_FILE}
-set init_top_cell  ${DESIGN_NAME}
-set init_lef_file  ${LEF_FILE}
-# MMMC view definition inline
-set init_mmmc_file innovus/mmmc.tcl
+# =============================================================
+#  Init design (LEF + timing lib + netlist)
+# =============================================================
+set init_lef_file    [list $TECH_LEF $CELL_LEF]
+set init_mmmc_file   innovus/mmmc_setup.tcl
+set init_verilog     $NETLIST
+set init_top_cell    $DESIGN_NAME
+set init_design_uniquify 1
+set init_pwr_net     VPWR
+set init_gnd_net     VGND
+
 init_design
 
-# ==========================================
-# 2. Floorplan
-# ==========================================
-# Auto-calculate area from gate count, 70% utilization
-floorPlan -site unit -d 0.70 1.0 10 10 10 10
+# MMMC loaded — activate constraint mode, then source SDC
+set_interactive_constraint_modes c_mode
+source $SDC_FILE
 
-# Connect all tie-hi/tie-lo cells
-globalNetConnect VDD -type tiehi
-globalNetConnect VSS -type tielo
+# =============================================================
+#  Floorplan
+# =============================================================
+floorPlan -r 1.0 0.60 10 10 10 10
 
-# ==========================================
-# 3. Power grid
-# ==========================================
-# Power rings and stripes for sky130 (6 metal layers available)
-addRing -spacing_bottom 2 -spacing_top 2 -width_left 3 -width_right 3 \
-  -width_bottom 3 -width_top 3 -layer_bottom met1 -layer_top met1 \
-  -layer_left met2 -layer_right met2 -nets {VDD VSS} -offset 2
+# =============================================================
+#  Power
+# =============================================================
+set_power_analysis_mode -method static
 
-addStripe -nets {VDD VSS} -layer met2 -direction vertical \
-  -width 3 -spacing 2 -number_of_sets 8
+globalNetConnect VPWR -type pgpin -pin VPWR -all -override
+globalNetConnect VGND -type pgpin -pin VGND -all -override
+globalNetConnect VPWR -type tiehi -all
+globalNetConnect VGND -type tielo -all
 
-addStripe -nets {VDD VSS} -layer met3 -direction horizontal \
-  -width 3 -spacing 2 -number_of_sets 8
+addStripe -nets {VPWR VGND} -layer met1 -direction vertical \
+  -width 2.0 -spacing 5.0 -set_to_set_distance 50 \
+  -start_offset 50 -stop_offset 50
 
-# Route power for standard cells
-sroute -connect {blockPin padPin padRing corePin} \
-  -layerChangeRange {met1 met5} -blockPinTarget {nearestRingStripe} \
-  -allowJogging 1 -crossoverViaLayerRange {met1 met5} \
-  -nets {VDD VSS}
+saveDesign ${RESULTS_DIR}/post_init.enc
 
-# ==========================================
-# 4. Placement & optimization
-# ==========================================
-setPlaceMode -timingDriven true -reorderScan false
-place_opt_design
+# =============================================================
+#  Placement
+# =============================================================
+setMultiCpuUsage -localCpu 8
+setPlaceMode -place_global_timing_effort high -place_global_cong_effort high
+place_design
+saveDesign ${RESULTS_DIR}/post_place.enc
 
-# Early timing check
-timeDesign -preCTS -outDir ${REPORT_DIR}
+optDesign -preCTS
+saveDesign ${RESULTS_DIR}/post_placeopt.enc
 
-# ==========================================
-# 5. Clock tree synthesis
-# ==========================================
-set_ccopt_property target_skew 0.15
-set_ccopt_property target_slew 0.3
-create_ccopt_clock_tree_spec -file ${REPORT_DIR}/ccopt.spec
-ccopt_design -cts
+# =============================================================
+#  CTS
+# =============================================================
+set_ccopt_property buffer_cells {sky130_fd_sc_hs__clkbuf_1 sky130_fd_sc_hs__clkbuf_2 sky130_fd_sc_hs__clkbuf_4 sky130_fd_sc_hs__clkbuf_8}
+set_ccopt_property inverter_cells {sky130_fd_sc_hs__clkinv_1 sky130_fd_sc_hs__clkinv_2 sky130_fd_sc_hs__clkinv_4 sky130_fd_sc_hs__clkinv_8}
+set_ccopt_property target_skew 0.200
+set_ccopt_property target_insertion_delay min
+set_ccopt_property max_fanout 32
 
-# Post-CTS timing
-timeDesign -postCTS -outDir ${REPORT_DIR}
+clock_opt_design
+saveDesign ${RESULTS_DIR}/post_cts.enc
 
-# ==========================================
-# 6. Routing
-# ==========================================
-setNanoRouteMode -quiet -timingEngine true
-setNanoRouteMode -quiet -routeWithViaInPin true
-setNanoRouteMode -quiet -routeTopRoutingLayer 5
-setNanoRouteMode -quiet -routeBottomRoutingLayer 1
-routeDesign -globalDetail
+# =============================================================
+#  Routing
+# =============================================================
+setRouteMode -earlyGlobalEffortLevel standard
+routeDesign
+saveDesign ${RESULTS_DIR}/post_route.enc
 
-# Post-route optimization
-optDesign -postRoute -setup -hold
+setDelayCalMode -siAware false
+setOptMode -opt_hold_cells {sky130_fd_sc_hs__buf_1 sky130_fd_sc_hs__buf_2 sky130_fd_sc_hs__buf_4} -opt_post_route_fix_si_transitions false
+optDesign -postRoute -hold
+saveDesign ${RESULTS_DIR}/post_routeopt.enc
 
-# ==========================================
-# 7. Reports
-# ==========================================
-puts "=== Generating reports ==="
+# =============================================================
+#  Reports
+# =============================================================
+file mkdir ${RESULTS_DIR}/timing
+report_timing -nworst 100 > ${RESULTS_DIR}/timing/setup.rpt
+report_timing -nworst 100 -late > ${RESULTS_DIR}/timing/hold.rpt
+report_power -outfile ${RESULTS_DIR}/power.rpt
+report_area  > ${RESULTS_DIR}/area.rpt
+summaryReport > ${RESULTS_DIR}/cell_usage.rpt
 
-# Timing
-report_timing -path_type full_clock -slack_lesser_than 0.0 \
-  -file ${REPORT_DIR}/timing_violations.rpt
-report_timing -path_type full_clock -nworst 5 \
-  -file ${REPORT_DIR}/timing_top5.rpt
+# =============================================================
+#  Output
+# =============================================================
+saveNetlist -includePowerGround ${RESULTS_DIR}/${DESIGN_NAME}_phys.v
+write_sdf -version 2.1 ${RESULTS_DIR}/${DESIGN_NAME}_postroute.sdf
+write_sdc ${RESULTS_DIR}/${DESIGN_NAME}_postroute.sdc
+saveDesign ${RESULTS_DIR}/${DESIGN_NAME}.enc
 
-# Area
-report_area -outfile ${REPORT_DIR}/area.rpt
-
-# Power
-report_power -outfile ${REPORT_DIR}/power.rpt
-
-# Design summary
-summaryReport -noHtml -outfile ${REPORT_DIR}/summary.rpt
-
-# Gate count
-reportGateCount -outfile ${REPORT_DIR}/gate_count.rpt
-
-# DRC
-verify_drc -report ${REPORT_DIR}/drc.rpt
-
-# Connectivity
-verifyConnectivity -report ${REPORT_DIR}/connectivity.rpt
-
-# ==========================================
-# 8. Export final netlist
-# ==========================================
-saveDesign ${REPORT_DIR}/${DESIGN_NAME}_final.enc
-write_netlist ${REPORT_DIR}/${DESIGN_NAME}_final.v
-
-puts "=== Physical synthesis complete ==="
-puts "Reports in: ${REPORT_DIR}/"
-exit
+puts "=== PHYSICAL SYNTHESIS COMPLETE ==="
+puts "Results in: ${RESULTS_DIR}/"

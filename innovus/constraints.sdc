@@ -21,11 +21,6 @@ set_output_delay -clock clk -min 0.2 [all_outputs]
 # Exclude reset from timing (async)
 set_false_path -from [get_ports rst_n]
 
-# Multicycle path for done/error/status (not every-cycle signals)
-set_multicycle_path -setup 2 -to [get_ports {done_o error_o busy_o}]
-set_multicycle_path -hold  1 -to [get_ports {done_o error_o busy_o}]
-
 # Load and drive (exclude clk & rst_n)
 set_load 0.05 [all_outputs]
-set_driving_cell -lib_cell sky130_fd_sc_hs__buf_1 \
-  [remove_from_collection [all_inputs] [get_ports {clk rst_n}]]
+set_drive 0.1 [remove_from_collection [all_inputs] [get_ports {clk rst_n}]]
