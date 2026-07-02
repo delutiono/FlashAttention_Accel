@@ -28,6 +28,7 @@ These gates are local bring-up evidence. They reduce risk before the full S256 a
 | Cycle model | Tile-aware bandwidth and cycle estimate | `scripts/cycle_bandwidth_model.py` | Available |
 | S256 manifest | Remote artifact contract and commands | `scripts/print_s256_regression_manifest.py` | Available |
 | Genus flow | Synthesis scripts, SDC, report parser, remote runbook | `synth/run_genus.tcl`, `synth/constraints.sdc`, `scripts/parse_genus_reports.py`, `docs/synthesis_runbook.md` | Available |
+| Mainline SRAM macro buffers | Q/K/V buffers instantiate compliant SKY130 SRAM wrappers | `rtl/fa_q_buffer.sv`, `rtl/fa_kv_buffer.sv`, `rtl/fa_sram_macros.v` | Available |
 
 ## Final Baseline Evidence Still Required
 
@@ -77,6 +78,33 @@ Treat the baseline as signable only when all of these are true:
 
 If any of these items are missing, the project can still be progressing correctly, but it is not ready for final baseline signoff.
 
-## Current Main Gap
+## Current Local Mainline Evidence
 
-The local project has the runners, vector format, S256 manifest, Genus scripts, parser, and runbook needed to close the loop. The missing evidence is the actual full S256 top-compute result and the real remote Genus report package.
+The local grouped page/tile-reuse RTL now has full S256 top-compute evidence:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_top_compute_s256_scoreboard.ps1 -RunSimulation -WorkLib work_top_compute_s256_group_tile
+```
+
+Latest local result:
+
+```text
+PASS elements=16384 mae=0 maxae=0 max_lsb_error=0 first_failure=none
+cycles=249697
+q_group_reads=32
+k_tile_reads=528
+v_tile_reads=528
+o_group_writes=32
+```
+
+The read/write counters above are grouped 64-beat burst counts. In row terms they correspond to `Q=256`, `K=4224`, `V=4224`, and `O=256`, matching the planned 8-row Q group and 8-row K/V tile reuse model.
+
+Evidence paths:
+
+```text
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_compare.json
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_sim.log
+artifacts/runs/s256_d64_seed100/s256_d64_seed100_top_O_beats128.hex
+```
+
+The remaining main gap is the real remote Genus report package for the macro-backed RTL.

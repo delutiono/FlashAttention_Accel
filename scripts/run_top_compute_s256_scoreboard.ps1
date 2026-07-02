@@ -38,6 +38,7 @@ if ($RunSimulation -and $SkipSimulation) {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
+. (Join-Path $PSScriptRoot "modelsim_worklib.ps1")
 
 New-Item -ItemType Directory -Force -Path $VectorDir | Out-Null
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
@@ -81,22 +82,16 @@ if (-not $RunSimulation) {
   exit 0
 }
 
-if (Test-Path $dumpPath) {
-  Remove-Item $dumpPath
-}
-if (Test-Path $summaryPath) {
-  Remove-Item $summaryPath
-}
-if (Test-Path $simLogPath) {
-  Remove-Item $simLogPath
-}
+Remove-PathWithAclRetry -Path $dumpPath
+Remove-PathWithAclRetry -Path $summaryPath
+Remove-PathWithAclRetry -Path $simLogPath
 
-Invoke-Checked vlib $WorkLib
-Invoke-Checked vlog "-sv" "-work" $WorkLib "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s32_smoke.sv" "sim/tb_top_compute_s256_smoke.sv"
+$modelSim = New-ModelSimWorkLib -LogicalName $WorkLib
+Invoke-Checked vlog "-modelsimini" $modelSim.ModelsimIni "-timescale" "1ns/1ps" "-sv" "-work" $modelSim.LogicalName "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s32_smoke.sv" "sim/tb_top_compute_s256_smoke.sv"
 
 $vsimArgs = @(
   "-c",
-  "-lib", $WorkLib,
+  "-lib", $modelSim.LogicalName,
   "tb_top_compute_s256_smoke",
   "+Q_BEATS128=$qPath128",
   "+K_BEATS128=$kPath128",
@@ -106,7 +101,7 @@ $vsimArgs = @(
   "-l", $simLogPath,
   "-do", "run -all; quit -f"
 )
-Invoke-Checked vsim @vsimArgs
+Invoke-ModelSimVsim -ModelsimIni $modelSim.ModelsimIni -Arguments $vsimArgs
 
 if (-not (Test-Path $dumpPath)) {
   throw "Simulation did not produce DUT dump: $dumpPath"

@@ -6,7 +6,8 @@ module tb_top_dma_smoke;
   localparam logic [63:0] Q_BASE = 64'h0000_0000_0000_1000;
   localparam logic [63:0] O_BASE = 64'h0000_0000_0000_2000;
   localparam logic [63:0] BAD_Q_BASE = 64'h0000_0000_0010_0000;
-  localparam int unsigned BEATS  = 16;
+  localparam int unsigned AXI_LANES = FA_AXI_DATA_W / FA_ELEM_W;
+  localparam int unsigned BEATS  = FA_D / AXI_LANES;
 
   logic clk;
   logic rst_n;
@@ -35,7 +36,7 @@ module tb_top_dma_smoke;
   logic [1:0]  m_axi_arburst;
   logic        m_axi_arvalid;
   logic        m_axi_arready;
-  logic [63:0] m_axi_rdata;
+  logic [FA_AXI_DATA_W-1:0] m_axi_rdata;
   logic [1:0]  m_axi_rresp;
   logic        m_axi_rlast;
   logic        m_axi_rvalid;
@@ -46,8 +47,8 @@ module tb_top_dma_smoke;
   logic [1:0]  m_axi_awburst;
   logic        m_axi_awvalid;
   logic        m_axi_awready;
-  logic [63:0] m_axi_wdata;
-  logic [7:0]  m_axi_wstrb;
+  logic [FA_AXI_DATA_W-1:0] m_axi_wdata;
+  logic [FA_AXI_STRB_W-1:0] m_axi_wstrb;
   logic        m_axi_wlast;
   logic        m_axi_wvalid;
   logic        m_axi_wready;
@@ -104,7 +105,9 @@ module tb_top_dma_smoke;
     .irq
   );
 
-  axi_mem_model u_mem (
+  axi_mem_model #(
+    .DATA_W(FA_AXI_DATA_W)
+  ) u_mem (
     .clk,
     .rst_n,
     .s_axi_araddr  (m_axi_araddr),
@@ -207,17 +210,28 @@ module tb_top_dma_smoke;
 
   logic [31:0] status;
   logic [31:0] cycles;
-  logic [63:0] got_word;
+  logic [FA_AXI_DATA_W-1:0] got_word;
   int unsigned idx;
   int unsigned poll_count;
+
+  function automatic logic [FA_AXI_DATA_W-1:0] smoke_word(input int unsigned beat);
+    logic [FA_AXI_DATA_W-1:0] value;
+    begin
+      value = '0;
+      value[63:0] = 64'h5151_0000_0000_0000 | {56'h0, beat[7:0]};
+      if (FA_AXI_DATA_W > 64) begin
+        value[FA_AXI_DATA_W-1:64] = {((FA_AXI_DATA_W - 64) / 8){8'h5a}};
+      end
+      return value;
+    end
+  endfunction
 
   initial begin
     reset_dut();
 
     for (idx = 0; idx < BEATS; idx++) begin
-      u_mem.write_word(Q_BASE + (idx * 8),
-                       64'h5151_0000_0000_0000 | {56'h0, idx[7:0]});
-      u_mem.write_word(O_BASE + (idx * 8), 64'h0bad_0bad_0bad_0bad);
+      u_mem.write_word(Q_BASE + (idx * FA_AXI_STRB_W), smoke_word(idx));
+      u_mem.write_word(O_BASE + (idx * FA_AXI_STRB_W), {FA_AXI_STRB_W{8'had}});
     end
 
     axil_write(REG_Q_BASE_L, Q_BASE[31:0]);
@@ -242,9 +256,9 @@ module tb_top_dma_smoke;
     if (cycles == 32'd0) fail("cycles did not increment");
 
     for (idx = 0; idx < BEATS; idx++) begin
-      u_mem.read_word(O_BASE + (idx * 8), got_word);
-      if (got_word !== (64'h5151_0000_0000_0000 | {56'h0, idx[7:0]})) begin
-        $fatal(1, "O[%0d] mismatch got=0x%016x", idx, got_word);
+      u_mem.read_word(O_BASE + (idx * FA_AXI_STRB_W), got_word);
+      if (got_word !== smoke_word(idx)) begin
+        $fatal(1, "O[%0d] mismatch got=0x%0x", idx, got_word);
       end
     end
 

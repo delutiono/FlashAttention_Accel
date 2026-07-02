@@ -33,7 +33,8 @@ module tb_q_kv_buffer;
 
   fa_q_buffer #(
     .D(D),
-    .ELEM_W(ELEM_W)
+    .ELEM_W(ELEM_W),
+    .GROUP_ROWS(1)
   ) u_q_buffer (
     .clk,
     .rst_n,
@@ -41,6 +42,7 @@ module tb_q_kv_buffer;
     .beat_valid_i(q_valid),
     .beat_ready_o(q_ready),
     .beat_data_i(q_data),
+    .row_index_i('0),
     .load_done_o(q_done),
     .q_o(q_row)
   );
@@ -147,7 +149,7 @@ module tb_q_kv_buffer;
     logic [ELEM_W-1:0] expected_v;
     begin
       row_index = row[$clog2(TILE_ROWS)-1:0];
-      #1;
+      repeat (3) @(negedge clk);
       for (int elem = 0; elem < D; elem++) begin
         expected_k = k_base + elem;
         expected_v = v_base + elem;
@@ -190,6 +192,7 @@ module tb_q_kv_buffer;
     @(negedge clk);
     if (!q_done) fail("Q load_done did not assert after final beat");
     if (q_ready) fail("Q buffer stayed ready after row completed");
+    repeat (3) @(negedge clk);
     check_q_row();
 
     @(negedge clk);

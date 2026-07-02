@@ -26,6 +26,8 @@ module fa_row_engine #(
   output logic                              div_zero_o,
   output logic signed [OUT_W-1:0]           o_q88_o [D]
 );
+  localparam int unsigned SCORE_PIPE_LATENCY = 2;
+
   logic                              input_accept;
   logic                              drain_q;
   logic                              active_q;
@@ -34,9 +36,9 @@ module fa_row_engine #(
   logic signed [SCORE_PIPE_W-1:0]    score;
   logic signed [SOFTMAX_SCORE_W-1:0] softmax_score;
 
-  logic                              score_row_start_q;
-  logic                              score_last_q;
-  logic signed [ELEM_W-1:0]          score_v_q [D];
+  logic                              score_row_start_pipe_q [0:SCORE_PIPE_LATENCY];
+  logic                              score_last_pipe_q [0:SCORE_PIPE_LATENCY];
+  logic signed [ELEM_W-1:0]          score_v_pipe_q [0:SCORE_PIPE_LATENCY][D];
 
   logic                              softmax_ready;
   logic                              softmax_valid;
@@ -80,10 +82,10 @@ module fa_row_engine #(
     .clk,
     .rst_n,
     .valid_i(score_valid),
-    .row_start_i(score_valid && score_row_start_q),
+    .row_start_i(score_valid && score_row_start_pipe_q[SCORE_PIPE_LATENCY]),
     .score_valid_i(score_valid),
     .score_i(softmax_score),
-    .v_i(score_v_q),
+    .v_i(score_v_pipe_q[SCORE_PIPE_LATENCY]),
     .ready_o(softmax_ready),
     .valid_o(softmax_valid),
     .m_o(),
@@ -109,27 +111,31 @@ module fa_row_engine #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      score_row_start_q <= 1'b0;
-      score_last_q <= 1'b0;
       softmax_last_q <= 1'b0;
       drain_q <= 1'b0;
       active_q <= 1'b0;
-      for (int lane = 0; lane < D; lane++) begin
-        score_v_q[lane] <= '0;
+      for (int stage = 0; stage <= SCORE_PIPE_LATENCY; stage++) begin
+        score_row_start_pipe_q[stage] <= 1'b0;
+        score_last_pipe_q[stage] <= 1'b0;
+        for (int lane = 0; lane < D; lane++) begin
+          score_v_pipe_q[stage][lane] <= '0;
+        end
       end
     end else begin
-      if (input_accept) begin
-        score_row_start_q <= row_start_i;
-        score_last_q <= last_i;
+      score_row_start_pipe_q[0] <= input_accept ? row_start_i : 1'b0;
+      score_last_pipe_q[0] <= input_accept ? last_i : 1'b0;
+      for (int lane = 0; lane < D; lane++) begin
+        score_v_pipe_q[0][lane] <= input_accept ? v_i[lane] : '0;
+      end
+      for (int stage = 1; stage <= SCORE_PIPE_LATENCY; stage++) begin
+        score_row_start_pipe_q[stage] <= score_row_start_pipe_q[stage-1];
+        score_last_pipe_q[stage] <= score_last_pipe_q[stage-1];
         for (int lane = 0; lane < D; lane++) begin
-          score_v_q[lane] <= v_i[lane];
+          score_v_pipe_q[stage][lane] <= score_v_pipe_q[stage-1][lane];
         end
-      end else begin
-        score_row_start_q <= 1'b0;
-        score_last_q <= 1'b0;
       end
 
-      if (score_valid && score_last_q) begin
+      if (score_valid && score_last_pipe_q[SCORE_PIPE_LATENCY]) begin
         softmax_last_q <= 1'b1;
       end else if (softmax_valid && softmax_last_q) begin
         softmax_last_q <= 1'b0;

@@ -32,6 +32,7 @@ function Convert-ToSimPath {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
+. (Join-Path $PSScriptRoot "modelsim_worklib.ps1")
 
 New-Item -ItemType Directory -Force -Path $VectorDir | Out-Null
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
@@ -44,12 +45,8 @@ $oGoldenPath128 = Convert-ToSimPath (Join-Path $VectorDir "$($CaseName)_O_golden
 $dumpPath = Convert-ToSimPath (Join-Path $BuildDir $DumpFile)
 $summaryPath = Convert-ToSimPath (Join-Path $BuildDir $SummaryFile)
 
-if (Test-Path $dumpPath) {
-  Remove-Item $dumpPath
-}
-if (Test-Path $summaryPath) {
-  Remove-Item $summaryPath
-}
+Remove-PathWithAclRetry -Path $dumpPath
+Remove-PathWithAclRetry -Path $summaryPath
 
 Invoke-Checked python "-B" "scripts/generate_test_vectors.py" `
   "--seed" "$Seed" `
@@ -63,16 +60,19 @@ Invoke-Checked python "-B" "scripts/pack_vectors_128.py" `
   "--metadata" $metadataPath `
   "--output-dir" $VectorDir
 
-Invoke-Checked vlib $WorkLib
-Invoke-Checked vlog "-sv" "-work" $WorkLib "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s32_smoke.sv" "sim/tb_top_compute_s64_smoke.sv"
-Invoke-Checked vsim "-c" "-lib" $WorkLib `
-  "tb_top_compute_s64_smoke" `
-  "+Q_BEATS128=$qPath128" `
-  "+K_BEATS128=$kPath128" `
-  "+V_BEATS128=$vPath128" `
-  "+O_GOLDEN_BEATS128=$oGoldenPath128" `
-  "+DUMP_O_BEATS128=$dumpPath" `
-  "-do" "run -all; quit -f"
+$modelSim = New-ModelSimWorkLib -LogicalName $WorkLib
+Invoke-Checked vlog "-modelsimini" $modelSim.ModelsimIni "-timescale" "1ns/1ps" "-sv" "-work" $modelSim.LogicalName "-f" "rtl/filelist.f" "sim/axi_mem_model.sv" "sim/tb_top_compute_s32_smoke.sv" "sim/tb_top_compute_s64_smoke.sv"
+Invoke-ModelSimVsim -ModelsimIni $modelSim.ModelsimIni -Arguments @(
+  "-c",
+  "-lib", $modelSim.LogicalName,
+  "tb_top_compute_s64_smoke",
+  "+Q_BEATS128=$qPath128",
+  "+K_BEATS128=$kPath128",
+  "+V_BEATS128=$vPath128",
+  "+O_GOLDEN_BEATS128=$oGoldenPath128",
+  "+DUMP_O_BEATS128=$dumpPath",
+  "-do", "run -all; quit -f"
+)
 Invoke-Checked python "-B" "scripts/compare_vector_output.py" `
   "--metadata" $metadataPath `
   "--dut-hex" $dumpPath `

@@ -17,9 +17,13 @@ module fa_score_pipe #(
   output logic [7:0]                        k_index_o,
   output logic signed [SCORE_W-1:0]         score_o
 );
+  localparam int unsigned DOT_LATENCY_CYCLES = 2;
+
   logic dot_valid;
   logic signed [SCORE_W-1:0] dot_score;
   logic signed [SCORE_W-1:0] scaled_score;
+  logic [7:0] q_index_pipe_q [0:DOT_LATENCY_CYCLES];
+  logic [7:0] k_index_pipe_q [0:DOT_LATENCY_CYCLES];
 
   fa_dot_pe #(
     .D(D),
@@ -44,14 +48,22 @@ module fa_score_pipe #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      q_index_o <= 8'h0;
-      k_index_o <= 8'h0;
+      for (int stage = 0; stage <= DOT_LATENCY_CYCLES; stage++) begin
+        q_index_pipe_q[stage] <= 8'h0;
+        k_index_pipe_q[stage] <= 8'h0;
+      end
     end else begin
-      q_index_o <= valid_i ? q_index_i : 8'h0;
-      k_index_o <= valid_i ? k_index_i : 8'h0;
+      q_index_pipe_q[0] <= valid_i ? q_index_i : 8'h0;
+      k_index_pipe_q[0] <= valid_i ? k_index_i : 8'h0;
+      for (int stage = 1; stage <= DOT_LATENCY_CYCLES; stage++) begin
+        q_index_pipe_q[stage] <= q_index_pipe_q[stage-1];
+        k_index_pipe_q[stage] <= k_index_pipe_q[stage-1];
+      end
     end
   end
 
-  assign valid_o = dot_valid;
-  assign score_o = scaled_score;
+  assign valid_o   = dot_valid;
+  assign q_index_o = dot_valid ? q_index_pipe_q[DOT_LATENCY_CYCLES] : 8'h0;
+  assign k_index_o = dot_valid ? k_index_pipe_q[DOT_LATENCY_CYCLES] : 8'h0;
+  assign score_o   = scaled_score;
 endmodule

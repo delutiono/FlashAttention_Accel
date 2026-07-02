@@ -25,7 +25,11 @@ module fa_kv_buffer #(
   output logic signed [ELEM_W-1:0]     k_o [D],
   output logic signed [ELEM_W-1:0]     v_o [D]
 );
+  localparam int unsigned SRAM_BANK_W = 64;
+  localparam int unsigned LANES_PER_BANK = SRAM_BANK_W / ELEM_W;
   localparam int unsigned LANES_PER_BEAT = BEAT_W / ELEM_W;
+  localparam int unsigned BANKS_PER_ROW = D / LANES_PER_BANK;
+  localparam int unsigned BANKS_PER_BEAT = BEAT_W / SRAM_BANK_W;
   localparam int unsigned BEATS_PER_ROW = D / LANES_PER_BEAT;
   localparam int unsigned BEAT_COUNT_W = (BEATS_PER_ROW <= 1) ? 1 : $clog2(BEATS_PER_ROW);
   localparam int unsigned ROW_COUNT_W = (TILE_ROWS <= 1) ? 1 : $clog2(TILE_ROWS);
@@ -35,8 +39,8 @@ module fa_kv_buffer #(
   logic [BEAT_COUNT_W-1:0] v_beat_count_q;
   logic [ROW_COUNT_W-1:0]  v_row_count_q;
 
-  logic signed [ELEM_W-1:0] k_mem [TILE_ROWS][D];
-  logic signed [ELEM_W-1:0] v_mem [TILE_ROWS][D];
+  logic [SRAM_BANK_W-1:0] k_bank_data [BANKS_PER_ROW];
+  logic [SRAM_BANK_W-1:0] v_bank_data [BANKS_PER_ROW];
 
   logic k_accept;
   logic v_accept;
@@ -46,10 +50,65 @@ module fa_kv_buffer #(
   assign k_accept = k_valid_i && k_ready_o;
   assign v_accept = v_valid_i && v_ready_o;
 
+  genvar bank;
+  generate
+    for (bank = 0; bank < BANKS_PER_ROW; bank++) begin : gen_kv_sram_bank
+      localparam int unsigned BEAT_SLOT = bank / BANKS_PER_BEAT;
+      localparam int unsigned BANK_SLOT = bank % BANKS_PER_BEAT;
+
+      logic k_bank_write_en;
+      logic v_bank_write_en;
+      logic k_bank_read_en;
+      logic v_bank_read_en;
+
+      assign k_bank_write_en = k_accept && (k_beat_count_q == BEAT_COUNT_W'(BEAT_SLOT));
+      assign v_bank_write_en = v_accept && (v_beat_count_q == BEAT_COUNT_W'(BEAT_SLOT));
+      assign k_bank_read_en = !(k_bank_write_en && (k_row_count_q == ROW_COUNT_W'(row_index_i)));
+      assign v_bank_read_en = !(v_bank_write_en && (v_row_count_q == ROW_COUNT_W'(row_index_i)));
+
+      // K/V tile 以 row 为 SRAM 地址、以 4 个 int16 lane 为一个 64-bit bank。
+      fa_sram_1rw1r_64x64_sky130 u_k_bank (
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .rw_en     (k_bank_write_en),
+        .rw_write  (1'b1),
+        .rw_wmask  (8'hff),
+        .rw_addr   (6'(k_row_count_q)),
+        .rw_wdata  (k_data_i[(BANK_SLOT * SRAM_BANK_W) +: SRAM_BANK_W]),
+        .rw_rvalid (),
+        .rw_rdata  (),
+        .rd_en     (k_bank_read_en),
+        .rd_addr   (6'(row_index_i)),
+        .rd_valid  (),
+        .rd_data   (k_bank_data[bank])
+      );
+
+      fa_sram_1rw1r_64x64_sky130 u_v_bank (
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .rw_en     (v_bank_write_en),
+        .rw_write  (1'b1),
+        .rw_wmask  (8'hff),
+        .rw_addr   (6'(v_row_count_q)),
+        .rw_wdata  (v_data_i[(BANK_SLOT * SRAM_BANK_W) +: SRAM_BANK_W]),
+        .rw_rvalid (),
+        .rw_rdata  (),
+        .rd_en     (v_bank_read_en),
+        .rd_addr   (6'(row_index_i)),
+        .rd_valid  (),
+        .rd_data   (v_bank_data[bank])
+      );
+    end
+  endgenerate
+
   always_comb begin
-    for (int elem = 0; elem < D; elem++) begin
-      k_o[elem] = k_mem[row_index_i][elem];
-      v_o[elem] = v_mem[row_index_i][elem];
+    for (int bank_idx = 0; bank_idx < BANKS_PER_ROW; bank_idx++) begin
+      for (int lane = 0; lane < LANES_PER_BANK; lane++) begin
+        k_o[(bank_idx * LANES_PER_BANK) + lane] =
+          k_bank_data[bank_idx][(lane * ELEM_W) +: ELEM_W];
+        v_o[(bank_idx * LANES_PER_BANK) + lane] =
+          v_bank_data[bank_idx][(lane * ELEM_W) +: ELEM_W];
+      end
     end
   end
 
@@ -61,12 +120,6 @@ module fa_kv_buffer #(
       v_row_count_q <= '0;
       k_load_done_o <= 1'b0;
       v_load_done_o <= 1'b0;
-      for (int row = 0; row < TILE_ROWS; row++) begin
-        for (int elem = 0; elem < D; elem++) begin
-          k_mem[row][elem] <= '0;
-          v_mem[row][elem] <= '0;
-        end
-      end
     end else begin
       if (clear_i) begin
         k_beat_count_q <= '0;
@@ -77,11 +130,6 @@ module fa_kv_buffer #(
         v_load_done_o <= 1'b0;
       end else begin
         if (k_accept) begin
-          for (int lane = 0; lane < LANES_PER_BEAT; lane++) begin
-            k_mem[k_row_count_q][(k_beat_count_q * LANES_PER_BEAT) + lane] <=
-              k_data_i[(lane * ELEM_W) +: ELEM_W];
-          end
-
           if (k_beat_count_q == BEATS_PER_ROW[BEAT_COUNT_W-1:0] - 1'b1) begin
             k_beat_count_q <= '0;
             if (k_row_count_q == TILE_ROWS[ROW_COUNT_W-1:0] - 1'b1) begin
@@ -96,11 +144,6 @@ module fa_kv_buffer #(
         end
 
         if (v_accept) begin
-          for (int lane = 0; lane < LANES_PER_BEAT; lane++) begin
-            v_mem[v_row_count_q][(v_beat_count_q * LANES_PER_BEAT) + lane] <=
-              v_data_i[(lane * ELEM_W) +: ELEM_W];
-          end
-
           if (v_beat_count_q == BEATS_PER_ROW[BEAT_COUNT_W-1:0] - 1'b1) begin
             v_beat_count_q <= '0;
             if (v_row_count_q == TILE_ROWS[ROW_COUNT_W-1:0] - 1'b1) begin

@@ -20,6 +20,9 @@ module tb_top_compute_s32_smoke #(
   localparam int unsigned BEATS_PER_ROW = FA_D / AXI_LANES;
   localparam int unsigned TOTAL_BEATS = ROWS * BEATS_PER_ROW;
   localparam int unsigned MAX_CAUSAL_ROW_READS = (ROWS * (ROWS + 1)) / 2;
+  localparam int unsigned GROUP_ROWS = FA_Q_GROUP_ROWS;
+  localparam int unsigned GROUP_COUNT = (ROWS + GROUP_ROWS - 1) / GROUP_ROWS;
+  localparam int unsigned CAUSAL_TILE_BURSTS = (GROUP_COUNT * (GROUP_COUNT + 1)) / 2;
   localparam logic [63:0] STRIDE_BYTES = 64'd128;
   localparam logic [63:0] Q_LIMIT = Q_BASE + (ROWS * STRIDE_BYTES);
   localparam logic [63:0] K_LIMIT = K_BASE + (ROWS * STRIDE_BYTES);
@@ -410,25 +413,27 @@ module tb_top_compute_s32_smoke #(
       $fatal(1, "top compute smoke observed %0d out-of-range K/V row DMA reads",
              oob_kv_read_count);
     end
-    if (q_row_read_count != ROWS) begin
-      $fatal(1, "top compute smoke expected %0d Q row reads, observed %0d",
-             ROWS, q_row_read_count);
+    if (q_row_read_count != GROUP_COUNT) begin
+      $fatal(1, "top compute smoke expected %0d Q group reads, observed %0d",
+             GROUP_COUNT, q_row_read_count);
     end
-    if ((k_row_read_count < ROWS) || (k_row_read_count > MAX_CAUSAL_ROW_READS)) begin
-      $fatal(1, "top compute smoke expected K row reads in [%0d,%0d], observed %0d",
-             ROWS, MAX_CAUSAL_ROW_READS, k_row_read_count);
+    if (k_row_read_count != CAUSAL_TILE_BURSTS) begin
+      $fatal(1, "top compute smoke expected %0d K tile reads, observed %0d",
+             CAUSAL_TILE_BURSTS, k_row_read_count);
     end
-    if ((v_row_read_count < ROWS) || (v_row_read_count > MAX_CAUSAL_ROW_READS)) begin
-      $fatal(1, "top compute smoke expected V row reads in [%0d,%0d], observed %0d",
-             ROWS, MAX_CAUSAL_ROW_READS, v_row_read_count);
+    if (v_row_read_count != CAUSAL_TILE_BURSTS) begin
+      $fatal(1, "top compute smoke expected %0d V tile reads, observed %0d",
+             CAUSAL_TILE_BURSTS, v_row_read_count);
     end
-    if (o_row_write_count != ROWS) begin
-      $fatal(1, "top compute smoke expected %0d O row writes, observed %0d",
-             ROWS, o_row_write_count);
+    if (o_row_write_count != GROUP_COUNT) begin
+      $fatal(1, "top compute smoke expected %0d O group writes, observed %0d",
+             GROUP_COUNT, o_row_write_count);
     end
 
     axil_read(REG_CYCLES, cycles);
     if (cycles == 32'd0) fail("cycles did not increment");
+    $display("tb_top_compute_stats cycles=%0d q_row_reads=%0d k_row_reads=%0d v_row_reads=%0d o_row_writes=%0d",
+             cycles, q_row_read_count, k_row_read_count, v_row_read_count, o_row_write_count);
 
     for (idx = 0; idx < TOTAL_BEATS; idx++) begin
       u_mem.read_word(O_BASE + (idx * FA_AXI_STRB_W), got_word);

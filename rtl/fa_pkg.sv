@@ -6,6 +6,12 @@ package fa_pkg;
   localparam int unsigned FA_AXI_DATA_W = 128;
   localparam int unsigned FA_AXI_STRB_W = FA_AXI_DATA_W / 8;
   localparam int unsigned FA_STRIDE_DEFAULT = FA_D * (FA_ELEM_W / 8);
+  localparam int unsigned FA_Q_GROUP_ROWS = 8;
+  localparam int unsigned FA_KV_TILE_ROWS = 8;
+  localparam int unsigned FA_GROUPS = FA_S / FA_Q_GROUP_ROWS;
+  localparam int unsigned FA_AXI_LANES = FA_AXI_DATA_W / FA_ELEM_W;
+  localparam int unsigned FA_ROW_BEATS = FA_D / FA_AXI_LANES;
+  localparam int unsigned FA_GROUP_BEATS = FA_Q_GROUP_ROWS * FA_ROW_BEATS;
 
   localparam logic [11:0] REG_CTRL         = 12'h000;
   localparam logic [11:0] REG_STATUS       = 12'h004;

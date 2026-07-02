@@ -72,6 +72,19 @@ module fa_regfile (
     end
   endfunction
 
+  function automatic logic [15:0] apply_wstrb_low16(
+    input logic [15:0] old_value,
+    input logic [31:0] new_value,
+    input logic [3:0]  strobe
+  );
+    logic [31:0] merged;
+    begin
+      // Genus 前端不接受函数返回值立即切片，先落到临时变量再截低 16 位。
+      merged = apply_wstrb({16'h0, old_value}, new_value, strobe);
+      return merged[15:0];
+    end
+  endfunction
+
   assign aw_take    = s_axil_awvalid & s_axil_awready;
   assign w_take     = s_axil_wvalid & s_axil_wready;
   assign write_fire = !s_axil_bvalid
@@ -164,10 +177,10 @@ module fa_regfile (
           REG_O_BASE_H:     o_base[63:32] <= apply_wstrb(o_base[63:32], write_data, write_strb);
           REG_STRIDE_BYTES: stride_bytes  <= apply_wstrb(stride_bytes, write_data, write_strb);
           REG_NEG_LARGE: begin
-            neg_large <= apply_wstrb({16'h0, neg_large}, write_data, write_strb)[15:0];
+            neg_large <= apply_wstrb_low16(neg_large, write_data, write_strb);
           end
           REG_SCALE: begin
-            scale <= apply_wstrb({16'h0, scale}, write_data, write_strb)[15:0];
+            scale <= apply_wstrb_low16(scale, write_data, write_strb);
           end
           default: begin
           end

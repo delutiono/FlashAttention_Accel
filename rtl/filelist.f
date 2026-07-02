@@ -14,6 +14,11 @@ rtl/fa_finalize_vec.sv
 rtl/fa_out_quant.sv
 rtl/fa_dma_rd.sv
 rtl/fa_dma_wr.sv
+sky130_sram_macros/verilog/sky130_sram_0kbytes_1rw1r_32x64_8.v
+sky130_sram_macros/verilog/sky130_sram_0kbytes_1rw1r_48x16_8.v
+rtl/fa_sram_macros.v
 rtl/fa_q_buffer.sv
 rtl/fa_kv_buffer.sv
+rtl/fa_group_engine.sv
+rtl/fa_o_group_store.sv
 rtl/fa_accel_top.sv

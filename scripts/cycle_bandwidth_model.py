@@ -13,6 +13,8 @@ DEFAULT_DIMENSION = 64
 DEFAULT_STRIDE_BYTES = 128
 DEFAULT_AXI_DATA_WIDTH = 64
 DEFAULT_CYCLE_BUDGET = 300_000
+DEFAULT_Q_GROUP_ROWS = 8
+DEFAULT_GROUP_KV_TILE_ROWS = 8
 
 DEFAULT_SCENARIOS: tuple[dict[str, int | str], ...] = (
     {
@@ -125,6 +127,13 @@ def estimate_case(
 
     sequential_read_bytes = q_bytes + 2 * causal_scores * stride_bytes
     sequential_read_beats = q_bytes // beat_bytes + 2 * causal_scores * beats_per_row
+    q_group_rows = DEFAULT_Q_GROUP_ROWS
+    group_kv_tile_rows = DEFAULT_GROUP_KV_TILE_ROWS
+    q_groups = _ceil_div(output_rows, q_group_rows)
+    causal_tile_loads = q_groups * (q_groups + 1) // 2
+    group_tile_kv_rows = causal_tile_loads * group_kv_tile_rows
+    group_tile_read_bytes = q_bytes + 2 * group_tile_kv_rows * stride_bytes
+    group_tile_read_beats = group_tile_read_bytes // beat_bytes
     if kv_tile_rows is None:
         tile_reuse_kv_rows = sequence_length
     else:
@@ -175,6 +184,13 @@ def estimate_case(
         "sequential_read_beats": sequential_read_beats,
         "sequential_dma_cycles": sequential_dma_cycles,
         "sequential_total_cycles": sequential_total_cycles,
+        "q_group_rows": q_group_rows,
+        "group_kv_tile_rows": group_kv_tile_rows,
+        "q_groups": q_groups,
+        "causal_tile_loads": causal_tile_loads,
+        "group_tile_kv_rows": group_tile_kv_rows,
+        "group_tile_read_bytes": group_tile_read_bytes,
+        "group_tile_read_beats": group_tile_read_beats,
         "tile_reuse_read_bytes": tile_reuse_read_bytes,
         "tile_reuse_read_beats": tile_reuse_read_beats,
         "tile_reuse_dma_cycles": tile_reuse_dma_cycles,
@@ -313,6 +329,9 @@ def main() -> int:
                 f"read_beats={scenario['read_beats']} write_beats={scenario['write_beats']} "
                 f"sequential_read_bytes={scenario['sequential_read_bytes']} "
                 f"tile_reuse_read_bytes={scenario['tile_reuse_read_bytes']} "
+                f"group_tile_kv_rows={scenario['group_tile_kv_rows']} "
+                f"group_tile_read_bytes={scenario['group_tile_read_bytes']} "
+                f"group_tile_read_beats={scenario['group_tile_read_beats']} "
                 f"kv_tile_count={scenario['kv_tile_count']} "
                 f"last_kv_tile_rows={scenario['last_kv_tile_rows']} "
                 f"kv_tiles_per_compute={scenario['kv_tiles_per_compute']} "

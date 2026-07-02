@@ -1,14 +1,3 @@
-proc require_std_cell_lib {} {
-  if {![info exists ::env(STD_CELL_LIB)] || $::env(STD_CELL_LIB) eq ""} {
-    error "STD_CELL_LIB must name a readable Liberty timing library"
-  }
-  set lib_path [file normalize $::env(STD_CELL_LIB)]
-  if {![file isfile $lib_path] || ![file readable $lib_path]} {
-    error "STD_CELL_LIB is not a readable file: $lib_path"
-  }
-  return $lib_path
-}
-
 proc require_file {path label} {
   set resolved [file normalize $path]
   if {![file isfile $resolved] || ![file readable $resolved]} {
@@ -38,6 +27,18 @@ proc read_path_list {path label} {
   return $paths
 }
 
+proc optional_file {env_name default_path label} {
+  if {[info exists ::env($env_name)] && $::env($env_name) ne ""} {
+    return [require_file $::env($env_name) $label]
+  }
+  set resolved [file normalize $default_path]
+  if {[file isfile $resolved] && [file readable $resolved]} {
+    return $resolved
+  }
+  puts "INFO: optional $label not found; skipping $resolved"
+  return ""
+}
+
 proc optional_filelist {env_name default_path label} {
   if {[info exists ::env($env_name)] && $::env($env_name) ne ""} {
     return [file normalize $::env($env_name)]
@@ -50,12 +51,24 @@ proc optional_filelist {env_name default_path label} {
   return ""
 }
 
-set std_cell_lib [require_std_cell_lib]
+proc require_std_cell_lib {default_path} {
+  set lib_path [optional_file STD_CELL_LIB $default_path "standard-cell Liberty"]
+  if {$lib_path eq ""} {
+    error "STD_CELL_LIB must name a readable Liberty timing library when the repository default is absent"
+  }
+  return $lib_path
+}
+
 set script_dir [file dirname [info script]]
 set repo_root [file normalize [file join $script_dir ..]]
+set default_std_cell_lib [file join $repo_root sky130A libs.ref sky130_fd_sc_hs lib sky130_fd_sc_hs__tt_025C_1v80.lib]
+set default_std_cell_tech_lef [file join $repo_root sky130A libs.ref sky130_fd_sc_hs techlef sky130_fd_sc_hs__nom.tlef]
+set default_std_cell_cell_lef [file join $repo_root sky130A libs.ref sky130_fd_sc_hs lef sky130_fd_sc_hs.lef]
+set default_std_cell_lef_filelist [file join $repo_root synth fa_stdcell_lefs.list]
 set default_sram_wrapper_filelist [file join $repo_root synth fa_sram_macro_files.list]
 set default_sram_lib_filelist [file join $repo_root synth fa_sram_tt_libs.list]
 set default_sram_lef_filelist [file join $repo_root synth fa_sram_lefs.list]
+set std_cell_lib [require_std_cell_lib $default_std_cell_lib]
 
 set top fa_accel_top
 if {[info exists ::env(TOP)] && $::env(TOP) ne ""} {
@@ -86,19 +99,27 @@ set wrapper_filelist [optional_filelist SRAM_WRAPPER_FILELIST $default_sram_wrap
 if {$wrapper_filelist ne ""} {
   set wrapper_files [read_path_list $wrapper_filelist "SRAM wrapper filelist"]
   foreach wrapper_file $wrapper_files { puts "INFO: SRAM_RTL=$wrapper_file" }
-  read_hdl -sv {*}$wrapper_files
+  read_hdl -sv -define SYNTHESIS {*}$wrapper_files
 }
 
+set lef_files {}
+set std_cell_lef_filelist [optional_filelist STD_CELL_LEF_FILELIST $default_std_cell_lef_filelist "standard-cell LEF filelist"]
+if {$std_cell_lef_filelist ne ""} {
+  set lef_files [concat $lef_files [read_path_list $std_cell_lef_filelist "standard-cell LEF filelist"]]
+}
 set lef_filelist [optional_filelist SRAM_LEF_FILELIST $default_sram_lef_filelist "SRAM LEF filelist"]
 if {$lef_filelist ne ""} {
-  set lef_files [read_path_list $lef_filelist "SRAM LEF filelist"]
+  set lef_files [concat $lef_files [read_path_list $lef_filelist "SRAM LEF filelist"]]
+}
+if {[llength $lef_files] > 0} {
   foreach lef_file $lef_files { puts "INFO: LEF=$lef_file" }
-  if {[catch {read_physical -lef {*}$lef_files} err]} {
-    puts "WARNING: read_physical -lef failed or is unsupported in this Genus setup: $err"
+  set lef_arg [join $lef_files " "]
+  if {[catch {read_physical -lefs $lef_arg} err]} {
+    puts "WARNING: read_physical -lefs failed or is unsupported in this Genus setup: $err"
   }
 }
 
-read_hdl -f $rtl_filelist
+read_hdl -define SYNTHESIS -f $rtl_filelist
 elaborate $top
 
 read_sdc $sdc_file

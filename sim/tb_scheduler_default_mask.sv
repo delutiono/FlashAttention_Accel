@@ -16,6 +16,12 @@ module tb_scheduler_default_mask;
   logic [7:0] kv_tile_o;
   logic [7:0] k_index_o;
   logic score_valid_o;
+  logic [4:0] q_group_o;
+  logic [2:0] q_context_o;
+  logic [2:0] kv_row_o;
+  logic score_last_o;
+  logic tile_done_o;
+  logic group_done_o;
 
   fa_scheduler dut (
     .clk,
@@ -39,7 +45,13 @@ module tb_scheduler_default_mask;
     .q_index_o,
     .kv_tile_o,
     .k_index_o,
-    .score_valid_o
+    .score_valid_o,
+    .q_group_o,
+    .q_context_o,
+    .kv_row_o,
+    .score_last_o,
+    .tile_done_o,
+    .group_done_o
   );
 
   initial clk = 1'b0;
@@ -65,10 +77,10 @@ module tb_scheduler_default_mask;
              q_index_o, k_index_o, score_valid_o);
     end
 
-    @(posedge clk);
+    wait (state_o == FA_ST_COMPUTE_TILE && kv_row_o == 3'd1 && q_context_o == 3'd0);
     #1;
     if (q_index_o !== 8'd0 || k_index_o !== 8'd1 || score_valid_o) begin
-      $fatal(1, "default mask failed to suppress future score: q=%0d k=%0d valid=%0b",
+      $fatal(1, "default group mask failed to suppress future score: q=%0d k=%0d valid=%0b",
              q_index_o, k_index_o, score_valid_o);
     end
 

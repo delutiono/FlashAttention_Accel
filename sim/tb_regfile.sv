@@ -29,6 +29,7 @@ module tb_regfile;
   logic        done_clear_pulse;
   logic        irq_en;
   logic        causal_en;
+  logic        compute_smoke_en;
   logic [63:0] q_base;
   logic [63:0] k_base;
   logic [63:0] v_base;
@@ -66,6 +67,7 @@ module tb_regfile;
     .done_clear_pulse,
     .irq_en,
     .causal_en,
+    .compute_smoke_en,
     .q_base,
     .k_base,
     .v_base,

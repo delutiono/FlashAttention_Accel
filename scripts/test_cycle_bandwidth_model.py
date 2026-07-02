@@ -128,6 +128,24 @@ class CycleBandwidthModelTest(unittest.TestCase):
             self.assertLess(case["tile_reuse_total_cycles"], 300_000)
             self.assertTrue(case["under_cycle_budget"])
 
+    def test_s256_group_tile_reuse_reports_causal_kv_rows(self) -> None:
+        report = build_report(
+            sequence_length=256,
+            dimension=64,
+            max_rows=None,
+            compute_rows=256,
+            kv_tile_rows=8,
+            reuse_kv_tile=True,
+            stride_bytes=128,
+            axi_data_width=128,
+            cycle_budget=300_000,
+        )
+        target = report["scenarios"][1]
+        self.assertEqual(4224, target["group_tile_kv_rows"])
+        self.assertEqual(256 * 128 + 2 * 4224 * 128, target["group_tile_read_bytes"])
+        self.assertEqual(target["group_tile_read_bytes"] // 16, target["group_tile_read_beats"])
+        self.assertLess(target["group_tile_read_bytes"], target["sequential_read_bytes"])
+
     def test_s5_partial_final_kv_tile_reports_tile_shape(self) -> None:
         report = build_report(
             sequence_length=5,
@@ -271,6 +289,29 @@ class CycleBandwidthModelTest(unittest.TestCase):
         self.assertIn("SCENARIO current_functional", result.stdout)
         self.assertIn("SCENARIO target_parallel", result.stdout)
         self.assertIn("under_300k=", result.stdout)
+
+    def test_cli_text_reports_group_tile_row_loads(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(REPO_ROOT / "scripts" / "cycle_bandwidth_model.py"),
+                "--sequence-length",
+                "256",
+                "--dimension",
+                "64",
+                "--kv-tile-rows",
+                "8",
+                "--axi-data-width",
+                "128",
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("group_tile_kv_rows=4224", result.stdout)
+        self.assertIn(f"group_tile_read_bytes={256 * 128 + 2 * 4224 * 128}", result.stdout)
 
 
 if __name__ == "__main__":

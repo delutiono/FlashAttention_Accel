@@ -31,6 +31,8 @@ logs/*.log
 # Locally generated vector/regression artifacts
 artifacts/
 .tmp_test_vectors/
+.tmp_py/
 
 # External SRAM macro library bundle supplied outside git
 sky130_sram_macros/
+sky130A/

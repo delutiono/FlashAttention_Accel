@@ -28,7 +28,13 @@ wire [32:0] rd_data_hi;
 reg         rw_rvalid_d1;
 reg         rd_valid_d1;
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_32x64_8 u_lo (
+`else
+sky130_sram_0kbytes_1rw1r_32x64_8 #(
+    .VERBOSE(0)
+) u_lo (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -47,7 +53,13 @@ sky130_sram_0kbytes_1rw1r_32x64_8 u_lo (
     .dout1(rd_data_lo)
 );
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_32x64_8 u_hi (
+`else
+sky130_sram_0kbytes_1rw1r_32x64_8 #(
+    .VERBOSE(0)
+) u_hi (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -109,7 +121,13 @@ wire [32:0] rd_data_hi;
 reg         rw_rvalid_d1;
 reg         rd_valid_d1;
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_32x64_8 u_lo (
+`else
+sky130_sram_0kbytes_1rw1r_32x64_8 #(
+    .VERBOSE(0)
+) u_lo (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -128,7 +146,13 @@ sky130_sram_0kbytes_1rw1r_32x64_8 u_lo (
     .dout1(rd_data_lo)
 );
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_32x64_8 u_hi (
+`else
+sky130_sram_0kbytes_1rw1r_32x64_8 #(
+    .VERBOSE(0)
+) u_hi (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -192,7 +216,13 @@ wire [48:0] rd_data_2;
 reg         rw_rvalid_d1;
 reg         rd_valid_d1;
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_48x16_8 u_lane_0_2 (
+`else
+sky130_sram_0kbytes_1rw1r_48x16_8 #(
+    .VERBOSE(0)
+) u_lane_0_2 (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -211,7 +241,13 @@ sky130_sram_0kbytes_1rw1r_48x16_8 u_lane_0_2 (
     .dout1(rd_data_0)
 );
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_48x16_8 u_lane_3_5 (
+`else
+sky130_sram_0kbytes_1rw1r_48x16_8 #(
+    .VERBOSE(0)
+) u_lane_3_5 (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),
@@ -230,7 +266,13 @@ sky130_sram_0kbytes_1rw1r_48x16_8 u_lane_3_5 (
     .dout1(rd_data_1)
 );
 
+`ifdef SYNTHESIS
 sky130_sram_0kbytes_1rw1r_48x16_8 u_lane_6_7 (
+`else
+sky130_sram_0kbytes_1rw1r_48x16_8 #(
+    .VERBOSE(0)
+) u_lane_6_7 (
+`endif
 `ifdef USE_POWER_PINS
     .vccd1(),
     .vssd1(),

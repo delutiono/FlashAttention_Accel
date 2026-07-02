@@ -77,10 +77,10 @@ module tb_score_pipe;
     k_index_i = 8'd34;
     valid_i = 1'b1;
     @(posedge clk);
+    @(negedge clk);
+    valid_i = 1'b0;
+    wait (valid_o);
     #1;
-    if (!valid_o) begin
-      $fatal(1, "valid_o not asserted");
-    end
     if (q_index_o !== 8'd12 || k_index_o !== 8'd34) begin
       $fatal(1, "index mismatch q=%0d k=%0d", q_index_o, k_index_o);
     end
@@ -90,7 +90,6 @@ module tb_score_pipe;
     end
 
     @(negedge clk);
-    valid_i = 1'b0;
     q_index_i = 8'd55;
     k_index_i = 8'd66;
     @(posedge clk);

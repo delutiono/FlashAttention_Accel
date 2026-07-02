@@ -17,6 +17,12 @@ module tb_scheduler_mask;
   logic [7:0] kv_tile;
   logic [7:0] k_index;
   logic score_valid;
+  logic [4:0] q_group;
+  logic [2:0] q_context;
+  logic [2:0] kv_row;
+  logic score_last;
+  logic tile_done;
+  logic group_done;
 
   fa_scheduler #(
     .S_PARAM(8),
@@ -44,7 +50,13 @@ module tb_scheduler_mask;
     .q_index_o(q_index),
     .kv_tile_o(kv_tile),
     .k_index_o(k_index),
-    .score_valid_o(score_valid)
+    .score_valid_o(score_valid),
+    .q_group_o(q_group),
+    .q_context_o(q_context),
+    .kv_row_o(kv_row),
+    .score_last_o(score_last),
+    .tile_done_o(tile_done),
+    .group_done_o(group_done)
   );
 
   initial clk = 1'b0;
@@ -71,7 +83,7 @@ module tb_scheduler_mask;
     tick();
     start = 1'b0;
 
-    for (int guard = 0; guard < 200; guard++) begin
+    for (int guard = 0; guard < 500; guard++) begin
       tick();
       if (state == FA_ST_COMPUTE_TILE) begin
         if (score_valid !== (k_index <= q_index)) begin
