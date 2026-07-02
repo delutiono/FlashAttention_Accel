@@ -1,0 +1,339 @@
+Cadence Genus(TM) Synthesis Solution.
+Copyright 2025 Cadence Design Systems, Inc. All rights reserved worldwide.
+Cadence and the Cadence logo are registered trademarks and Genus is a trademark
+of Cadence Design Systems, Inc. in the United States and other countries.
+
+[16:23:42.060305] Configured Lic search path (25.01-s002): 5280@sh02lo01
+
+Version: 25.12-s067_1, built Sun Nov 16 21:10:10 PST 2025
+Options: -files /home/liuqisong/Desktop/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl 
+Date:    Wed Jul 01 16:23:42 2026
+Host:    sh02lo02 (x86_64 w/Linux 4.18.0-477.10.1.el8_8.x86_64) (18cores*36cpus*2physical cpus*Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz 25344KB) (1055765044KB)
+PID:     2782948
+OS:      Red Hat Enterprise Linux 8.4 (Ootpa)
+
+Checking out license: Genus_Synthesis
+[16:23:42.179946] Periodic Lic check successful
+[16:23:42.704248] Feature usage summary:
+[16:23:42.704248] Genus_Synthesis  
+License checkout complete (0 seconds elapsed).
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+
+
+
+Finished executable startup (10 seconds elapsed).
+
+Loading tool scripts...
+Finished loading tool scripts (46 seconds elapsed).
+
+#@ Processing -files option
+@genus:root: 1> source /home/liuqisong/Desktop/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+#@ Begin verbose source /home/liuqisong/Desktop/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+@file(run_fa_accel_sky130_sram.tcl) 1: set STAGE syn
+@file(run_fa_accel_sky130_sram.tcl) 2: set DEFAULT_TOP fa_accel_top
+@file(run_fa_accel_sky130_sram.tcl) 4: proc require_file ...
+@file(run_fa_accel_sky130_sram.tcl) 12: proc env_or_default ...
+@file(run_fa_accel_sky130_sram.tcl) 19: proc read_path_list ...
+@file(run_fa_accel_sky130_sram.tcl) 40: proc write_text_report ...
+@file(run_fa_accel_sky130_sram.tcl) 52: set DEFAULT_PROJECT_ROOT /home/liuqisong/Desktop/genus_bs1
+@file(run_fa_accel_sky130_sram.tcl) 53: set script_dir [file normalize [file dirname [info script]]]
+@file(run_fa_accel_sky130_sram.tcl) 54: set bundle_root [file normalize [file join $script_dir ..]]
+@file(run_fa_accel_sky130_sram.tcl) 56: if {[info exists ::env(GENUS_PROJECT_ROOT)] && $::env(GENUS_PROJECT_ROOT) ne ""} {
+  set project_root [file normalize $::env(GENUS_PROJECT_ROOT)]
+} elseif {[file isdirectory $DEFAULT_PROJECT_ROOT]} {
+  set project_root [file normalize $DEFAULT_PROJECT_ROOT]
+} else {
+  set project_root $bundle_root
+}
+@file(run_fa_accel_sky130_sram.tcl) 64: set workspace_dir [env_or_default GENUS_WORKSPACE_DIR [file join $project_root workspace]]
+@file(run_fa_accel_sky130_sram.tcl) 65: set results_root [env_or_default GENUS_RESULTS_DIR [file join $project_root results]]
+@file(run_fa_accel_sky130_sram.tcl) 66: set filelist_dir [file join $workspace_dir filelists]
+@file(run_fa_accel_sky130_sram.tcl) 67: set constraint_dir [file join $workspace_dir constraints]
+@file(run_fa_accel_sky130_sram.tcl) 69: foreach {dir label} [list \
+  $project_root PROJECT_ROOT \
+  $workspace_dir WORKSPACE_DIR \
+  $filelist_dir FILELIST_DIR \
+  $constraint_dir CONSTRAINT_DIR] {
+  if {![file isdirectory $dir]} {
+    error "$label is not a directory: $dir"
+  }
+}
+@file(run_fa_accel_sky130_sram.tcl) 79: set top $DEFAULT_TOP
+@file(run_fa_accel_sky130_sram.tcl) 80: if {[info exists ::env(TOP)] && $::env(TOP) ne ""} {
+  set top $::env(TOP)
+}
+@file(run_fa_accel_sky130_sram.tcl) 84: set physical_mode 1
+@file(run_fa_accel_sky130_sram.tcl) 85: if {[info exists ::env(GENUS_PHYSICAL)] && $::env(GENUS_PHYSICAL) eq "0"} {
+  set physical_mode 0
+}
+@file(run_fa_accel_sky130_sram.tcl) 89: set read_sram_behav_rtl 0
+@file(run_fa_accel_sky130_sram.tcl) 90: if {[info exists ::env(READ_SRAM_BEHAV_RTL)] && $::env(READ_SRAM_BEHAV_RTL) ne "0"} {
+  set read_sram_behav_rtl 1
+}
+@file(run_fa_accel_sky130_sram.tcl) 94: set report_dir [file join $results_root reports $top]
+@file(run_fa_accel_sky130_sram.tcl) 95: set output_dir [file join $results_root outputs $top]
+@file(run_fa_accel_sky130_sram.tcl) 96: set log_dir [file join $results_root logs]
+@file(run_fa_accel_sky130_sram.tcl) 97: file mkdir $report_dir
+@file(run_fa_accel_sky130_sram.tcl) 98: file mkdir $output_dir
+@file(run_fa_accel_sky130_sram.tcl) 99: file mkdir $log_dir
+@file(run_fa_accel_sky130_sram.tcl) 101: set rtl_filelist [env_or_default RTL_FILELIST [file join $filelist_dir rtl.f]]
+@file(run_fa_accel_sky130_sram.tcl) 102: set sram_behav_filelist [env_or_default SRAM_BEHAV_RTL_FILELIST [file join $filelist_dir sram_macro_verilog.f]]
+@file(run_fa_accel_sky130_sram.tcl) 103: set lib_filelist [env_or_default LIB_FILELIST [file join $filelist_dir libs_tt.f]]
+@file(run_fa_accel_sky130_sram.tcl) 104: set lef_filelist [env_or_default LEF_FILELIST [file join $filelist_dir lefs.f]]
+@file(run_fa_accel_sky130_sram.tcl) 105: set sdc_file [env_or_default SDC_FILE [file join $constraint_dir timing_300m.sdc]]
+@file(run_fa_accel_sky130_sram.tcl) 107: puts "INFO: STAGE=$STAGE"
+INFO: STAGE=syn
+@file(run_fa_accel_sky130_sram.tcl) 108: puts "INFO: TOP=$top"
+INFO: TOP=fa_accel_top
+@file(run_fa_accel_sky130_sram.tcl) 109: puts "INFO: BUNDLE_ROOT=$bundle_root"
+INFO: BUNDLE_ROOT=/home/liuqisong/Desktop/genus_bs1
+@file(run_fa_accel_sky130_sram.tcl) 110: puts "INFO: PROJECT_ROOT=$project_root"
+INFO: PROJECT_ROOT=/home/liuqisong/Desktop/genus_bs1
+@file(run_fa_accel_sky130_sram.tcl) 111: puts "INFO: WORKSPACE_DIR=$workspace_dir"
+INFO: WORKSPACE_DIR=/home/liuqisong/Desktop/genus_bs1/workspace
+@file(run_fa_accel_sky130_sram.tcl) 112: puts "INFO: RESULTS_DIR=$results_root"
+INFO: RESULTS_DIR=/home/liuqisong/Desktop/genus_bs1/results
+@file(run_fa_accel_sky130_sram.tcl) 113: puts "INFO: PHYSICAL_MODE=$physical_mode"
+INFO: PHYSICAL_MODE=1
+@file(run_fa_accel_sky130_sram.tcl) 114: puts "INFO: READ_SRAM_BEHAV_RTL=$read_sram_behav_rtl"
+INFO: READ_SRAM_BEHAV_RTL=0
+@file(run_fa_accel_sky130_sram.tcl) 116: set lib_files [read_path_list $lib_filelist "Liberty filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 117: foreach lib_file $lib_files {
+  puts "INFO: LIB=$lib_file"
+}
+INFO: LIB=/home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib
+INFO: LIB=/home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_sram_0kbytes_1rw1r_32x64_8_TT_1p8V_25C.lib
+INFO: LIB=/home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_sram_0kbytes_1rw1r_48x16_8_TT_1p8V_25C.lib
+@file(run_fa_accel_sky130_sram.tcl) 120: eval read_libs $lib_files
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 832 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+        : Add the look-up table definition, then reload the library.
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 832)
+        : Fix the library cell error and then reload the library.
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 884 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 884)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 890 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 890)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 870 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 870)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 876 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 876)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 949 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 949)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 956 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 956)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 963 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 963)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 970 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 970)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 977 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 977)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 984 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 984)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 991 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 991)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 898 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 898)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 905 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 905)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 912 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 912)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 919 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 919)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 926 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further lib
+  Message Summary for Library all 3 libraries:
+  ********************************************
+rary checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 926)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 933 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 933)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 940 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 940)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 1002 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/liuqisong/Desktop/genus_bs1/workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 1002)
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-517'.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-709'.
+  Ignoring the timing group. [LBR-709]: 96732
+  Could not find the look-up table definition. [LBR-517]: 96732
+  Missing library level attribute. [LBR-516]: 2
+  An unsupported construct was detected in this library. [LBR-40]: 5
+  ********************************************
+ 
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_fd_sc_hs__tt_025C_1v80.lib'.
+        : The nominal operating condition is represented, either by the nominal PVT values specified in the library source (via nom_process,nom_voltage and nom_temperature respectively), or by the default PVT values (1.0,1.0,1.0).
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_32x64_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_48x16_8_TT_1p8V_25C.lib'.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+        : Add the missing output pin(s), then reload the library. Else the library cell will be marked as timing model i.e. unusable. Timing_model means that the cell does not have any defined function. If there is no output pin, Genus will mark library cell as unusable i.e. the attribute 'usable' will be marked to 'false' on the libcell. Therefore, the cell is not used for mapping and it will not be picked up from the library for synthesis. If you query the attribute 'unusable_reason' on the libcell; result will be: 'Library cell has no output pins.'Note: The message LBR-9 is only for the logical pins and not for the power_ground pins. Genus will depend upon the output function defined in the pin group (output pin) of the cell, to use it for mapping. The pg_pin will not have any function defined.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+@file(run_fa_accel_sky130_sram.tcl) 122: set lef_files [read_path_list $lef_filelist "LEF filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 123: foreach lef_file $lef_files {
+  puts "INFO: LEF=$lef_file"
+}
+INFO: LEF=/home/liuqisong/Desktop/genus_bs1/workspace/LEFS/sky130_fd_sc_hs__nom.tlef
+INFO: LEF=/home/liuqisong/Desktop/genus_bs1/workspace/LEFS/sky130_fd_sc_hs.lef
+INFO: LEF=/home/liuqisong/Desktop/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_32x64_8.lef
+INFO: LEF=/home/liuqisong/Desktop/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_48x16_8.lef
+@file(run_fa_accel_sky130_sram.tcl) 126: if {[llength $lef_files] > 0} {
+  if {[catch {eval read_physical -lef $lef_files} err]} {
+    puts "WARNING: read_physical -lef failed or is unsupported in this Genus setup: $err"
+  }
+}
+Error   : A command argument did not match any of the acceptable command options. [TUI-64] [read_physical]
+        : The argument in question is '/home/liuqisong/Desktop/genus_bs1/workspace/LEFS/sky130_fd_sc_hs.lef'.
+        : Check the command usage and correct the input to the command.
+  read_physical: read physical design information 
+
+Usage: read_physical
+           [ -lefs <string> |
+             -add_lefs <string> |
+             -oa_ref_libs <string> ]
+
+    -lefs <string>:
+        list of LEF files to read 
+    -add_lefs <string>:
+        list of additional LEF files to read 
+    -oa_ref_libs <string>:
+        list of OA library files to read 
+WARNING: read_physical -lef failed or is unsupported in this Genus setup: 1
+@file(run_fa_accel_sky130_sram.tcl) 132: set_db init_hdl_search_path [list [file join $workspace_dir RTL]]
+  Setting attribute of root '/': 'init_hdl_search_path' = /home/liuqisong/Desktop/genus_bs1/workspace/RTL
+@file(run_fa_accel_sky130_sram.tcl) 133: set_db hdl_language sv
+  Setting attribute of root '/': 'hdl_language' = sv
+@file(run_fa_accel_sky130_sram.tcl) 134: catch {set_db hdl_track_filename_row_col true}
+Info   : Enabled hdl_track_filename_row_col attribute.
+       : Setting this attribute to 'true' can have an impact on the run time. Use this attribute only when filename, line number, and column information are needed in reports.
+  Setting attribute of root '/': 'hdl_track_filename_row_col' = true
+@file(run_fa_accel_sky130_sram.tcl) 135: if {[catch {set_db hdl_resolve_instance_with_libcell true} err]} {
+  puts "WARNING: hdl_resolve_instance_with_libcell not accepted: $err"
+}
+  Setting attribute of root '/': 'hdl_resolve_instance_with_libcell' = true
+@file(run_fa_accel_sky130_sram.tcl) 139: if {$read_sram_behav_rtl} {
+  set sram_behav_files [read_path_list $sram_behav_filelist "SRAM behavioral Verilog filelist"]
+  foreach src $sram_behav_files {
+    puts "INFO: SRAM_BEHAV_RTL=$src"
+  }
+  eval read_hdl -sv $sram_behav_files
+} else {
+  puts "INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances."
+}
+INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances.
+@file(run_fa_accel_sky130_sram.tcl) 149: set rtl_files [read_path_list $rtl_filelist "RTL filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 150: foreach src $rtl_files {
+  puts "INFO: RTL=$src"
+}
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_pkg.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_regfile.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_scheduler.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_dot_pe.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_score_scale.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_score_pipe.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_row_engine.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_compute_core.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_exp_approx.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_recip_approx.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_softmax_online.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_softmax_online_vec.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_out_quant.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_finalize_vec.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_dma_rd.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_dma_wr.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/sky130_sram_macro_blackboxes.v
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_sram_macros.v
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_q_buffer.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_kv_buffer.sv
+INFO: RTL=/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_accel_top.sv
+@file(run_fa_accel_sky130_sram.tcl) 153: eval read_hdl -sv $rtl_files
+            neg_large <= apply_wstrb({16'h0, neg_large}, write_data, write_strb)[15:0];
+                                                                                |
+Error   : Parsing error. [VLOGPT-1] [read_hdl]
+        : Expecting token ';', found '[' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_regfile.sv' on line 167, column 81.
+        : Invalid Verilog syntax is parsed, or unsupported Verilog syntax is encountered.
+            scale <= apply_wstrb({16'h0, scale}, write_data, write_strb)[15:0];
+                                                                        |
+Error   : Parsing error. [VLOGPT-1] [read_hdl]
+        : Expecting token ';', found '[' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/fa_regfile.sv' on line 170, column 73.
+%DLS-E-AuxAttrExists, DeclarationList node already has auxiliary
+	attribute NODE_BASE_FILE_INFO; in AddAttribute.
+(* black_box, syn_black_box *)
+   |
+Warning : Unused attribute. [VLOGPT-506]
+        : Attribute 'black_box' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/sky130_sram_macro_blackboxes.v' on line 4, column 4.
+(* black_box, syn_black_box *)
+              |
+Warning : Unused attribute. [VLOGPT-506]
+        : Attribute 'syn_black_box' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/sky130_sram_macro_blackboxes.v' on line 4, column 15.
+(* black_box, syn_black_box *)
+   |
+Warning : Unused attribute. [VLOGPT-506]
+        : Attribute 'black_box' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/sky130_sram_macro_blackboxes.v' on line 33, column 4.
+(* black_box, syn_black_box *)
+              |
+Warning : Unused attribute. [VLOGPT-506]
+        : Attribute 'syn_black_box' in file '/home/liuqisong/Desktop/genus_bs1/workspace/RTL/sky130_sram_macro_blackboxes.v' on line 33, column 15.
+%DLS-E-AuxAttrExists, DeclarationList node already has auxiliary
+	attribute NODE_BASE_FILE_INFO; in AddAttribute.
+#@ End verbose source /home/liuqisong/Desktop/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+1
+Encountered problems processing file: /home/liuqisong/Desktop/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+WARNING: This version of the tool is 226 days old.
+@genus:root: 2> exit
+
+Lic Summary:
+[16:39:49.252075] Cdslmd servers: sh02lo01
+[16:39:49.776376] Feature usage summary:
+[16:39:49.776377] Genus_Synthesis  
+Normal exit.

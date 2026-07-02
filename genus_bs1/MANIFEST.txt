@@ -1,0 +1,56 @@
+Bundle: fa_accel_genus_20260701_final2
+Created: 2026-07-01T10:41:46
+Repo: D:\FlashAttention_Accel
+Git HEAD: 6e7e9018
+
+Linux deployment path checked from screenshot: /home/liuqisong/Desktop/genus_bs1
+Recommended remote command:
+  cd /home/liuqisong/Desktop/genus_bs1
+  chmod +x run_genus.sh
+  ./run_genus.sh
+
+Path override examples:
+  GENUS_PROJECT_ROOT=/home/liuqisong/Desktop/genus_bs1 bash run_genus.sh
+  GENUS_PHYSICAL=0 bash run_genus.sh
+  READ_SRAM_BEHAV_RTL=1 bash run_genus.sh
+
+
+Top: fa_accel_top
+RTL filelist: workspace/filelists/rtl.f
+Liberty filelist: workspace/filelists/libs_tt.f
+LEF filelist: workspace/filelists/lefs.f
+SRAM macro Verilog filelist: workspace/filelists/sram_macro_verilog.f
+SRAM synthesis blackboxes: workspace/RTL/sky130_sram_macro_blackboxes.v
+
+Git status at bundle time:
+ M .gitignore
+ M docs/baseline_status.md
+ M docs/synthesis_runbook.md
+ M rtl/fa_accel_top.sv
+ M rtl/fa_kv_buffer.sv
+ M rtl/fa_q_buffer.sv
+ M rtl/fa_sram_macros.v
+ M rtl/filelist.f
+ M scripts/run_top_compute_s16_scoreboard.ps1
+ M scripts/run_top_compute_s256_scoreboard.ps1
+ M scripts/run_top_compute_s32_scoreboard.ps1
+ M scripts/run_top_compute_s4_scoreboard.ps1
+ M scripts/run_top_compute_s5_scoreboard.ps1
+ M scripts/run_top_compute_s5_stall_scoreboard.ps1
+ M scripts/run_top_compute_s64_scoreboard.ps1
+ M scripts/test_main_genus_sram_flow.py
+ M scripts/test_main_sram_macro_entry.py
+ M sim/tb_q_kv_buffer.sv
+ M sim/tb_regfile.sv
+ M sim/tb_top_compute_s32_smoke.sv
+ M sim/tb_top_dma_smoke.sv
+ M synth/run_genus.tcl
+?? docs/superpowers/plans/2026-06-25-accel-code-numeric-closure.md
+?? docs/superpowers/plans/2026-06-30-page-tile-reuse-baseline.md
+?? scripts/cleanup_modelsim_locks.ps1
+?? scripts/make_genus_bundle.ps1
+?? scripts/modelsim_worklib.ps1
+?? scripts/test_modelsim_lock_cleanup.py
+?? synth/fa_stdcell_lefs.list
+?? synth/fa_stdcell_verilog.list
+?? synth/run_fa_accel_sky130_sram.tcl
