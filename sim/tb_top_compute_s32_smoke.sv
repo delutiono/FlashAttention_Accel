@@ -384,21 +384,21 @@ module tb_top_compute_s32_smoke #(
       if (status[2]) fail("top reported compute smoke error");
       poll_count++;
       if (poll_count > 2000000) begin
-        $display("TIMEOUT_DEBUG state=%0d q=%0d tile_base=%0d tile_off=%0d k=%0d wr_beat=%0d rd_valid=%0b rd_ready=%0b rd_done=%0b wr_valid=%0b wr_ready=%0b wr_done=%0b row_busy=%0b row_valid_o=%0b cycles=%0d",
+        $display("TIMEOUT_DEBUG state=%0d q_group=%0d kv_tile=%0d q_ctx=%0d kv_row=%0d rd_valid=%0b rd_ready=%0b rd_done=%0b wr_valid=%0b wr_ready=%0b wr_done=%0b score_ready=%0b final_valid=%0b store_ready=%0b cycles=%0d",
                  dut.top_state,
-                 dut.compute_q_idx,
-                 dut.compute_kv_tile_base_idx,
-                 dut.compute_key_in_tile_idx,
-                 dut.compute_k_idx,
-                 dut.compute_wr_beat_idx,
+                 dut.compute_q_group_idx,
+                 dut.compute_kv_tile_idx,
+                 dut.compute_q_context_idx,
+                 dut.compute_kv_row_idx,
                  dut.rd_valid,
                  dut.rd_out_ready,
                  dut.rd_done,
                  dut.wr_in_valid,
                  dut.wr_in_ready,
                  dut.wr_done,
-                 dut.row_engine_busy,
-                 dut.row_engine_valid_o,
+                 dut.group_engine_score_ready,
+                 dut.group_engine_final_valid,
+                 dut.o_group_store_group_ready,
                  dut.cycles);
         fail("timeout waiting for top compute smoke done");
       end

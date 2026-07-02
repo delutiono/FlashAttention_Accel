@@ -70,6 +70,20 @@ class MainSramMacroEntryTest(unittest.TestCase):
         self.assertIn("compute_buffer_wait_q", text)
         self.assertIn("TOP_BUFFER_READ_WAIT_CYCLES", text)
 
+    def test_top_does_not_instantiate_legacy_row_engine(self) -> None:
+        text = (REPO_ROOT / "rtl" / "fa_accel_top.sv").read_text(encoding="utf-8")
+
+        self.assertNotIn("u_row_engine", text)
+        self.assertNotIn("row_engine_busy", text)
+        self.assertNotIn("row_engine_valid_o", text)
+
+    def test_top_does_not_instantiate_dead_legacy_scheduler(self) -> None:
+        text = (REPO_ROOT / "rtl" / "fa_accel_top.sv").read_text(encoding="utf-8")
+
+        self.assertNotIn("u_scheduler", text)
+        self.assertNotIn("scheduler_q_group", text)
+        self.assertNotIn("scheduler_group_done", text)
+
     def test_main_sram_synth_filelists_do_not_depend_on_sram128_rtl_path(self) -> None:
         for relative_path in (
             "synth/fa_sram_macro_files.list",
