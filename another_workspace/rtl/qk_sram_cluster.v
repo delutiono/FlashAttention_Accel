@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// 512x32 logical memory built from eight 64x32 macros.
+// 256x64 logical memory built from eight 32x64 PDK macros.
 module qk_sram_cluster (
     input  wire         clk,
     input  wire         rst_n,
