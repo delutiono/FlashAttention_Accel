@@ -36,7 +36,7 @@ module fa_group_engine #(
   localparam int unsigned EXP_FRAC_W = 23;
   localparam logic [L_W-1:0] L_ONE =
       ({{(L_W-1){1'b0}}, 1'b1} << EXP_FRAC_W);
-  localparam int unsigned FINAL_CONTEXT_LATENCY = 5;
+  localparam int unsigned FINAL_CONTEXT_LATENCY = 6;
   localparam int unsigned SCORE_PIPE_LATENCY = 2;
 
   typedef enum logic [1:0] {

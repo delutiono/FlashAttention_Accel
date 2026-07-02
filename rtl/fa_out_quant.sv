@@ -23,6 +23,8 @@ module fa_out_quant #(
       PRODUCT_W'(32'd32768);
 
   logic signed [PRODUCT_W-1:0] product_next;
+  logic signed [PRODUCT_W-1:0] product_s1_q;
+  logic                        valid_s1_q;
 
   assign product_next = $signed(x_i) * $signed({1'b0, recip_l_i});
 
@@ -51,11 +53,15 @@ module fa_out_quant #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      valid_o <= 1'b0;
-      y_o     <= '0;
+      valid_s1_q  <= 1'b0;
+      product_s1_q <= '0;
+      valid_o     <= 1'b0;
+      y_o         <= '0;
     end else begin
-      valid_o <= valid_i;
-      y_o     <= valid_i ? quantize_q88(product_next) : '0;
+      valid_s1_q  <= valid_i;
+      product_s1_q <= valid_i ? product_next : '0;
+      valid_o     <= valid_s1_q;
+      y_o         <= valid_s1_q ? quantize_q88(product_s1_q) : '0;
     end
   end
 endmodule

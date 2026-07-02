@@ -19,6 +19,7 @@ module fa_finalize_vec #(
 
   logic                         recip_valid;
   logic                         recip_div_zero;
+  logic                         div_zero_pipe_q;
   logic [31:0]                  recip_l;
   logic signed [ACC_W-1:0]      acc_pipe [RECIP_LATENCY][D];
   logic                         quant_valid [D];
@@ -60,13 +61,15 @@ module fa_finalize_vec #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       div_zero_o <= 1'b0;
+      div_zero_pipe_q <= 1'b0;
       for (int stage = 0; stage < RECIP_LATENCY; stage++) begin
         for (int lane = 0; lane < D; lane++) begin
           acc_pipe[stage][lane] <= '0;
         end
       end
     end else begin
-      div_zero_o <= recip_valid && recip_div_zero;
+      div_zero_pipe_q <= recip_valid && recip_div_zero;
+      div_zero_o <= div_zero_pipe_q;
       for (int lane = 0; lane < D; lane++) begin
         acc_pipe[0][lane] <= valid_i ? acc_i[lane] : '0;
       end

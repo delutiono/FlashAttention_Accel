@@ -5,7 +5,7 @@ module tb_finalize_vec;
   localparam int unsigned L_W = 32;
   localparam int unsigned ACC_W = 48;
   localparam int unsigned OUT_W = 16;
-  localparam int unsigned FINALIZE_LATENCY = 5;
+  localparam int unsigned FINALIZE_LATENCY = 6;
   localparam int unsigned CASES = 6;
 
   logic clk;
