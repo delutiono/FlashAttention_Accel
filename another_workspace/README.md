@@ -1,4 +1,4 @@
-# FlashAttention Hardware Accelerator — Bonus Easy Implementation
+# FlashAttention Hardware Accelerator — Bonus Medium Implementation (7/9 Bonuses)
 
 ## 已实现功能总览
 
@@ -15,14 +15,19 @@
 | (7) | 片上存储约束：无 S×S 矩阵，仅 tile K/V + 每行 m/l/acc | 8-entry token FIFO + tile 双缓冲 + per-row online softmax state |
 | (8) | Causal mask corner case 正确 | i=0 只能关注 j=0 |
 
-### Bonus（已实现 4 项）
+### Bonus（已实现 7/9 项）
 
-| # | Bonus | 官方编号 | 关键改动 |
-|---|-------|---------|---------|
-| 1 | **Padding Mask** | #4 | `valid_len` 寄存器 + score 路径 mask 管道，无效位置 exp=0 |
-| 2 | **Q6.10 / Q4.12 定点格式** | #5 | CFG[2:1] FORMAT 选择，output_norm_pipe 动态移位 |
-| 3 | **S=512 可配置序列长度** | #3 | `seq_len` 寄存器，所有计数器 5→6 bit，TOKEN_WIDTH 16→18 |
-| 4 | **DMA 任务队列** | #9 | 8-entry 任务参数 RAM + FIFO 队列 + 链式自动执行 |
+| # | Bonus | 官方编号 | 难度 | 关键改动 |
+|---|-------|---------|------|---------|
+| 1 | **Padding Mask** | #4 | Easy | `valid_len` 寄存器 + score 路径 mask 管道，无效位置 exp=0 |
+| 2 | **Q6.10 / Q4.12 定点格式** | #5 | Easy | CFG[2:1] FORMAT 选择，output_norm_pipe 动态移位 |
+| 3 | **S=512 可配置序列长度** | #3 | Easy | `seq_len` 寄存器，所有计数器 5→6 bit，TOKEN_WIDTH 16→18 |
+| 4 | **DMA 任务队列** | #9 | Easy | 8-entry 任务参数 RAM + FIFO 队列 + 链式自动执行 |
+| 5 | **AXI4-Stream 数据接口** | #8 | Medium | `axi_stream_data_adapter.v` 旁路 DMA，CFG[4] STREAM_EN |
+| 6 | **Dropout 训练模式** | #6 | Medium | 32-bit LFSR + dropout 管道复用 padding mask 路径 |
+| 7 | **多 Head 支持** | #2 | Medium | `page_manager` 最外层 head 循环 + head_stride 地址偏移 |
+
+**未实现（2 项 Hard）**：BF16/FP16 (#1)、INT8/FP8 低精度 (#7)
 
 ---
 
@@ -32,7 +37,7 @@
 |--------|------|------|------|
 | 0x00 | CTRL | R/W | [0] START, [1] SOFT_RESET, [2] IRQ_EN |
 | 0x04 | STATUS | R | [0] BUSY, [1] DONE(W1C), [2] ERROR(W1C) |
-| 0x08 | CFG | R/W | [0] CAUSAL_EN, [2:1] FORMAT (00=Q8.8, 01=Q6.10, 10=Q4.12), [3] TASK_CHAIN |
+| 0x08 | CFG | R/W | [0] CAUSAL_EN, [2:1] FORMAT (00=Q8.8, 01=Q6.10, 10=Q4.12), [3] TASK_CHAIN, [4] STREAM_EN, [5] DROPOUT_EN |
 | 0x0C | SEQ_LEN | R/W | S/8 = num_groups（默认 32→S=256, 最大 64→S=512） |
 | 0x10 | VALID_LEN | R/W | 有效 KV 位置数（≤S），0=禁用 padding mask |
 | 0x14 | Q_BASE_L | R/W | Q 基地址低 32 位 |
@@ -50,6 +55,10 @@
 | 0x44 | TASK_PARAM_ADDR | W | 任务参数 RAM 索引（[2:0]=entry, [5:3]=word） |
 | 0x48 | TASK_PARAM_DATA | R/W | 任务参数数据（写入后自动递增 word 地址） |
 | 0x4C | TASK_QUEUE_CTRL | W | [0]=入队, [1]=清队列；R 返回 queue_count[3:0] |
+| 0x50 | DROPOUT_SEED | R/W | 32-bit LFSR 种子（写操作重新播种） |
+| 0x54 | DROPOUT_PROB | R/W | Q0.16 概率阈值（默认 0x0000，禁用 dropout） |
+| 0x58 | NUM_HEADS | R/W | Head 数量（1-8，默认 1→单 head） |
+| 0x5C | HEAD_STRIDE | R/W | 每个 head 的字节偏移（含 Q/K/V/O 所有矩阵） |
 
 ---
 
@@ -148,6 +157,69 @@ write(CTRL, 0x1);  // START
 
 ---
 
+### 5. AXI4-Stream 数据接口（官方 #8）
+
+**原理**：在 AXI4 Memory-Mapped DMA 通路之外，额外提供 AXI4-Stream 从/主接口，便于与其他 IP 级联。CFG[4]=1 时，`axi_stream_data_adapter` 将 Stream 信号直通到内部 DMA rd/wr 接口，旁路 DMA engine。
+
+**数据通路**：
+```
+Stream 模式 (CFG[4]=1):
+  s_axis_t* → stream_adapter → dma_rd_* → load adapters (K/V/Q) → compute core
+  compute core → o_store_adapter → dma_wr_* → stream_adapter → m_axis_t*
+
+DMA 模式 (CFG[4]=0):
+  现有通路不变，DMA engine 正常工作
+```
+
+**AXI4-Stream 端口**：
+- Slave (输入 Q/K/V): `s_axis_tvalid/tready/tdata[127:0]/tkeep[15:0]/tuser[1:0]/tlast`，tuser=0/1/2 区分 Q/K/V
+- Master (输出 O): `m_axis_tvalid/tready/tdata[127:0]/tkeep[15:0]/tlast`
+
+**关键修改**：
+- `rtl/axi_stream_data_adapter.v`: **新文件**，~134 行，Stream↔DMA 桥接
+- `rtl/fa_top.v`: 新增 stream 端口 + MUX 旁路逻辑（~60 行）
+- `rtl/axi_lite_regs.v`: CFG[4] → stream_en
+
+### 6. Dropout 训练模式（官方 #6）
+
+**原理**：在 softmax 后的 score 路径上加入 dropout，使用 32-bit Fibonacci LFSR（多项式 x^32 + x^22 + x^2 + x + 1）生成伪随机数。`dropout_prob`（Q0.16）控制 mask 概率：`lfsr[15:0] < dropout_prob` 时该 token 被 mask（alpha=0, beta=0）。
+
+**管道设计**：完全复用 padding mask 的 5 级延迟管道（mask_v0→v1→v2→side_s0→side_s1），dropout mask 与 padding mask 在输出阶段 OR 合并：
+```
+in_valid → lfsr_advance + dropout_v0 → ... → dropout_side_s1
+effective_mask = mask_side_s1 || (dropout_en && dropout_side_s1)
+alpha = effective_mask ? 0x8000 : normal_alpha
+beta  = effective_mask ? 0      : normal_beta
+```
+
+**关键修改**：
+- `rtl/score_exp_pipe.v`: +32-bit LFSR reg + dropout_v0/v1/v2/s0/s1 管道 + 输出 OR 合并（~100 行）
+- `rtl/packed_compute_core.v`: 端口透传 dropout_en/seed/prob
+- `rtl/axi_lite_regs.v`: DROPOUT_SEED (0x050), DROPOUT_PROB (0x054)
+
+### 7. 多 Head 支持（官方 #2）
+
+**原理**：在 `page_manager` 最外层添加 head 循环，对每个 head 通过 `head_idx * head_stride` 偏移 Q/K/V/O 基地址。计算核心完全不变，每个 head 顺序执行。
+
+**循环结构**：
+```
+for head_idx in 0..num_heads-1:
+    cur_*_base = *_base + head_idx * head_stride
+    for group in 0..num_groups-1:   ← 现有逻辑，改用 cur_*_base
+        ...
+```
+
+**关键修改**：
+- `rtl/page_manager.v`: +head_idx_reg, head_offset_reg, cur_*_base 寄存器，ST_O_WAIT 中判断 head 是否完成（~80 行）
+- `rtl/axi_lite_regs.v`: NUM_HEADS (0x058, 默认 1), HEAD_STRIDE (0x05C)
+- `rtl/fa_top.v`: wires + 连线
+
+**配置示例**（head=4, S=256, D=64, 每个 head 矩阵连续存储）：
+- HEAD_STRIDE = 4 × S × D × 2 = 4 × 256 × 64 × 2 = 131072 bytes
+- 物理内存布局: `[Q_head0][K_head0][V_head0][O_head0][Q_head1][K_head1][V_head1][O_head1]...`
+
+---
+
 ## 性能结果
 
 ### 正确性（S=256, Q8.8, causal）
@@ -235,18 +307,19 @@ print(f'Errors: {(diff!=0).sum()}/{len(diff)}')
 ```
 another_workspace/
 ├── rtl/                          # 所有 RTL 设计源文件
-│   ├── fa_top.v                  # 顶层集成
+│   ├── fa_top.v                  # 顶层集成（Stream + Dropout + Multi-head 端口）
 │   ├── axi_lite_regs.v           # AXI4-Lite 寄存器 + 任务队列
-│   ├── page_manager.v            # Page/Group 管理器（双缓冲 + 任务链）
+│   ├── page_manager.v            # Page/Group 管理器（双缓冲 + 任务链 + head 循环）
 │   ├── score_scheduler.v         # 记分板调度器（可配置 S）
 │   ├── task_ctrl.v               # Task 控制器（链式执行）
 │   ├── dma_engine.v              # DMA 引擎
 │   ├── dma_read_master.v         # AXI4 读 Master
 │   ├── dma_write_master.v        # AXI4 写 Master
+│   ├── axi_stream_data_adapter.v   # AXI4-Stream ↔ DMA 桥接（新）
 │   ├── dma_cmd_queue.v           # DMA 命令队列
 │   ├── packed_compute_core.v     # 计算核顶层（含 padding mask）
 │   ├── dot_frontend.v            # Dot-product 前端（32 lane × 2 phase）
-│   ├── score_exp_pipe.v          # Score + Exp 流水线（含 mask 管道）
+│   ├── score_exp_pipe.v          # Score + Exp 流水线（mask 管道 + LFSR dropout）
 │   ├── update_state_cluster.v    # Online Softmax + 累加更新
 │   ├── finalize_cluster.v        # 最终归一化（含 format 译码）
 │   ├── reciprocal_approx.v       # 倒数近似
@@ -276,6 +349,8 @@ another_workspace/
 
 ## 已知限制
 
-1. 单 head, 单 batch（多 head 需通过任务队列顺序执行）
-2. simulaton 无 dropout / BF16 / INT8 / AXI4-Stream 支持
-3. 需 iverilog 解释执行，仿真速度较慢
+1. 单 batch（batch=1），不支持多 batch 并行
+2. Dropout 使用 LFSR 伪随机数，非真随机，需软件写 DROPOUT_SEED 保证可复现
+3. AXI4-Stream 模式下 tuser 仅区分 Q/K/V（0/1/2），不支持带内配置参数
+4. 多 head 为顺序执行（非并行），head 数增加时延迟线性增长
+5. 未实现 BF16/FP16 (#1) 和 INT8/FP8 低精度 (#7)
