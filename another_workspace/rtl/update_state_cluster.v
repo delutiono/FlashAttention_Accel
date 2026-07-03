@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// 32-lane, two-half online-softmax update cluster.
+// 16-lane, four-quarter online-softmax update cluster.
 // ACC/l use signed Q*.30, V uses signed Q8.8, alpha/beta use unsigned Q1.15.
 module update_state_cluster #(
     parameter TOKEN_WIDTH = 16
@@ -45,18 +45,18 @@ module update_state_cluster #(
     output reg signed [95:0]       fin_acc_rsp_data
 );
 
-localparam integer LANES = 32;
+localparam integer LANES = 16;
 localparam integer ACC_WIDTH = 48;
 localparam integer ACC_PRODUCT_WIDTH = 65;
 localparam integer V_PRODUCT_WIDTH = 33;
 localparam integer SUM_WIDTH = 66;
 
 reg                    init_active_reg;
-reg                    init_half_reg;
+reg [1:0]              init_quarter_reg;
 reg [2:0]              init_context_reg;
 
 reg                    issue_active_reg;
-reg                    issue_half_reg;
+reg [1:0]              issue_quarter_reg;
 reg [2:0]              issue_context_reg;
 reg                    issue_v_page_reg;
 reg [2:0]              issue_v_row_reg;
@@ -67,16 +67,16 @@ reg [TOKEN_WIDTH-1:0]  issue_token_reg;
 reg                    issue_last_reg;
 
 wire                   update_fire;
-wire                   half_issue;
-wire [3:0]             acc_rd_addr;
+wire                   quarter_issue;
+wire [4:0]             acc_rd_addr;
 wire                   acc_rd_en;
 wire                   acc_rd_valid;
-wire [127:0]           acc_rd_bank [0:11];
-wire [1535:0]          acc_rd_packed;
-wire [1535:0]          acc_wr_packed;
-wire [127:0]           acc_wr_bank [0:11];
+wire [63:0]            acc_rd_bank [0:11];
+wire [767:0]           acc_rd_packed;
+wire [767:0]           acc_wr_packed;
+wire [63:0]            acc_wr_bank [0:11];
 wire                   acc_wr_en;
-wire [3:0]             acc_wr_addr;
+wire [4:0]             acc_wr_addr;
 
 wire [5:0]             v_rd_addr;
 wire                   v_rd_valid;
@@ -84,7 +84,7 @@ wire [63:0]            v_rd_bank [0:7];
 wire [511:0]           v_rd_packed;
 
 reg [1:0]              rd_valid_pipe;
-reg                    rd_half_pipe [0:1];
+reg [1:0]              rd_quarter_pipe [0:1];
 reg [2:0]              rd_context_pipe [0:1];
 reg [15:0]             rd_alpha_pipe [0:1];
 reg [15:0]             rd_beta_pipe [0:1];
@@ -92,7 +92,7 @@ reg [TOKEN_WIDTH-1:0]  rd_token_pipe [0:1];
 reg                    rd_last_pipe [0:1];
 
 reg                    mul_valid_reg;
-reg                    mul_half_reg;
+reg [1:0]              mul_quarter_reg;
 reg [2:0]              mul_context_reg;
 reg [TOKEN_WIDTH-1:0]  mul_token_reg;
 reg                    mul_last_reg;
@@ -100,7 +100,7 @@ reg signed [ACC_PRODUCT_WIDTH-1:0] acc_mul_reg [0:LANES-1];
 reg signed [V_PRODUCT_WIDTH-1:0]   v_mul_reg [0:LANES-1];
 
 reg                    sum_valid_reg;
-reg                    sum_half_reg;
+reg [1:0]              sum_quarter_reg;
 reg [2:0]              sum_context_reg;
 reg [TOKEN_WIDTH-1:0]  sum_token_reg;
 reg                    sum_last_reg;
@@ -128,40 +128,43 @@ reg                    meta_wr_en;
 reg [3:0]              meta_wr_addr;
 reg [127:0]            meta_wr_data;
 
-wire [3:0]             fin_acc_addr;
+wire [4:0]             fin_acc_addr;
 wire                   fin_acc_fire;
 reg [1:0]              fin_req_pipe_valid;
-reg [3:0]              fin_pair_index_pipe [0:1];
+reg [2:0]              fin_pair_index_pipe [0:1];
 
 integer i;
 
 assign init_ready = !init_active_reg && !issue_active_reg;
-// The next score may be accepted in the same cycle that the current half1 is
-// issued. Old payload registers still drive half1 until the active clock edge.
 assign update_ready = !init_active_reg &&
-                      (!issue_active_reg || (issue_active_reg && issue_half_reg));
+                      (!issue_active_reg || (issue_active_reg && issue_quarter_reg == 2'd3));
 assign update_fire = update_valid && update_ready;
-assign half_issue = issue_active_reg;
+assign quarter_issue = issue_active_reg;
 
-assign fin_acc_addr = {fin_acc_req_context, fin_acc_req_quarter[1]};
+assign fin_acc_addr = {fin_acc_req_context, fin_acc_req_quarter[1:0]};
 assign fin_acc_fire = fin_acc_req_valid && fin_acc_req_ready;
 assign fin_acc_req_ready = !init_active_reg && !issue_active_reg;
 
-assign acc_rd_addr = half_issue ? {issue_context_reg, issue_half_reg} : fin_acc_addr;
-assign acc_rd_en = half_issue || fin_acc_fire;
-assign v_rd_addr = {issue_v_page_reg, issue_v_row_reg, issue_half_reg, 1'b0};
-assign meta_read_issue = half_issue && !issue_half_reg;
+assign acc_rd_addr = quarter_issue ? {issue_context_reg, issue_quarter_reg} : fin_acc_addr;
+assign acc_rd_en = quarter_issue || fin_acc_fire;
+assign v_rd_addr = {issue_v_page_reg, issue_v_row_reg, issue_quarter_reg[1], 1'b0};
+assign meta_read_issue = quarter_issue && (issue_quarter_reg[0] == 1'b0);
 
 assign acc_wr_en = init_active_reg || sum_valid_reg;
-assign acc_wr_addr = init_active_reg ? {init_context_reg, init_half_reg} :
-                                      {sum_context_reg, sum_half_reg};
+assign acc_wr_addr = init_active_reg ? {init_context_reg, init_quarter_reg} :
+                                      {sum_context_reg, sum_quarter_reg};
+
+wire v_quarter_sel;
+wire [255:0] v_rd_q;
+assign v_quarter_sel = rd_quarter_pipe[1][0];
+assign v_rd_q = v_quarter_sel ? v_rd_packed[511:256] : v_rd_packed[255:0];
 
 generate
     genvar pack_idx;
     for (pack_idx = 0; pack_idx < 12; pack_idx = pack_idx + 1) begin : g_acc_pack
-        assign acc_rd_packed[pack_idx*128 +: 128] = acc_rd_bank[pack_idx];
-        assign acc_wr_bank[pack_idx] = init_active_reg ? 128'd0 :
-                                      acc_wr_packed[pack_idx*128 +: 128];
+        assign acc_rd_packed[pack_idx*64 +: 64] = acc_rd_bank[pack_idx];
+        assign acc_wr_bank[pack_idx] = init_active_reg ? 64'd0 :
+                                      acc_wr_packed[pack_idx*64 +: 64];
     end
     for (pack_idx = 0; pack_idx < 8; pack_idx = pack_idx + 1) begin : g_v_pack
         assign v_rd_packed[pack_idx*64 +: 64] = v_rd_bank[pack_idx];
@@ -205,7 +208,7 @@ v_sram_cluster u_v_sram (
     .rw_valid(v_load_valid), .rw_write(1'b1), .rw_pair(v_load_pair),
     .rw_addr(v_load_addr), .rw_wmask(v_load_wmask), .rw_wdata(v_load_data),
     .rw_rvalid(), .rw_rdata(),
-    .wide_rd_en(half_issue), .wide_rd_addr(v_rd_addr), .wide_rd_valid(v_rd_valid),
+    .wide_rd_en(quarter_issue), .wide_rd_addr(v_rd_addr), .wide_rd_valid(v_rd_valid),
     .wide_rd_data0(v_rd_bank[0]), .wide_rd_data1(v_rd_bank[1]),
     .wide_rd_data2(v_rd_bank[2]), .wide_rd_data3(v_rd_bank[3]),
     .wide_rd_data4(v_rd_bank[4]), .wide_rd_data5(v_rd_bank[5]),
@@ -239,10 +242,10 @@ meta_sram_cluster u_meta_sram (
 always @(posedge clk) begin
     if (!rst_n) begin
         init_active_reg <= 1'b0;
-        init_half_reg <= 1'b0;
+        init_quarter_reg <= 2'd0;
         init_context_reg <= 3'd0;
         issue_active_reg <= 1'b0;
-        issue_half_reg <= 1'b0;
+        issue_quarter_reg <= 2'd0;
         issue_context_reg <= 3'd0;
         issue_v_page_reg <= 1'b0;
         issue_v_row_reg <= 3'd0;
@@ -252,8 +255,8 @@ always @(posedge clk) begin
         issue_token_reg <= {TOKEN_WIDTH{1'b0}};
         issue_last_reg <= 1'b0;
         rd_valid_pipe <= 2'b00;
-        rd_half_pipe[0] <= 1'b0;
-        rd_half_pipe[1] <= 1'b0;
+        rd_quarter_pipe[0] <= 2'd0;
+        rd_quarter_pipe[1] <= 2'd0;
         rd_context_pipe[0] <= 3'd0;
         rd_context_pipe[1] <= 3'd0;
         rd_alpha_pipe[0] <= 16'd0;
@@ -265,12 +268,12 @@ always @(posedge clk) begin
         rd_last_pipe[0] <= 1'b0;
         rd_last_pipe[1] <= 1'b0;
         mul_valid_reg <= 1'b0;
-        mul_half_reg <= 1'b0;
+        mul_quarter_reg <= 2'd0;
         mul_context_reg <= 3'd0;
         mul_token_reg <= {TOKEN_WIDTH{1'b0}};
         mul_last_reg <= 1'b0;
         sum_valid_reg <= 1'b0;
-        sum_half_reg <= 1'b0;
+        sum_quarter_reg <= 2'd0;
         sum_context_reg <= 3'd0;
         sum_token_reg <= {TOKEN_WIDTH{1'b0}};
         sum_last_reg <= 1'b0;
@@ -301,8 +304,8 @@ always @(posedge clk) begin
         fin_acc_rsp_valid <= 1'b0;
         fin_acc_rsp_data <= 96'sd0;
         fin_req_pipe_valid <= 2'b00;
-        fin_pair_index_pipe[0] <= 4'd0;
-        fin_pair_index_pipe[1] <= 4'd0;
+        fin_pair_index_pipe[0] <= 3'd0;
+        fin_pair_index_pipe[1] <= 3'd0;
         for (i = 0; i < LANES; i = i + 1) begin
             acc_mul_reg[i] <= {ACC_PRODUCT_WIDTH{1'b0}};
             v_mul_reg[i] <= {V_PRODUCT_WIDTH{1'b0}};
@@ -319,7 +322,7 @@ always @(posedge clk) begin
 
         if (init_valid && init_ready) begin
             init_active_reg <= 1'b1;
-            init_half_reg <= 1'b0;
+            init_quarter_reg <= 2'd0;
             init_context_reg <= init_context;
             pending_l[init_context] <= 48'sd0;
             pending_m[init_context] <= -32'sh80000000;
@@ -328,15 +331,15 @@ always @(posedge clk) begin
             meta_wr_addr <= {1'b0, init_context};
             meta_wr_data <= {48'd0, 48'd0, 32'h80000000};
         end else if (init_active_reg) begin
-            if (init_half_reg)
+            if (init_quarter_reg == 2'd3)
                 init_active_reg <= 1'b0;
             else
-                init_half_reg <= 1'b1;
+                init_quarter_reg <= init_quarter_reg + 2'd1;
         end
 
         if (update_fire) begin
             issue_active_reg <= 1'b1;
-            issue_half_reg <= 1'b0;
+            issue_quarter_reg <= 2'd0;
             issue_context_reg <= update_context;
             issue_v_page_reg <= update_v_page;
             issue_v_row_reg <= update_v_row;
@@ -347,16 +350,16 @@ always @(posedge clk) begin
             issue_last_reg <= update_last;
             pending_meta_valid_reg[update_context] <= 1'b0;
         end else if (issue_active_reg) begin
-            if (issue_half_reg)
+            if (issue_quarter_reg == 2'd3)
                 issue_active_reg <= 1'b0;
             else
-                issue_half_reg <= 1'b1;
+                issue_quarter_reg <= issue_quarter_reg + 2'd1;
         end
 
-        rd_valid_pipe[0] <= half_issue;
+        rd_valid_pipe[0] <= quarter_issue;
         rd_valid_pipe[1] <= rd_valid_pipe[0];
-        rd_half_pipe[0] <= issue_half_reg;
-        rd_half_pipe[1] <= rd_half_pipe[0];
+        rd_quarter_pipe[0] <= issue_quarter_reg;
+        rd_quarter_pipe[1] <= rd_quarter_pipe[0];
         rd_context_pipe[0] <= issue_context_reg;
         rd_context_pipe[1] <= rd_context_pipe[0];
         rd_alpha_pipe[0] <= issue_alpha_reg;
@@ -379,8 +382,6 @@ always @(posedge clk) begin
         meta_beta_pipe[0] <= issue_beta_reg;
         meta_beta_pipe[1] <= meta_beta_pipe[0];
 
-        // L1: multiplier-only stage. This removes multiply+round+add+saturate
-        // from the critical path reported by Genus.
         l_mul_valid_reg <= meta_tag_valid_pipe[1] && meta_rd_valid;
         if (meta_tag_valid_pipe[1] && meta_rd_valid) begin
             l_mul_context_reg <= meta_context_pipe[1];
@@ -390,7 +391,6 @@ always @(posedge clk) begin
                              $signed({1'b0, meta_alpha_pipe[1]});
         end
 
-        // L2: rounding, beta alignment, addition and saturation.
         if (l_mul_valid_reg) begin
             pending_m[l_mul_context_reg] <= l_mul_m_new_reg;
             pending_l[l_mul_context_reg] <= sat_acc(
@@ -400,7 +400,7 @@ always @(posedge clk) begin
         end
 
         mul_valid_reg <= rd_valid_pipe[1] && acc_rd_valid && v_rd_valid;
-        mul_half_reg <= rd_half_pipe[1];
+        mul_quarter_reg <= rd_quarter_pipe[1];
         mul_context_reg <= rd_context_pipe[1];
         mul_token_reg <= rd_token_pipe[1];
         mul_last_reg <= rd_last_pipe[1];
@@ -408,13 +408,13 @@ always @(posedge clk) begin
             for (i = 0; i < LANES; i = i + 1) begin
                 acc_mul_reg[i] <= $signed(acc_rd_packed[i*ACC_WIDTH +: ACC_WIDTH]) *
                                   $signed({1'b0, rd_alpha_pipe[1]});
-                v_mul_reg[i] <= $signed(v_rd_packed[i*16 +: 16]) *
+                v_mul_reg[i] <= $signed(v_rd_q[i*16 +: 16]) *
                                 $signed({1'b0, rd_beta_pipe[1]});
             end
         end
 
         sum_valid_reg <= mul_valid_reg;
-        sum_half_reg <= mul_half_reg;
+        sum_quarter_reg <= mul_quarter_reg;
         sum_context_reg <= mul_context_reg;
         sum_token_reg <= mul_token_reg;
         sum_last_reg <= mul_last_reg;
@@ -426,8 +426,7 @@ always @(posedge clk) begin
             end
         end
 
-        // ACC half1 write, meta write and completion commit together.
-        if (sum_valid_reg && sum_half_reg) begin
+        if (sum_valid_reg && sum_quarter_reg == 2'd3) begin
             meta_wr_en <= 1'b1;
             meta_wr_addr <= {1'b0, sum_context_reg};
             meta_wr_data <= {48'd0, pending_l[sum_context_reg], pending_m[sum_context_reg]};
@@ -448,27 +447,19 @@ always @(posedge clk) begin
 
         fin_req_pipe_valid[0] <= fin_acc_fire;
         fin_req_pipe_valid[1] <= fin_req_pipe_valid[0];
-        fin_pair_index_pipe[0] <= {fin_acc_req_quarter[0], fin_acc_req_pair};
+        fin_pair_index_pipe[0] <= fin_acc_req_pair;
         fin_pair_index_pipe[1] <= fin_pair_index_pipe[0];
         if (fin_req_pipe_valid[1] && acc_rd_valid) begin
             fin_acc_rsp_valid <= 1'b1;
             case (fin_pair_index_pipe[1])
-                4'd0:  fin_acc_rsp_data <= acc_rd_packed[0*96 +: 96];
-                4'd1:  fin_acc_rsp_data <= acc_rd_packed[1*96 +: 96];
-                4'd2:  fin_acc_rsp_data <= acc_rd_packed[2*96 +: 96];
-                4'd3:  fin_acc_rsp_data <= acc_rd_packed[3*96 +: 96];
-                4'd4:  fin_acc_rsp_data <= acc_rd_packed[4*96 +: 96];
-                4'd5:  fin_acc_rsp_data <= acc_rd_packed[5*96 +: 96];
-                4'd6:  fin_acc_rsp_data <= acc_rd_packed[6*96 +: 96];
-                4'd7:  fin_acc_rsp_data <= acc_rd_packed[7*96 +: 96];
-                4'd8:  fin_acc_rsp_data <= acc_rd_packed[8*96 +: 96];
-                4'd9:  fin_acc_rsp_data <= acc_rd_packed[9*96 +: 96];
-                4'd10: fin_acc_rsp_data <= acc_rd_packed[10*96 +: 96];
-                4'd11: fin_acc_rsp_data <= acc_rd_packed[11*96 +: 96];
-                4'd12: fin_acc_rsp_data <= acc_rd_packed[12*96 +: 96];
-                4'd13: fin_acc_rsp_data <= acc_rd_packed[13*96 +: 96];
-                4'd14: fin_acc_rsp_data <= acc_rd_packed[14*96 +: 96];
-                default: fin_acc_rsp_data <= acc_rd_packed[15*96 +: 96];
+                3'd0: fin_acc_rsp_data <= acc_rd_packed[0*96 +: 96];
+                3'd1: fin_acc_rsp_data <= acc_rd_packed[1*96 +: 96];
+                3'd2: fin_acc_rsp_data <= acc_rd_packed[2*96 +: 96];
+                3'd3: fin_acc_rsp_data <= acc_rd_packed[3*96 +: 96];
+                3'd4: fin_acc_rsp_data <= acc_rd_packed[4*96 +: 96];
+                3'd5: fin_acc_rsp_data <= acc_rd_packed[5*96 +: 96];
+                3'd6: fin_acc_rsp_data <= acc_rd_packed[6*96 +: 96];
+                default: fin_acc_rsp_data <= acc_rd_packed[7*96 +: 96];
             endcase
         end
     end

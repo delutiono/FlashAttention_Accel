@@ -1,47 +1,47 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// 1536x16 ACC half store built from twelve 128x16 macros.
-// Address encoding is {context[2:0], half}; one access covers 32 signed lanes.
+// 32x64x12 ACC store built from twelve 64x32 PDK-compatible wrappers.
+// Address encoding is {context[2:0], quarter[1:0]}; one access covers 16 signed lanes.
 module acc_sram_cluster (
     input  wire         clk,
     input  wire         rst_n,
     input  wire         wr_en,
-    input  wire [3:0]   wr_addr,
-    input  wire [127:0] wr_data0,
-    input  wire [127:0] wr_data1,
-    input  wire [127:0] wr_data2,
-    input  wire [127:0] wr_data3,
-    input  wire [127:0] wr_data4,
-    input  wire [127:0] wr_data5,
-    input  wire [127:0] wr_data6,
-    input  wire [127:0] wr_data7,
-    input  wire [127:0] wr_data8,
-    input  wire [127:0] wr_data9,
-    input  wire [127:0] wr_data10,
-    input  wire [127:0] wr_data11,
+    input  wire [4:0]   wr_addr,
+    input  wire [63:0]  wr_data0,
+    input  wire [63:0]  wr_data1,
+    input  wire [63:0]  wr_data2,
+    input  wire [63:0]  wr_data3,
+    input  wire [63:0]  wr_data4,
+    input  wire [63:0]  wr_data5,
+    input  wire [63:0]  wr_data6,
+    input  wire [63:0]  wr_data7,
+    input  wire [63:0]  wr_data8,
+    input  wire [63:0]  wr_data9,
+    input  wire [63:0]  wr_data10,
+    input  wire [63:0]  wr_data11,
     input  wire         rd_en,
-    input  wire [3:0]   rd_addr,
+    input  wire [4:0]   rd_addr,
     output wire         rd_valid,
-    output wire [127:0] rd_data0,
-    output wire [127:0] rd_data1,
-    output wire [127:0] rd_data2,
-    output wire [127:0] rd_data3,
-    output wire [127:0] rd_data4,
-    output wire [127:0] rd_data5,
-    output wire [127:0] rd_data6,
-    output wire [127:0] rd_data7,
-    output wire [127:0] rd_data8,
-    output wire [127:0] rd_data9,
-    output wire [127:0] rd_data10,
-    output wire [127:0] rd_data11
+    output wire [63:0]  rd_data0,
+    output wire [63:0]  rd_data1,
+    output wire [63:0]  rd_data2,
+    output wire [63:0]  rd_data3,
+    output wire [63:0]  rd_data4,
+    output wire [63:0]  rd_data5,
+    output wire [63:0]  rd_data6,
+    output wire [63:0]  rd_data7,
+    output wire [63:0]  rd_data8,
+    output wire [63:0]  rd_data9,
+    output wire [63:0]  rd_data10,
+    output wire [63:0]  rd_data11
 );
 
 wire [11:0] bank_rd_valid;
-wire [127:0] bank_rd_data [0:11];
-wire [127:0] bank_wr_data [0:11];
+wire [63:0] bank_rd_data [0:11];
+wire [63:0] bank_wr_data [0:11];
 wire [11:0] bank_rw_rvalid_unused;
-wire [127:0] bank_rw_rdata_unused [0:11];
+wire [63:0] bank_rw_rdata_unused [0:11];
 
 assign bank_wr_data[0] = wr_data0;
 assign bank_wr_data[1] = wr_data1;
@@ -59,7 +59,7 @@ assign bank_wr_data[11] = wr_data11;
 genvar bank_idx;
 generate
     for (bank_idx = 0; bank_idx < 12; bank_idx = bank_idx + 1) begin : g_bank
-        sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper u_bank (
+        sky130_sram_0kbytes_1rw1r_64x32_8_wrapper u_bank (
             .clk(clk),
             .rst_n(rst_n),
             .rw_en(wr_en),
