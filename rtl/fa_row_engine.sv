@@ -8,7 +8,8 @@ module fa_row_engine #(
   parameter int unsigned EXP_W = 24,
   parameter int unsigned L_W = 32,
   parameter int unsigned ACC_W = 48,
-  parameter int unsigned OUT_W = 16
+  parameter int unsigned OUT_W = 16,
+  parameter int unsigned DOT_LANES = fa_pkg::FA_DOT_LANES
 ) (
   input  logic                              clk,
   input  logic                              rst_n,
@@ -17,20 +18,21 @@ module fa_row_engine #(
   input  logic                              last_i,
   input  logic [7:0]                        q_index_i,
   input  logic [7:0]                        k_index_i,
-  input  var logic signed [ELEM_W-1:0]      q_i [D],
-  input  var logic signed [ELEM_W-1:0]      k_i [D],
-  input  var logic signed [ELEM_W-1:0]      v_i [D],
+  input  logic signed [ELEM_W-1:0]          q_i [D],
+  input  logic signed [ELEM_W-1:0]          k_i [D],
+  input  logic signed [ELEM_W-1:0]          v_i [D],
   output logic                              ready_o,
   output logic                              busy_o,
   output logic                              valid_o,
   output logic                              div_zero_o,
   output logic signed [OUT_W-1:0]           o_q88_o [D]
 );
-  localparam int unsigned SCORE_PIPE_LATENCY = 2;
+  localparam int unsigned SCORE_PIPE_LATENCY = (D + DOT_LANES - 1) / DOT_LANES;
 
   logic                              input_accept;
   logic                              drain_q;
   logic                              active_q;
+  logic                              score_pipe_ready;
 
   logic                              score_valid;
   logic signed [SCORE_PIPE_W-1:0]    score;
@@ -48,7 +50,7 @@ module fa_row_engine #(
 
   logic                              finalize_valid_i;
 
-  assign ready_o = rst_n && softmax_ready && !drain_q;
+  assign ready_o = rst_n && softmax_ready && score_pipe_ready && !drain_q;
   assign input_accept = valid_i && ready_o;
   assign softmax_score = score[SOFTMAX_SCORE_W-1:0];
   assign finalize_valid_i = softmax_valid && softmax_last_q;
@@ -57,7 +59,8 @@ module fa_row_engine #(
   fa_score_pipe #(
     .D(D),
     .ELEM_W(ELEM_W),
-    .SCORE_W(SCORE_PIPE_W)
+    .SCORE_W(SCORE_PIPE_W),
+    .DOT_LANES(DOT_LANES)
   ) u_score_pipe (
     .clk,
     .rst_n,
@@ -66,6 +69,7 @@ module fa_row_engine #(
     .k_index_i,
     .q_i,
     .k_i,
+    .ready_o(score_pipe_ready),
     .valid_o(score_valid),
     .q_index_o(),
     .k_index_o(),

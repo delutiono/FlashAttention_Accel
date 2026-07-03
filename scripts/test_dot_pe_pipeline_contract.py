@@ -14,15 +14,21 @@ class DotPePipelineContractTest(unittest.TestCase):
     def test_dot_pe_uses_registered_pipeline(self) -> None:
         rtl = read_rtl("fa_dot_pe.sv")
         self.assertIn("DOT_LATENCY_CYCLES", rtl)
+        self.assertIn("DOT_LANES", rtl)
+        self.assertIn("ready_o", rtl)
         self.assertIn("prod_s1_q", rtl)
-        self.assertIn("sum_s2_q", rtl)
+        self.assertIn("chunk_idx_q", rtl)
+        self.assertIn("dot_acc_q", rtl)
         self.assertNotRegex(rtl, r"\bdot_o\s*<=\s*valid_i\s*\?\s*dot_sum\(\)")
 
     def test_score_pipe_delays_indices_to_match_dot_latency(self) -> None:
         rtl = read_rtl("fa_score_pipe.sv")
         self.assertIn("DOT_LATENCY_CYCLES", rtl)
+        self.assertIn("DOT_LANES", rtl)
+        self.assertIn("ready_o", rtl)
         self.assertIn("q_index_pipe_q", rtl)
         self.assertIn("k_index_pipe_q", rtl)
+        self.assertIn("dot_ready", rtl)
         self.assertRegex(rtl, re.compile(r"assign\s+q_index_o\s*=\s*dot_valid\s*\?", re.S))
         self.assertRegex(rtl, re.compile(r"assign\s+k_index_o\s*=\s*dot_valid\s*\?", re.S))
 
@@ -39,6 +45,7 @@ class DotPePipelineContractTest(unittest.TestCase):
         self.assertIn("score_context_pipe_q", rtl)
         self.assertIn("score_last_pipe_q", rtl)
         self.assertIn("score_v_pipe_q", rtl)
+        self.assertIn("score_pipe_ready", rtl)
 
 
 if __name__ == "__main__":

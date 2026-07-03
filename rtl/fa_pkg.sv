@@ -8,6 +8,7 @@ package fa_pkg;
   localparam int unsigned FA_STRIDE_DEFAULT = FA_D * (FA_ELEM_W / 8);
   localparam int unsigned FA_Q_GROUP_ROWS = 8;
   localparam int unsigned FA_KV_TILE_ROWS = 8;
+  localparam int unsigned FA_DOT_LANES = 16;
   localparam int unsigned FA_GROUPS = FA_S / FA_Q_GROUP_ROWS;
   localparam int unsigned FA_AXI_LANES = FA_AXI_DATA_W / FA_ELEM_W;
   localparam int unsigned FA_ROW_BEATS = FA_D / FA_AXI_LANES;

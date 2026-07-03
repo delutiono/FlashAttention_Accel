@@ -8,8 +8,8 @@ module fa_compute_core #(
   input  logic                              clk,
   input  logic                              rst_n,
   input  logic                              valid_i,
-  input  var logic signed [ELEM_W-1:0]      q_i [D],
-  input  var logic signed [ELEM_W-1:0]      k_i [D],
+  input  logic signed [ELEM_W-1:0]          q_i [D],
+  input  logic signed [ELEM_W-1:0]          k_i [D],
   output logic                              dot_valid_o,
   output logic signed [DOT_ACC_W-1:0]       dot_o
 );

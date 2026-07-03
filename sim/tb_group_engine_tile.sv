@@ -161,7 +161,10 @@ module tb_group_engine_tile;
       if (final_count == 0) begin
         if (final_row[0] <= 0) fail("context 0 final lane 0 was not positive");
         for (int lane = 1; lane < D; lane++) begin
-          if (final_row[lane] !== '0) fail("context 0 one-hot final had non-zero side lane");
+          if (final_row[lane] !== '0) begin
+            $fatal(1, "context 0 one-hot final lane %0d=%0d was not zero",
+                   lane, final_row[lane]);
+          end
         end
       end
       final_count <= final_count + 1;

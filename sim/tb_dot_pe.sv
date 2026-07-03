@@ -10,6 +10,7 @@ module tb_dot_pe;
   logic valid_i;
   logic signed [ELEM_W-1:0] q_i [D];
   logic signed [ELEM_W-1:0] k_i [D];
+  logic ready_o;
   logic valid_o;
   logic signed [ACC_W-1:0] dot_o;
 
@@ -23,6 +24,7 @@ module tb_dot_pe;
     .valid_i,
     .q_i,
     .k_i,
+    .ready_o,
     .valid_o,
     .dot_o
   );
@@ -55,17 +57,28 @@ module tb_dot_pe;
     begin
       expected = ref_dot();
       @(negedge clk);
+      if (!ready_o) begin
+        $fatal(1, "%s: ready_o was low before issue", name);
+      end
       valid_i = 1'b1;
       @(posedge clk);
       #1;
+      if (ready_o) begin
+        $fatal(1, "%s: ready_o stayed high while dot was busy", name);
+      end
+      @(negedge clk);
+      valid_i = 1'b0;
+      for (int cycle = 0; cycle < 16 && !valid_o; cycle++) begin
+        @(posedge clk);
+        #1;
+      end
       if (!valid_o) begin
-        $fatal(1, "%s: valid_o not asserted", name);
+        $fatal(1, "%s: timeout waiting for valid_o", name);
       end
       if (dot_o !== expected) begin
         $fatal(1, "%s: dot_o=%0d expected=%0d", name, dot_o, expected);
       end
       @(negedge clk);
-      valid_i = 1'b0;
       @(posedge clk);
       #1;
       if (valid_o) begin

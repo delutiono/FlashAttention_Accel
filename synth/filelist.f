@@ -16,4 +16,6 @@
 ../rtl/fa_dma_wr.sv
 ../rtl/fa_q_buffer.sv
 ../rtl/fa_kv_buffer.sv
+../rtl/fa_group_engine.sv
+../rtl/fa_o_group_store.sv
 ../rtl/fa_accel_top.sv

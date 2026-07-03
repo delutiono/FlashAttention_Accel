@@ -10,7 +10,7 @@ module fa_finalize_vec #(
   input  logic                         rst_n,
   input  logic                         valid_i,
   input  logic [L_W-1:0]               l_i,
-  input  var logic signed [ACC_W-1:0]  acc_i [D],
+  input  logic signed [ACC_W-1:0]      acc_i [D],
   output logic                         valid_o,
   output logic                         div_zero_o,
   output logic signed [OUT_W-1:0]      o_q88_o [D]

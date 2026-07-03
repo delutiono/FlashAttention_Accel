@@ -24,6 +24,24 @@ function Convert-ToUnixPath {
   return $Path.Replace("\", "/")
 }
 
+function Remove-TreeWithRetry {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    try {
+      Remove-Item -LiteralPath $Path -Recurse -Force
+      return
+    } catch {
+      if ($attempt -eq 3) {
+        throw
+      }
+      [System.GC]::Collect()
+      [System.GC]::WaitForPendingFinalizers()
+      Start-Sleep -Milliseconds (200 * $attempt)
+    }
+  }
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 
@@ -35,6 +53,8 @@ $patchRootAbs = Join-Path $repoRoot $PatchRoot
 $patchDir = Join-Path $patchRootAbs $PatchName
 $synDir = Join-Path $patchDir "SYN"
 $rtlDir = Join-Path $patchDir "workspace/RTL"
+$constraintDir = Join-Path $patchDir "workspace/constraints"
+$filelistDir = Join-Path $patchDir "workspace/filelists"
 
 if (Test-Path -LiteralPath $patchDir) {
   if (-not $Force) {
@@ -43,7 +63,7 @@ if (Test-Path -LiteralPath $patchDir) {
   Remove-Item -LiteralPath $patchDir -Recurse -Force
 }
 
-New-Item -ItemType Directory -Force -Path $synDir, $rtlDir | Out-Null
+New-Item -ItemType Directory -Force -Path $synDir, $rtlDir, $constraintDir, $filelistDir | Out-Null
 
 $runScript = @(
   '#!/usr/bin/env bash',
@@ -59,6 +79,7 @@ $runScript = @(
   'export GENUS_PROJECT_ROOT="$project_root"',
   'export GENUS_WORKSPACE_DIR="$workspace_dir"',
   'export GENUS_RESULTS_DIR="$results_dir"',
+  'export GENUS_THREADS="${GENUS_THREADS:-8}"',
   '',
   'cd "$project_root"',
   '',
@@ -79,6 +100,12 @@ $runScript = @(
   'echo "INFO: workspace:    $workspace_dir"',
   'echo "INFO: results:      $results_dir"',
   'echo "INFO: Genus Tcl:    $syn_script"',
+  'echo "INFO: GENUS_PHYSICAL=${GENUS_PHYSICAL:-1}"',
+  'echo "INFO: GENUS_DEF_FILE=${GENUS_DEF_FILE:-<unset>}"',
+  'echo "INFO: GENUS_PREDICT_FLOORPLAN=${GENUS_PREDICT_FLOORPLAN:-1}"',
+  'echo "INFO: GENUS_ALLOW_PHYSICAL_FALLBACK=${GENUS_ALLOW_PHYSICAL_FALLBACK:-0}"',
+  'echo "INFO: GENUS_CAP_TABLE=${GENUS_CAP_TABLE:-<unset>}"',
+  'echo "INFO: GENUS_THREADS=$GENUS_THREADS"',
   'echo "INFO: writing Genus log to $log"',
   '"$genus_bin" -batch -files "$syn_script" 2>&1 | tee "$log"'
 )
@@ -90,14 +117,26 @@ Copy-Item `
   -Force
 
 Copy-Item `
-  -LiteralPath (Join-Path $repoRoot "rtl/fa_regfile.sv") `
-  -Destination (Join-Path $rtlDir "fa_regfile.sv") `
+  -LiteralPath (Join-Path $repoRoot "synth/constraints.sdc") `
+  -Destination (Join-Path $constraintDir "timing_300m.sdc") `
   -Force
 
-Copy-Item `
-  -LiteralPath (Join-Path $repoRoot "rtl/fa_sram_macros.v") `
-  -Destination (Join-Path $patchDir "workspace/RTL/fa_sram_macros.v") `
-  -Force
+$rtlPatchFiles = @(
+  "fa_pkg.sv",
+  "fa_regfile.sv",
+  "fa_q_buffer.sv",
+  "fa_kv_buffer.sv",
+  "fa_group_engine.sv",
+  "fa_o_group_store.sv",
+  "fa_accel_top.sv",
+  "fa_sram_macros.v"
+)
+foreach ($rtlName in $rtlPatchFiles) {
+  Copy-Item `
+    -LiteralPath (Join-Path $repoRoot "rtl/$rtlName") `
+    -Destination (Join-Path $rtlDir $rtlName) `
+    -Force
+}
 
 $sramBlackbox = @(
   '`timescale 1ns/1ps',
@@ -147,6 +186,20 @@ $sramBlackbox = @(
 )
 Write-LinesUtf8 -Path (Join-Path $rtlDir "sky130_sram_macro_blackboxes.v") -Lines $sramBlackbox
 
+$rtlFilelistLines = New-Object System.Collections.Generic.List[string]
+$rtlSourceList = Get-Content -LiteralPath (Join-Path $repoRoot "synth/filelist.f") |
+  ForEach-Object { $_.Trim() } |
+  Where-Object { $_ -ne "" -and -not $_.StartsWith("#") }
+foreach ($rel in $rtlSourceList) {
+  $leaf = Split-Path -Leaf $rel
+  if ($leaf -eq "fa_q_buffer.sv") {
+    $rtlFilelistLines.Add("../RTL/sky130_sram_macro_blackboxes.v")
+    $rtlFilelistLines.Add("../RTL/fa_sram_macros.v")
+  }
+  $rtlFilelistLines.Add("../RTL/$leaf")
+}
+Write-LinesUtf8 -Path (Join-Path $filelistDir "rtl.f") -Lines $rtlFilelistLines.ToArray()
+
 $readme = @(
   '# Genus BS1 Incremental Patch',
   '',
@@ -154,7 +207,15 @@ $readme = @(
   '',
   '- `run_genus.sh`',
   '- `SYN/run_fa_accel_sky130_sram.tcl`',
+  '- `workspace/constraints/timing_300m.sdc`',
+  '- `workspace/filelists/rtl.f`',
+  '- `workspace/RTL/fa_pkg.sv`',
+  '- `workspace/RTL/fa_accel_top.sv`',
   '- `workspace/RTL/fa_regfile.sv`',
+  '- `workspace/RTL/fa_q_buffer.sv`',
+  '- `workspace/RTL/fa_kv_buffer.sv`',
+  '- `workspace/RTL/fa_group_engine.sv`',
+  '- `workspace/RTL/fa_o_group_store.sv`',
   '- `workspace/RTL/fa_sram_macros.v`',
   '- `workspace/RTL/sky130_sram_macro_blackboxes.v`',
   '',
@@ -166,6 +227,15 @@ $readme = @(
   'bash run_genus.sh',
   '```',
   '',
+  'Physical-aware synthesis defaults:',
+  '',
+  '- `GENUS_PHYSICAL=1` enables physical-aware synthesis.',
+  '- `GENUS_PREDICT_FLOORPLAN=1` asks Genus to run `predict_floorplan` when `GENUS_DEF_FILE` is not set.',
+  '- `GENUS_ALLOW_PHYSICAL_FALLBACK=0` makes missing/failed floorplan setup a hard error instead of silently falling back to logical synthesis.',
+  '- `GENUS_DEF_FILE=/path/to/seed.def` can reuse a prior or Innovus-exported floorplan.',
+  '- `GENUS_CAP_TABLE=/path/to/cap.tbl` is optional but recommended for better pre-route RC accuracy.',
+  '- `GENUS_THREADS=8` is the default multi-CPU request; increase it only if the remote license/server load allows.',
+  '',
   'This patch intentionally excludes Liberty, LEF, SRAM macro payloads, and previous results.'
 )
 Write-LinesUtf8 -Path (Join-Path $patchDir "README_PATCH.md") -Lines $readme
@@ -175,13 +245,18 @@ if (Test-Path -LiteralPath $zipPath) {
   if (-not $Force) {
     throw "Patch archive already exists: $zipPath. Use -Force to replace it."
   }
-  Remove-Item -LiteralPath $zipPath -Force
+  Remove-TreeWithRetry -Path $zipPath
 }
 
 Compress-Archive -Path (Join-Path $patchDir "*") -DestinationPath $zipPath -Force
 if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
   throw "Patch archive was not created: $zipPath"
 }
-Remove-Item -LiteralPath $patchDir -Recurse -Force
+try {
+  Remove-TreeWithRetry -Path $patchDir
+} catch {
+  Write-Warning "Patch archive was created, but temporary directory cleanup failed: $_"
+  Write-Warning "Temporary directory may be removed manually: $patchDir"
+}
 
 Write-Host "Patch archive: $(Convert-ToUnixPath $zipPath)"

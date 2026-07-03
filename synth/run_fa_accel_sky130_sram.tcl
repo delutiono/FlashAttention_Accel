@@ -53,6 +53,130 @@ proc write_text_report {path lines} {
   close $fd
 }
 
+proc env_flag {name default_value} {
+  if {[info exists ::env($name)] && $::env($name) ne ""} {
+    return [expr {$::env($name) ne "0"}]
+  }
+  return $default_value
+}
+
+proc env_value {name default_value} {
+  if {[info exists ::env($name)] && $::env($name) ne ""} {
+    return $::env($name)
+  }
+  return $default_value
+}
+
+proc optional_env_file {name label} {
+  if {![info exists ::env($name)] || $::env($name) eq ""} {
+    return ""
+  }
+  return [require_file $::env($name) $label]
+}
+
+proc run_physical_command {cmd fallback_cmd label allow_fallback} {
+  if {[catch {uplevel 1 $cmd} err]} {
+    if {$allow_fallback && $fallback_cmd ne ""} {
+      puts "WARNING: $label failed; retrying $fallback_cmd because GENUS_ALLOW_PHYSICAL_FALLBACK=1: $err"
+      uplevel 1 $fallback_cmd
+      return 0
+    }
+    error "$label failed: $err"
+  }
+  return 1
+}
+
+proc try_write_def {path label} {
+  if {[catch {write_def $path} err]} {
+    puts "WARNING: $label DEF export failed: $err"
+    return 0
+  }
+  puts "INFO: $label DEF written to $path"
+  return 1
+}
+
+proc configure_multicpu {} {
+  set threads [env_value GENUS_THREADS 8]
+  if {![string is integer -strict $threads] || $threads < 1} {
+    puts "WARNING: GENUS_THREADS=$threads is invalid; using 8."
+    set threads 8
+  }
+  puts "INFO: GENUS_THREADS=$threads"
+
+  if {$threads <= 1} {
+    puts "INFO: Multi-CPU setup disabled because GENUS_THREADS <= 1."
+    return
+  }
+
+  set commands [list \
+    [list set_db max_cpus_per_server $threads] \
+    [list set_db auto_super_thread true] \
+    [list set_db super_thread_servers [list localhost $threads]] \
+    [list set_multi_cpu_usage -local_cpu $threads]]
+  foreach cmd $commands {
+    if {[catch {eval $cmd} err]} {
+      puts "WARNING: Multi-CPU command '$cmd' was not accepted in this Genus setup: $err"
+    } else {
+      puts "INFO: Applied multi-CPU command: $cmd"
+    }
+  }
+}
+
+proc configure_physical_context {output_dir top} {
+  set process_node [env_value GENUS_PROCESS_NODE 130]
+  if {[catch {set_db design_process_node $process_node} err]} {
+    puts "WARNING: design_process_node=$process_node was not accepted: $err"
+  } else {
+    puts "INFO: design_process_node=$process_node"
+  }
+
+  set cap_table [optional_env_file GENUS_CAP_TABLE "cap table"]
+  if {$cap_table ne ""} {
+    puts "INFO: GENUS_CAP_TABLE=$cap_table"
+    if {[catch {create_rc_corner -name sky130_pre_route_rc -cap_table $cap_table} err]} {
+      puts "WARNING: create_rc_corner -cap_table failed; continuing without explicit cap table: $err"
+    }
+  } else {
+    puts "INFO: GENUS_CAP_TABLE is unset; pre-route parasitic accuracy may remain limited."
+  }
+
+  set seed_def [optional_env_file GENUS_DEF_FILE "seed DEF floorplan"]
+  if {$seed_def ne ""} {
+    puts "INFO: Reading seed DEF floorplan: $seed_def"
+    read_def $seed_def
+    try_write_def [file join $output_dir ${top}_seed_floorplan_readback.def] "Seed floorplan readback"
+    return 1
+  }
+
+  if {![env_flag GENUS_PREDICT_FLOORPLAN 1]} {
+    puts "INFO: GENUS_PREDICT_FLOORPLAN=0 and GENUS_DEF_FILE is unset; no physical floorplan will be prepared."
+    return 0
+  }
+
+  set fp_util [env_value GENUS_FP_UTIL 0.55]
+  set fp_aspect [env_value GENUS_FP_ASPECT_RATIO 1.0]
+  set fp_margin [env_value GENUS_FP_CORE_MARGIN 20.0]
+  puts "INFO: Trying predict_floorplan before syn_generic -physical."
+  puts "INFO: GENUS_FP_UTIL=$fp_util GENUS_FP_ASPECT_RATIO=$fp_aspect GENUS_FP_CORE_MARGIN=$fp_margin"
+
+  set attempts [list \
+    [list predict_floorplan -utilization $fp_util -aspect_ratio $fp_aspect -core_margin $fp_margin] \
+    [list predict_floorplan -utilization $fp_util -aspect_ratio $fp_aspect] \
+    [list predict_floorplan]]
+  foreach attempt $attempts {
+    puts "INFO: Attempting: $attempt"
+    if {[catch {eval $attempt} err]} {
+      puts "WARNING: predict_floorplan attempt failed: $err"
+      continue
+    }
+    try_write_def [file join $output_dir ${top}_predict_floorplan.def] "Predicted floorplan"
+    return 1
+  }
+
+  puts "WARNING: All predict_floorplan attempts failed."
+  return 0
+}
+
 set script_dir [file dirname [info script]]
 set bundle_root [env_or_default GENUS_PROJECT_ROOT [file join $script_dir ..]]
 set workspace_dir [env_or_default GENUS_WORKSPACE_DIR [file join $bundle_root workspace]]
@@ -71,6 +195,8 @@ set physical_mode 1
 if {[info exists ::env(GENUS_PHYSICAL)] && $::env(GENUS_PHYSICAL) eq "0"} {
   set physical_mode 0
 }
+
+set allow_physical_fallback [env_flag GENUS_ALLOW_PHYSICAL_FALLBACK 0]
 
 set read_sram_behav_rtl 0
 if {[info exists ::env(READ_SRAM_BEHAV_RTL)] && $::env(READ_SRAM_BEHAV_RTL) ne "0"} {
@@ -96,7 +222,10 @@ puts "INFO: PROJECT_ROOT=$bundle_root"
 puts "INFO: WORKSPACE_DIR=$workspace_dir"
 puts "INFO: RESULTS_DIR=$results_root"
 puts "INFO: PHYSICAL_MODE=$physical_mode"
+puts "INFO: GENUS_ALLOW_PHYSICAL_FALLBACK=$allow_physical_fallback"
 puts "INFO: READ_SRAM_BEHAV_RTL=$read_sram_behav_rtl"
+
+configure_multicpu
 
 set lib_files [read_path_list $lib_filelist "Liberty filelist"]
 foreach lib_file $lib_files {
@@ -174,21 +303,17 @@ if {[catch {redirect [file join $report_dir unmapped_pre.rpt] {report unmapped}}
 }
 
 if {$physical_mode} {
-  puts "INFO: Running physical-aware synthesis stages when supported."
-  if {[catch {syn_generic -physical} err]} {
-    puts "WARNING: syn_generic -physical failed; retrying syn_generic: $err"
-    syn_generic
+  puts "INFO: Preparing floorplan before physical-aware synthesis."
+  set physical_floorplan_ready [configure_physical_context $output_dir $top]
+  if {!$physical_floorplan_ready && !$allow_physical_fallback} {
+    error "GENUS_PHYSICAL=1 requires GENUS_DEF_FILE or a successful predict_floorplan result. Set GENUS_ALLOW_PHYSICAL_FALLBACK=1 only for debug logical fallback runs."
   }
+  puts "INFO: Running physical-aware synthesis stages."
+  run_physical_command {syn_generic -physical} {syn_generic} "syn_generic -physical" $allow_physical_fallback
   redirect [file join $report_dir qor_generic.rpt] {report qor}
-  if {[catch {syn_map -physical} err]} {
-    puts "WARNING: syn_map -physical failed; retrying syn_map: $err"
-    syn_map
-  }
+  run_physical_command {syn_map -physical} {syn_map} "syn_map -physical" $allow_physical_fallback
   redirect [file join $report_dir qor_mapped.rpt] {report qor}
-  if {[catch {syn_opt -physical} err]} {
-    puts "WARNING: syn_opt -physical failed; retrying syn_opt: $err"
-    syn_opt
-  }
+  run_physical_command {syn_opt -physical} {syn_opt} "syn_opt -physical" $allow_physical_fallback
 } else {
   puts "INFO: Running logical synthesis stages."
   syn_generic

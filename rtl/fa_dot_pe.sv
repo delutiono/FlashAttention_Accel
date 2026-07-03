@@ -3,25 +3,31 @@
 module fa_dot_pe #(
   parameter int unsigned D = 64,
   parameter int unsigned ELEM_W = 16,
-  parameter int unsigned ACC_W = 48
+  parameter int unsigned ACC_W = 48,
+  parameter int unsigned DOT_LANES = 16
 ) (
   input  logic                         clk,
   input  logic                         rst_n,
   input  logic                         valid_i,
-  input  var logic signed [ELEM_W-1:0] q_i [D],
-  input  var logic signed [ELEM_W-1:0] k_i [D],
+  input  logic signed [ELEM_W-1:0]     q_i [D],
+  input  logic signed [ELEM_W-1:0]     k_i [D],
+  output logic                         ready_o,
   output logic                         valid_o,
   output logic signed [ACC_W-1:0]      dot_o
 );
   localparam int unsigned PROD_W = ELEM_W * 2;
-  localparam int unsigned DOT_LATENCY_CYCLES = 2;
-  localparam int unsigned SUM_GROUP_SIZE = 4;
-  localparam int unsigned SUM_GROUPS = (D + SUM_GROUP_SIZE - 1) / SUM_GROUP_SIZE;
+  localparam int unsigned DOT_LATENCY_CYCLES = (D + DOT_LANES - 1) / DOT_LANES;
+  localparam int unsigned CHUNK_IDX_W = (DOT_LATENCY_CYCLES <= 1) ? 1 : $clog2(DOT_LATENCY_CYCLES);
 
-  logic signed [ACC_W-1:0] prod_s1_q [D];
-  logic signed [ACC_W-1:0] sum_s2_q [SUM_GROUPS];
-  logic valid_s1_q;
-  logic valid_s2_q;
+  logic signed [ELEM_W-1:0] q_hold_q [D];
+  logic signed [ELEM_W-1:0] k_hold_q [D];
+  logic signed [ACC_W-1:0] prod_s1_q [DOT_LANES];
+  logic signed [ACC_W-1:0] chunk_sum_w;
+  logic signed [ACC_W-1:0] dot_acc_q;
+  logic [CHUNK_IDX_W-1:0] chunk_idx_q;
+  logic busy_q;
+  logic accept_w;
+  logic last_chunk_w;
 
   function automatic logic signed [ACC_W-1:0] product_ext(
       input logic signed [ELEM_W-1:0] q,
@@ -34,60 +40,58 @@ module fa_dot_pe #(
     end
   endfunction
 
-  function automatic logic signed [ACC_W-1:0] sum_product_group(
-      input int unsigned group_idx
-  );
-    logic signed [ACC_W-1:0] acc;
-    int unsigned idx;
-    begin
-      acc = '0;
-      for (int lane = 0; lane < SUM_GROUP_SIZE; lane++) begin
-        idx = group_idx * SUM_GROUP_SIZE + lane;
-        if (idx < D) begin
-          acc += prod_s1_q[idx];
-        end
-      end
-      return acc;
-    end
-  endfunction
+  assign ready_o = rst_n && !busy_q;
+  assign accept_w = valid_i && ready_o;
+  assign last_chunk_w = (chunk_idx_q == CHUNK_IDX_W'(DOT_LATENCY_CYCLES - 1));
 
-  function automatic logic signed [ACC_W-1:0] final_sum;
-    logic signed [ACC_W-1:0] acc;
-    begin
-      acc = '0;
-      for (int group = 0; group < SUM_GROUPS; group++) begin
-        acc += sum_s2_q[group];
+  always_comb begin
+    chunk_sum_w = '0;
+    for (int lane = 0; lane < DOT_LANES; lane++) begin
+      int unsigned idx;
+      idx = (int'(chunk_idx_q) * DOT_LANES) + lane;
+      if (idx < D) begin
+        prod_s1_q[lane] = product_ext(q_hold_q[idx], k_hold_q[idx]);
+      end else begin
+        prod_s1_q[lane] = '0;
       end
-      return acc;
+      chunk_sum_w += prod_s1_q[lane];
     end
-  endfunction
+  end
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      valid_s1_q <= 1'b0;
-      valid_s2_q <= 1'b0;
-      valid_o    <= 1'b0;
-      dot_o      <= '0;
+      busy_q <= 1'b0;
+      chunk_idx_q <= '0;
+      dot_acc_q <= '0;
+      valid_o <= 1'b0;
+      dot_o <= '0;
       for (int lane = 0; lane < D; lane++) begin
-        prod_s1_q[lane] <= '0;
-      end
-      for (int group = 0; group < SUM_GROUPS; group++) begin
-        sum_s2_q[group] <= '0;
+        q_hold_q[lane] <= '0;
+        k_hold_q[lane] <= '0;
       end
     end else begin
-      valid_s1_q <= valid_i;
-      valid_s2_q <= valid_s1_q;
-      valid_o    <= valid_s2_q;
+      valid_o <= 1'b0;
 
-      for (int lane = 0; lane < D; lane++) begin
-        prod_s1_q[lane] <= valid_i ? product_ext(q_i[lane], k_i[lane]) : '0;
+      if (accept_w) begin
+        busy_q <= 1'b1;
+        chunk_idx_q <= '0;
+        dot_acc_q <= '0;
+        for (int lane = 0; lane < D; lane++) begin
+          q_hold_q[lane] <= q_i[lane];
+          k_hold_q[lane] <= k_i[lane];
+        end
+      end else if (busy_q) begin
+        if (last_chunk_w) begin
+          dot_o <= dot_acc_q + chunk_sum_w;
+          valid_o <= 1'b1;
+          busy_q <= 1'b0;
+          chunk_idx_q <= '0;
+          dot_acc_q <= '0;
+        end else begin
+          dot_acc_q <= dot_acc_q + chunk_sum_w;
+          chunk_idx_q <= chunk_idx_q + 1'b1;
+        end
       end
-
-      for (int group = 0; group < SUM_GROUPS; group++) begin
-        sum_s2_q[group] <= valid_s1_q ? sum_product_group(group) : '0;
-      end
-
-      dot_o <= valid_s2_q ? final_sum() : '0;
     end
   end
 endmodule

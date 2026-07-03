@@ -13,7 +13,7 @@ module fa_softmax_online_vec #(
   input  logic                         row_start_i,
   input  logic                         score_valid_i,
   input  logic signed [SCORE_W-1:0]    score_i,
-  input  var logic signed [15:0]       v_i [D],
+  input  logic signed [15:0]           v_i [D],
   output logic                         ready_o,
   output logic                         valid_o,
   output logic signed [SCORE_W-1:0]    m_o,

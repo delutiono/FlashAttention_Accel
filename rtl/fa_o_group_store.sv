@@ -11,7 +11,7 @@ module fa_o_group_store #(
   input  logic                         clear_i,
   input  logic                         final_valid_i,
   input  logic [2:0]                   final_context_i,
-  input  var logic signed [ELEM_W-1:0] final_i [D],
+  input  logic signed [ELEM_W-1:0]     final_i [D],
   input  logic [GROUP_ROWS-1:0]        active_rows_i,
   output logic                         group_ready_o,
   input  logic                         start_i,

@@ -9,7 +9,8 @@ module fa_group_engine #(
   parameter int unsigned EXP_W = 24,
   parameter int unsigned L_W = 32,
   parameter int unsigned ACC_W = 48,
-  parameter int unsigned OUT_W = ELEM_W
+  parameter int unsigned OUT_W = ELEM_W,
+  parameter int unsigned DOT_LANES = fa_pkg::FA_DOT_LANES
 ) (
   input  logic                         clk,
   input  logic                         rst_n,
@@ -22,9 +23,9 @@ module fa_group_engine #(
   input  logic [7:0]                   q_index_i,
   input  logic [7:0]                   k_index_i,
   input  logic                         score_last_i,
-  input  var logic signed [ELEM_W-1:0] q_i [D],
-  input  var logic signed [ELEM_W-1:0] k_i [D],
-  input  var logic signed [ELEM_W-1:0] v_i [D],
+  input  logic signed [ELEM_W-1:0]     q_i [D],
+  input  logic signed [ELEM_W-1:0]     k_i [D],
+  input  logic signed [ELEM_W-1:0]     v_i [D],
   output logic                         context_done_valid_o,
   output logic [2:0]                   context_done_o,
   output logic                         final_valid_o,
@@ -37,7 +38,7 @@ module fa_group_engine #(
   localparam logic [L_W-1:0] L_ONE =
       ({{(L_W-1){1'b0}}, 1'b1} << EXP_FRAC_W);
   localparam int unsigned FINAL_CONTEXT_LATENCY = 6;
-  localparam int unsigned SCORE_PIPE_LATENCY = 2;
+  localparam int unsigned SCORE_PIPE_LATENCY = (D + DOT_LANES - 1) / DOT_LANES;
 
   typedef enum logic [1:0] {
     OP_FIRST,
@@ -53,6 +54,7 @@ module fa_group_engine #(
   logic signed [ACC_W-1:0] acc_q [GROUP_ROWS][D];
 
   logic score_accept;
+  logic score_pipe_ready;
   logic score_pipe_valid;
   logic signed [SCORE_PIPE_W-1:0] score_pipe_score;
   logic signed [SOFTMAX_SCORE_W-1:0] score_pipe_score_narrow;
@@ -93,14 +95,15 @@ module fa_group_engine #(
   assign init_ready_o = rst_n && !pending_q[init_context_i];
 
   // 同一个 context 的 m/l/acc 是读改写状态，必须等上一个 update 提交后再发下一个 score。
-  assign score_ready_o = rst_n && !pending_q[score_context_i];
+  assign score_ready_o = rst_n && !pending_q[score_context_i] && score_pipe_ready;
   assign score_accept = score_valid_i && score_ready_o;
   assign score_pipe_score_narrow = score_pipe_score[SOFTMAX_SCORE_W-1:0];
 
   fa_score_pipe #(
     .D(D),
     .ELEM_W(ELEM_W),
-    .SCORE_W(SCORE_PIPE_W)
+    .SCORE_W(SCORE_PIPE_W),
+    .DOT_LANES(DOT_LANES)
   ) u_score_pipe (
     .clk,
     .rst_n,
@@ -109,6 +112,7 @@ module fa_group_engine #(
     .k_index_i,
     .q_i,
     .k_i,
+    .ready_o(score_pipe_ready),
     .valid_o(score_pipe_valid),
     .q_index_o(),
     .k_index_o(),
