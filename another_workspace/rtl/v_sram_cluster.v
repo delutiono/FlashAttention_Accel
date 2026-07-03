@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// 256x64 logical memory built from four 64x64 macros.
+// 256x64 logical memory built from eight 32x64 macros (two pages x four banks).
 module v_sram_cluster (
     input  wire         clk,
     input  wire         rst_n,
@@ -58,34 +58,34 @@ generate
         assign bank_wdata = PAIR_HALF ? rw_wdata[127:64] : rw_wdata[63:0];
         assign bank_wmask = PAIR_HALF ? rw_wmask[15:8] : rw_wmask[7:0];
 
-        sky130_sram_0kbytes_1rw1r_64x64_8_wrapper u_bank_p0 (
+        sky130_sram_0kbytes_1rw1r_64x32_8_wrapper u_bank_p0 (
             .clk(clk),
             .rst_n(rst_n),
             .rw_en((wide_rd_en && !wide_rd_addr[5]) || bank_selected_p0),
             .rw_write((wide_rd_en && !wide_rd_addr[5]) ? 1'b0 : rw_write),
             .rw_wmask(bank_wmask),
-            .rw_addr((wide_rd_en && !wide_rd_addr[5]) ? ({1'b0, wide_rd_addr[4:0]} + 6'd1) : {1'b0, rw_addr[4:0]}),
+            .rw_addr((wide_rd_en && !wide_rd_addr[5]) ? (wide_rd_addr[4:0] + 5'd1) : rw_addr[4:0]),
             .rw_wdata(bank_wdata),
             .rw_rvalid(bank_rw_rvalid_p0[bank_idx]),
             .rw_rdata(bank_rw_rdata_p0[bank_idx]),
             .rd_en(wide_rd_en && !wide_rd_addr[5]),
-            .rd_addr({1'b0, wide_rd_addr[4:0]}),
+            .rd_addr(wide_rd_addr[4:0]),
             .rd_valid(bank_rd_valid_p0[bank_idx]),
             .rd_data(bank_rd_data_p0[bank_idx])
         );
 
-        sky130_sram_0kbytes_1rw1r_64x64_8_wrapper u_bank_p1 (
+        sky130_sram_0kbytes_1rw1r_64x32_8_wrapper u_bank_p1 (
             .clk(clk),
             .rst_n(rst_n),
             .rw_en((wide_rd_en && wide_rd_addr[5]) || bank_selected_p1),
             .rw_write((wide_rd_en && wide_rd_addr[5]) ? 1'b0 : rw_write),
             .rw_wmask(bank_wmask),
-            .rw_addr((wide_rd_en && wide_rd_addr[5]) ? ({1'b0, wide_rd_addr[4:0]} + 6'd1) : {1'b0, rw_addr[4:0]}),
+            .rw_addr((wide_rd_en && wide_rd_addr[5]) ? (wide_rd_addr[4:0] + 5'd1) : rw_addr[4:0]),
             .rw_wdata(bank_wdata),
             .rw_rvalid(bank_rw_rvalid_p1[bank_idx]),
             .rw_rdata(bank_rw_rdata_p1[bank_idx]),
             .rd_en(wide_rd_en && wide_rd_addr[5]),
-            .rd_addr({1'b0, wide_rd_addr[4:0]}),
+            .rd_addr(wide_rd_addr[4:0]),
             .rd_valid(bank_rd_valid_p1[bank_idx]),
             .rd_data(bank_rd_data_p1[bank_idx])
         );

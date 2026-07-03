@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// 1536x16 ACC half store built from twelve 128x16 macros.
+// 16x128x12 ACC half store built from twelve 128x16 PDK-compatible wrappers.
 // Address encoding is {context[2:0], half}; one access covers 32 signed lanes.
 module acc_sram_cluster (
     input  wire         clk,

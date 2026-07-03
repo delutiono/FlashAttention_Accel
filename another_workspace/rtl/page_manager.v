@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// Page manager with configurable sequence length (num_groups = S/8).
+// Page manager with configurable sequence length (num_groups = S/8) and multi-head support.
 module page_manager (
     input  wire        clk,
     input  wire        rst_n,
@@ -46,7 +46,10 @@ module page_manager (
 
     input  wire        task_chain_enable,
     input  wire        task_queue_not_empty,
-    output reg         task_dequeue
+    output reg         task_dequeue,
+
+    input  wire [2:0]  num_heads,
+    input  wire [31:0] head_stride
 );
 
 localparam [3:0] ST_IDLE   = 4'd0;
@@ -79,6 +82,8 @@ reg [5:0] prefetch_tile_reg;
 reg       prefetch_page_reg;
 reg [7:0] prefetch_expect_tag_reg;
 reg       next_tile_pending_reg;
+reg [2:0] head_idx_reg;
+reg [63:0] head_offset_reg;
 
 assign busy = (state_reg != ST_IDLE);
 assign q_group_ready = q_ready_reg;
@@ -121,6 +126,8 @@ always @(posedge clk) begin
         prefetch_page_reg <= 1'b0;
         prefetch_expect_tag_reg <= 8'd0;
         next_tile_pending_reg <= 1'b0;
+        head_idx_reg <= 3'd0;
+        head_offset_reg <= 64'd0;
         task_dequeue <= 1'b0;
     end else begin
         done <= 1'b0;
@@ -152,6 +159,8 @@ always @(posedge clk) begin
                     prefetch_tile_reg <= 6'd0;
                     prefetch_page_reg <= 1'b0;
                     prefetch_expect_tag_reg <= 8'd0;
+                    head_idx_reg <= 3'd0;
+                    head_offset_reg <= 64'd0;
                     error <= 1'b0;
                     state_reg <= ST_Q_CMD;
                 end
@@ -161,7 +170,7 @@ always @(posedge clk) begin
                     cmd_valid <= 1'b1;
                     cmd_kind <= 2'd0;
                     cmd_page <= active_q_page;
-                    cmd_base_addr <= add_group_offset(q_base_addr, active_q_group);
+                    cmd_base_addr <= add_group_offset(q_base_addr, active_q_group) + head_offset_reg;
                     cmd_bytes <= 16'd1024;
                     cmd_tag <= {2'd0, active_q_group};
                     expect_tag_reg <= {2'd0, active_q_group};
@@ -180,7 +189,7 @@ always @(posedge clk) begin
                     cmd_valid <= 1'b1;
                     cmd_kind <= 2'd1;
                     cmd_page <= active_k_page;
-                    cmd_base_addr <= add_group_offset(k_base_addr, active_kv_tile);
+                    cmd_base_addr <= add_group_offset(k_base_addr, active_kv_tile) + head_offset_reg;
                     cmd_bytes <= 16'd1024;
                     cmd_tag <= 8'h40 | {2'd0, active_kv_tile};
                     expect_tag_reg <= 8'h40 | {2'd0, active_kv_tile};
@@ -197,7 +206,7 @@ always @(posedge clk) begin
                     cmd_valid <= 1'b1;
                     cmd_kind <= 2'd2;
                     cmd_page <= active_v_page;
-                    cmd_base_addr <= add_group_offset(v_base_addr, active_kv_tile);
+                    cmd_base_addr <= add_group_offset(v_base_addr, active_kv_tile) + head_offset_reg;
                     cmd_bytes <= 16'd1024;
                     cmd_tag <= 8'h80 | {2'd0, active_kv_tile};
                     expect_tag_reg <= 8'h80 | {2'd0, active_kv_tile};
@@ -219,7 +228,7 @@ always @(posedge clk) begin
                         cmd_valid <= 1'b1;
                         cmd_kind <= 2'd1;
                         cmd_page <= ~active_k_page;
-                        cmd_base_addr <= add_group_offset(k_base_addr, active_kv_tile + 6'd1);
+                        cmd_base_addr <= add_group_offset(k_base_addr, active_kv_tile + 6'd1) + head_offset_reg;
                         cmd_bytes <= 16'd1024;
                         cmd_tag <= 8'h40 | {2'd0, active_kv_tile + 6'd1};
                         prefetch_expect_tag_reg <= 8'h40 | {2'd0, active_kv_tile + 6'd1};
@@ -234,7 +243,7 @@ always @(posedge clk) begin
                         cmd_valid <= 1'b1;
                         cmd_kind <= 2'd2;
                         cmd_page <= prefetch_page_reg;
-                        cmd_base_addr <= add_group_offset(v_base_addr, prefetch_tile_reg);
+                        cmd_base_addr <= add_group_offset(v_base_addr, prefetch_tile_reg) + head_offset_reg;
                         cmd_bytes <= 16'd1024;
                         cmd_tag <= 8'h80 | {2'd0, prefetch_tile_reg};
                         prefetch_expect_tag_reg <= 8'h80 | {2'd0, prefetch_tile_reg};
@@ -278,7 +287,7 @@ always @(posedge clk) begin
                     cmd_valid <= 1'b1;
                     cmd_kind <= 2'd2;
                     cmd_page <= prefetch_page_reg;
-                    cmd_base_addr <= add_group_offset(v_base_addr, prefetch_tile_reg);
+                    cmd_base_addr <= add_group_offset(v_base_addr, prefetch_tile_reg) + head_offset_reg;
                     cmd_bytes <= 16'd1024;
                     cmd_tag <= 8'h80 | {2'd0, prefetch_tile_reg};
                     expect_tag_reg <= 8'h80 | {2'd0, prefetch_tile_reg};
@@ -302,7 +311,7 @@ always @(posedge clk) begin
                     cmd_valid <= 1'b1;
                     cmd_kind <= 2'd3;
                     cmd_page <= active_q_page;
-                    cmd_base_addr <= add_group_offset(o_base_addr, active_q_group);
+                    cmd_base_addr <= add_group_offset(o_base_addr, active_q_group) + head_offset_reg;
                     cmd_bytes <= 16'd1024;
                     cmd_tag <= 8'hc0 | {2'd0, active_q_group};
                     expect_tag_reg <= 8'hc0 | {2'd0, active_q_group};
@@ -313,7 +322,22 @@ always @(posedge clk) begin
             ST_O_WAIT: begin
                 if (dma_done_valid && (dma_done_tag == expect_tag_reg)) begin
                     if (active_q_group == num_groups - 6'd1) begin
-                        state_reg <= ST_DONE;
+                        if (head_idx_reg < (num_heads - 3'd1)) begin
+                            head_idx_reg <= head_idx_reg + 3'd1;
+                            head_offset_reg <= head_offset_reg + {32'd0, head_stride};
+                            active_q_group <= 6'd0;
+                            active_kv_tile <= 6'd0;
+                            active_q_page <= ~active_q_page;
+                            active_k_page <= 1'b0;
+                            active_v_page <= 1'b0;
+                            q_ready_reg <= 1'b0;
+                            kv_ready_reg <= 1'b0;
+                            prefetch_state_reg <= PF_IDLE;
+                            next_tile_pending_reg <= 1'b0;
+                            state_reg <= ST_Q_CMD;
+                        end else begin
+                            state_reg <= ST_DONE;
+                        end
                     end else begin
                         active_q_group <= active_q_group + 6'd1;
                         active_kv_tile <= 6'd0;
@@ -340,6 +364,8 @@ always @(posedge clk) begin
                     kv_ready_reg <= 1'b0;
                     prefetch_state_reg <= PF_IDLE;
                     next_tile_pending_reg <= 1'b0;
+                    head_idx_reg <= 3'd0;
+                    head_offset_reg <= 64'd0;
                     error <= 1'b0;
                     state_reg <= ST_Q_CMD;
                 end else begin

@@ -46,6 +46,9 @@ module packed_compute_core (
     input  wire [9:0]          score_user_token,
     input  wire [2:0]          score_context,
     input  wire                score_last,
+    input  wire                score_dropout_en,
+    input  wire [31:0]         score_dropout_seed,
+    input  wire [15:0]         score_dropout_prob,
     output wire                complete_valid,
     output wire [2:0]          complete_context,
     output wire [9:0]          complete_user_token,
@@ -186,6 +189,9 @@ score_exp_pipe #(.TOKEN_WIDTH(18)) u_score_exp (
     .in_m_old(issue_m_mem[issue_meta_rd_ptr_reg]),
     .in_token(dot_token), .out_valid(exp_valid), .out_score(exp_score),
 	    .in_mask_valid(pad_mask_mem[issue_meta_rd_ptr_reg]),
+	    .in_dropout_en(score_dropout_en),
+	    .in_dropout_seed(score_dropout_seed),
+	    .in_dropout_prob(score_dropout_prob),
     .out_m_new(exp_m_new), .out_alpha(exp_alpha), .out_beta(exp_beta),
     .out_token(exp_token)
 );

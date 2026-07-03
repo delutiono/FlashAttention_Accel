@@ -80,7 +80,19 @@ module tb_fa_top;
     .m_axi_awvalid, .m_axi_awready, .m_axi_wdata,   .m_axi_wstrb,
     .m_axi_wlast,   .m_axi_wvalid, .m_axi_wready,
     .m_axi_bresp,   .m_axi_bvalid, .m_axi_bready,
-    .irq(irq)
+    .irq(irq),
+    // AXI4-Stream ports (unused in DMA mode)
+    .s_axis_tvalid(1'b0),
+    .s_axis_tready(),
+    .s_axis_tdata(128'd0),
+    .s_axis_tkeep(16'd0),
+    .s_axis_tuser(2'd0),
+    .s_axis_tlast(1'b0),
+    .m_axis_tvalid(),
+    .m_axis_tready(1'b0),
+    .m_axis_tdata(),
+    .m_axis_tkeep(),
+    .m_axis_tlast()
   );
 
   // =============================================================
@@ -123,60 +135,6 @@ module tb_fa_top;
     end
   end
 
-  // =============================================================
-  //  Deep debug: monitor o_store_adapter & dma_write_master
-  //  internal state on every write beat
-  // =============================================================
-  // Hierarchical probes (iverilog -g2012 supports dotted names)
-  wire [6:0] ostore_rsp_cnt  = u_dut.u_q_adapter.u_store.rsp_count_reg;
-  wire [6:0] ostore_req_cnt  = u_dut.u_q_adapter.u_store.req_count_reg;
-  wire       ostore_wr_valid = u_dut.u_q_adapter.u_store.wr_valid;
-  wire       ostore_wr_last  = u_dut.u_q_adapter.u_store.wr_last;
-  wire       ostore_busy     = u_dut.u_q_adapter.u_store.busy;
-  wire       ostore_done     = u_dut.u_q_adapter.u_store.done;
-  // Mux drop detection: o_store q_rw_valid vs adapter output
-  wire       ostore_store_q_req = u_dut.u_q_adapter.u_store.q_rw_valid;
-  wire       adapter_q_rw_out   = u_dut.u_q_adapter.q_rw_valid;
-  wire       adapter_fin_fire   = u_dut.u_q_adapter.fin_valid && u_dut.u_q_adapter.fin_ready;
-  wire       ostore_out_fire = u_dut.u_q_adapter.u_store.out_fire;
-  wire [1:0] ostore_outstand = u_dut.u_q_adapter.u_store.outstanding_reg;
-  wire [6:0] ostore_req_cnt_reg = u_dut.u_q_adapter.u_store.req_count_reg;
-  wire [6:0] ostore_rsp_cnt_reg = u_dut.u_q_adapter.u_store.rsp_count_reg;
-  wire [1:0] wrm_state       = u_dut.u_dma.u_write.state_reg;
-  wire [3:0] wrm_beat_in     = u_dut.u_dma.u_write.beat_in_burst_reg;
-  wire [4:0] wrm_burst_beats = u_dut.u_dma.u_write.burst_beats_reg;
-  wire [15:0] wrm_beats_left = u_dut.u_dma.u_write.beats_left_reg;
-  wire       wrm_wr_ready    = u_dut.u_dma.u_write.wr_ready;
-  wire       wrm_cmd_ready   = u_dut.u_dma.u_write.cmd_ready;
-
-  // Count beats at the o_store -> write_master interface
-  integer ostore_beat_cnt;
-  initial ostore_beat_cnt = 0;
-
-  // Print every write beat with full internal state
-  always @(posedge clk) begin
-    if (m_axi_wvalid && m_axi_wready) begin
-      $display("[%0t] WBEAT: total=%0d m_wlast=%0d | WRM: state=%0d b_in=%0d b_beats=%0d left=%0d rdy=%0d | OST: rsp=%0d req=%0d wv=%0d wl=%0d busy=%0d done=%0d ostbeat=%0d out=%0d",
-               $time, wbeat_cnt, m_axi_wlast,
-               wrm_state, wrm_beat_in, wrm_burst_beats, wrm_beats_left, wrm_wr_ready,
-               ostore_rsp_cnt, ostore_req_cnt, ostore_wr_valid, ostore_wr_last, ostore_busy, ostore_done,
-               ostore_beat_cnt, ostore_outstand, ostore_store_q_req, adapter_q_rw_out, adapter_fin_fire);
-    end
-    // Track o_store -> write_master handshakes
-    if (ostore_wr_valid && wrm_wr_ready && wrm_state == 2'd2) begin
-      ostore_beat_cnt = ostore_beat_cnt + 1;
-      $display("[%0t] OST_BEAT: cnt=%0d wl=%0d rsp=%0d req=%0d",
-               $time, ostore_beat_cnt, ostore_wr_last, ostore_rsp_cnt, ostore_req_cnt);
-    end
-    // Detect mux drops: o_store requested but adapter did not forward
-    if (ostore_store_q_req && !adapter_q_rw_out)
-      $display("[%0t] *** MUX_DROP: ostore q_rw_valid=1 but adapter q_rw_valid=0! fin_fire=%0d rsp=%0d req=%0d", $time, adapter_fin_fire, ostore_rsp_cnt, ostore_req_cnt);
-    if (ostore_out_fire)
-      $display("[%0t] OST_OUT_FIRE: rsp=%0d req=%0d wv=%0d wl=%0d",
-               $time, ostore_rsp_cnt, ostore_req_cnt, ostore_wr_valid, ostore_wr_last);
-  end
-
-  // Print when we seem stuck (no write beat for 5000 cycles)
   integer last_wbeat_cycle, stuck_reported;
   initial begin
     last_wbeat_cycle = 0;
@@ -186,14 +144,9 @@ module tb_fa_top;
       @(posedge clk);
       if (m_axi_wvalid && m_axi_wready)
         last_wbeat_cycle = $time;
-      // Report stall if wbeat>48 and no new beat for >50k cycles
-      if (wbeat_cnt > 48 && ($time - last_wbeat_cycle) > 500000 && !stuck_reported && ostore_busy) begin
-        $display("[%0t] *** STUCK: no W beat for %0d cycles. wbeat=%0d ostore: rsp=%0d req=%0d wv=%0d wl=%0d busy=%0d done=%0d ostbeat=%0d out=%0d store_q=%0d adap_q=%0d fin_fire=%0d",
-                 $time, $time - last_wbeat_cycle, wbeat_cnt,
-                 ostore_rsp_cnt, ostore_req_cnt, ostore_wr_valid, ostore_wr_last, ostore_busy, ostore_done,
-                 ostore_beat_cnt, ostore_outstand, ostore_store_q_req, adapter_q_rw_out, adapter_fin_fire);
-        $display("    WRM: state=%0d b_in=%0d b_beats=%0d left=%0d rdy=%0d cmd_rdy=%0d",
-                 wrm_state, wrm_beat_in, wrm_burst_beats, wrm_beats_left, wrm_wr_ready, wrm_cmd_ready);
+      if (wbeat_cnt > 48 && ($time - last_wbeat_cycle) > 500000 && !stuck_reported) begin
+        $display("[%0t] *** STUCK: no W beat for %0d cycles. wbeat=%0d",
+                 $time, $time - last_wbeat_cycle, wbeat_cnt);
         stuck_reported = 1;
       end
     end
