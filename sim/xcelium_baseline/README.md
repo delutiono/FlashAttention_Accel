@@ -18,6 +18,8 @@ It is intentionally self-contained for simulation:
 - `filelists/fa_top_gate_sdf.f`: source filelist for SDF gate simulation.
 - `tcl/run_gate_func.tcl`: final Xcelium run-control script used through
   `xrun -input`.
+- `power/`: nonzero Q/K/V S256 activity generation and Joules power-template
+  scripts.
 - `run_xcelium.sh`: user-facing wrapper for gate-level functional simulation.
 - `run_mem_model_test.sh`: user-facing wrapper for memory-model sanity tests.
 
@@ -48,6 +50,8 @@ Available gate simulation cases:
 - `zero_trace`: `zero` with text trace.
 - `zero_xtrace`: `zero` with X tracing and early stop.
 - `zero_wrtrace`: alias of the write-path X trace case.
+- `power_s256`: zero-delay S256 run with deterministic nonzero Q/K/V stimulus
+  and DUT-only VCD dump for power estimation.
 - `sdf_smoke`: AXI-Lite smoke test with `timing/fa_top_mapped.sdf` annotated.
 - `sdf_s256`: S256 zero-input run with `timing/fa_top_mapped.sdf` annotated.
 - `sdf_s256_trace`: `sdf_s256` with text trace.
@@ -66,6 +70,22 @@ The current validated baseline is:
 
 The `smoke`, `zero`, trace, and scoreboard cases use `-delay_mode zero`,
 `-notimingchecks`, and `-define FUNCTIONAL`.
+
+For power activity, run:
+
+```bash
+bash power/run_xcelium_power_activity.sh
+JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
+  bash power/run_joules_power.sh
+```
+
+The power flow intentionally hands Joules an uncompressed VCD rather than an
+Xcelium SHM database. SHM remains useful for SimVision waveform debug, while VCD
+or SAIF is the safer exchange format for vector-based power. The VCD is limited
+to the `dut` hierarchy and to the active compute window, then gzip-compressed
+for packaging; the Joules wrapper automatically expands the default `.vcd.gz`
+if the uncompressed VCD is missing. See `power/README.md` for the Joules
+environment variables and result packaging command.
 
 The `sdf_*` cases compile the SDF-capable standard-cell model, annotate
 `timing/fa_top_mapped.sdf` onto the testbench `dut` instance through

@@ -67,6 +67,14 @@ case "$CASE" in
     tb_file="tb/tb_fa_top_zero_s256.sv"
     extra_xrun_args=("${zero_delay_args[@]}" -define FA_GATE_DIAG -define FA_GATE_TRACE -define FA_GATE_XTRACE -define FA_GATE_XSTOP)
     ;;
+  power_s256)
+    tb=tb_fa_top_power_s256
+    tb_file="tb/tb_fa_top_power_s256.sv"
+    POWER_ACTIVITY_DIR=${POWER_ACTIVITY_DIR:-"$OUT_ROOT/power/out/activity"}
+    POWER_VCD=${POWER_VCD:-"$POWER_ACTIVITY_DIR/fa_top_power_s256.vcd"}
+    mkdir -p "$POWER_ACTIVITY_DIR"
+    extra_xrun_args=("${zero_delay_args[@]}" -define FA_GATE_DIAG -define FA_POWER_VCD "+POWER_VCD=$POWER_VCD")
+    ;;
   sdf_smoke)
     tb=tb_fa_top_axi_lite_smoke
     tb_file="tb/tb_fa_top_axi_lite_smoke.sv"
@@ -93,7 +101,7 @@ case "$CASE" in
     extra_xrun_args=("${zero_delay_args[@]}" -define FA_GATE_DIAG -define FA_GATE_TRACE)
     ;;
   *)
-    echo "usage: $0 [smoke|zero|zero_trace|zero_xtrace|zero_wrtrace|sdf_smoke|sdf_s256|sdf_s256_trace|scoreboard|scoreboard_trace]" >&2
+    echo "usage: $0 [smoke|zero|zero_trace|zero_xtrace|zero_wrtrace|power_s256|sdf_smoke|sdf_s256|sdf_s256_trace|scoreboard|scoreboard_trace]" >&2
     exit 2
     ;;
 esac
