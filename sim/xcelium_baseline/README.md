@@ -74,6 +74,11 @@ back-annotation and delayed gate-level functionality; it is not a timing-closure
 pass/fail signoff. Xcelium writes the SDF annotation report to
 `sdf_annotate.log` in this directory.
 
+The standard-cell `specify` timing information used for SDF simulation is based
+on the open-source SkyWater SKY130 PDK standard-cell Verilog models, including
+the `sky130_fd_sc_hs` library. See
+[google/skywater-pdk](https://github.com/google/skywater-pdk).
+
 The SDF/netlist pair came from `genus_bs_xcem/results/outputs/fa_top`. Its
 source RTL snapshot is not byte-identical to this repository's current
 `workspace/RTL` tree after normalizing line endings, so treat this directory as
