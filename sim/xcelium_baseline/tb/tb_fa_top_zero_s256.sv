@@ -144,6 +144,13 @@ module tb_fa_top_zero_s256;
     .m_axi_bready(m_axi_bready)
   );
 
+`ifdef FA_GATE_ENABLE_SDF
+  initial begin : sdf_annotation
+    $display("INFO: annotating fa_top SDF file timing/fa_top_mapped.sdf");
+    $sdf_annotate("timing/fa_top_mapped.sdf", dut, , "sdf_annotate.log", "TYPICAL");
+  end
+`endif
+
   axi_mem_model_128 #(
     .MEM_WORDS(16384)
   ) u_mem (
