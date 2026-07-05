@@ -536,7 +536,7 @@ module tb_fa_top_zero_s256;
 
       if (cycle_count > MAX_CYCLES) begin
         dump_timeout_diag();
-        fail("timeout waiting for S256 zero run to complete");
+        fail("timeout waiting for S256 zero-input run to complete");
       end
 
       if (m_axi_awvalid && m_axi_awready) begin
@@ -590,7 +590,7 @@ module tb_fa_top_zero_s256;
       repeat (25) @(posedge clk);
     end while (status[1] !== 1'b1 && status[2] !== 1'b1);
 
-    if (status[2]) fail("S256 zero run completed with STATUS.ERROR");
+    if (status[2]) fail("S256 zero-input run completed with STATUS.ERROR");
     if (!irq) fail("IRQ did not assert after DONE with IRQ_EN=1");
 
     axil_read(REG_CYCLES, cycles_reg);
@@ -600,7 +600,7 @@ module tb_fa_top_zero_s256;
       $fatal(1);
     end
 
-    $display("PASS: fa_top S256 zero run cycles=%0d o_write_beats=%0d o_write_bursts=%0d",
+    $display("PASS: fa_top S256 zero-input run cycles=%0d o_write_beats=%0d o_write_bursts=%0d",
              cycles_reg, o_write_beats, o_write_bursts);
     $finish;
   end

@@ -28,7 +28,7 @@ bash sim/xcelium_baseline/run_mem_model_test.sh
 bash sim/xcelium_baseline/run_xcelium.sh smoke
 bash sim/xcelium_baseline/run_xcelium.sh zero
 bash sim/xcelium_baseline/run_xcelium.sh sdf_smoke
-bash sim/xcelium_baseline/run_xcelium.sh sdf_zero
+bash sim/xcelium_baseline/run_xcelium.sh sdf_s256
 ```
 
 If already inside `sim/xcelium_baseline`, use:
@@ -38,7 +38,7 @@ bash run_mem_model_test.sh
 bash run_xcelium.sh smoke
 bash run_xcelium.sh zero
 bash run_xcelium.sh sdf_smoke
-bash run_xcelium.sh sdf_zero
+bash run_xcelium.sh sdf_s256
 ```
 
 Available gate simulation cases:
@@ -49,8 +49,8 @@ Available gate simulation cases:
 - `zero_xtrace`: `zero` with X tracing and early stop.
 - `zero_wrtrace`: alias of the write-path X trace case.
 - `sdf_smoke`: AXI-Lite smoke test with `timing/fa_top_mapped.sdf` annotated.
-- `sdf_zero`: S256 zero-input run with `timing/fa_top_mapped.sdf` annotated.
-- `sdf_zero_trace`: `sdf_zero` with text trace.
+- `sdf_s256`: S256 zero-input run with `timing/fa_top_mapped.sdf` annotated.
+- `sdf_s256_trace`: `sdf_s256` with text trace.
 - `scoreboard`: S256 scoreboard test.
 - `scoreboard_trace`: scoreboard test with text trace.
 
@@ -60,7 +60,7 @@ The current validated baseline is:
 - `run_xcelium.sh zero`: passed on Xcelium 24.09-s006 with
   `o_write_beats=2048` and `o_write_bursts=128`.
 - `run_xcelium.sh sdf_smoke`: passed on Xcelium 24.09-s006.
-- `run_xcelium.sh sdf_zero`: passed on Xcelium 24.09-s006 with
+- `run_xcelium.sh sdf_s256`: passed on Xcelium 24.09-s006 with
   `o_write_beats=2048`, `o_write_bursts=128`, and no `SDFNEP` annotation
   warnings in the checked SDF logs.
 
@@ -73,6 +73,10 @@ The `sdf_*` cases compile the SDF-capable standard-cell model, annotate
 back-annotation and delayed gate-level functionality; it is not a timing-closure
 pass/fail signoff. Xcelium writes the SDF annotation report to
 `sdf_annotate.log` in this directory.
+
+The SDF S256 case is named `sdf_s256` rather than `sdf_zero` to avoid confusing
+the zero-input stimulus with zero-delay simulation. The script still accepts
+`sdf_zero` and `sdf_zero_trace` as backward-compatible aliases.
 
 The standard-cell `specify` timing information used for SDF simulation is based
 on the open-source SkyWater SKY130 PDK standard-cell Verilog models, including
