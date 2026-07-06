@@ -266,8 +266,9 @@ module tb_fa_top_power_s256;
 
   task automatic start_power_dump;
     begin
+      power_dump_start_time = $time;
+      $display("POWER_WINDOW_START time=%0t", power_dump_start_time);
       if (power_dump_enabled) begin
-        power_dump_start_time = $time;
         $display("INFO: power VCD dump on at %0t", power_dump_start_time);
         $dumpon;
       end
@@ -276,8 +277,10 @@ module tb_fa_top_power_s256;
 
   task automatic stop_power_dump;
     begin
+      power_dump_stop_time = $time;
+      $display("POWER_WINDOW_END time=%0t duration=%0t",
+               power_dump_stop_time, power_dump_stop_time - power_dump_start_time);
       if (power_dump_enabled) begin
-        power_dump_stop_time = $time;
         $dumpoff;
         $display("INFO: power VCD dump off at %0t duration=%0t",
                  power_dump_stop_time, power_dump_stop_time - power_dump_start_time);

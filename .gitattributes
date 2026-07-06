@@ -1,9 +1,11 @@
 .gitattributes text eol=lf
 sim/xcelium_baseline/**/*.f text eol=lf
+sim/xcelium_baseline/**/*.md text eol=lf
 sim/xcelium_baseline/**/*.sdc text eol=lf
 sim/xcelium_baseline/**/*.sdf text eol=lf
 sim/xcelium_baseline/**/*.sh text eol=lf
 sim/xcelium_baseline/**/*.sv text eol=lf
 sim/xcelium_baseline/**/*.tcl text eol=lf
 sim/xcelium_baseline/**/*.v text eol=lf
+sim/xcelium_baseline/**/.gitignore text eol=lf
 sim/xcelium_baseline/README.md text eol=lf

@@ -18,8 +18,8 @@ It is intentionally self-contained for simulation:
 - `filelists/fa_top_gate_sdf.f`: source filelist for SDF gate simulation.
 - `tcl/run_gate_func.tcl`: final Xcelium run-control script used through
   `xrun -input`.
-- `power/`: nonzero Q/K/V S256 activity generation and Joules power-template
-  scripts.
+- `power/`: zero-delay Xreplay power work environment plus a fallback VCD-based
+  Joules flow.
 - `run_xcelium.sh`: user-facing wrapper for gate-level functional simulation.
 - `run_mem_model_test.sh`: user-facing wrapper for memory-model sanity tests.
 
@@ -71,21 +71,19 @@ The current validated baseline is:
 The `smoke`, `zero`, trace, and scoreboard cases use `-delay_mode zero`,
 `-notimingchecks`, and `-define FUNCTIONAL`.
 
-For power activity, run:
+For zero-delay Xreplay power, regenerate or copy in the same-source Genus
+mapping file at `power/mapping/fa_top_genus_mapping.rpt`, then run:
 
 ```bash
-bash power/run_xcelium_power_activity.sh
+bash power/scripts/run_rtl_power_activity.sh
 JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
-  bash power/run_joules_power.sh
+  bash power/scripts/run_joules_xreplay_zero.sh
 ```
 
-The power flow intentionally hands Joules an uncompressed VCD rather than an
-Xcelium SHM database. SHM remains useful for SimVision waveform debug, while VCD
-or SAIF is the safer exchange format for vector-based power. The VCD is limited
-to the `dut` hierarchy and to the active compute window, then gzip-compressed
-for packaging; the Joules wrapper automatically expands the default `.vcd.gz`
-if the uncompressed VCD is missing. See `power/README.md` for the Joules
-environment variables and result packaging command.
+This power path uses RTL waveform replay with `-delay_mode zero`; it does not
+use SDF. The previous gate-level VCD based power scripts remain available in
+`power/` as a fallback. See `power/README.md` for the required inputs and result
+packaging command.
 
 The `sdf_*` cases compile the SDF-capable standard-cell model, annotate
 `timing/fa_top_mapped.sdf` onto the testbench `dut` instance through

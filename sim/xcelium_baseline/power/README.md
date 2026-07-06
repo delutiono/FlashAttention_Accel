@@ -1,46 +1,89 @@
-# fa_top power activity and Joules flow
+# fa_top zero-delay Xreplay power flow
 
-This flow creates a representative zero-delay gate-level activity file for
-power estimation. The stimulus uses deterministic nonzero Q/K/V data for an
-S256 run and dumps only the `dut` hierarchy during the active compute window.
+This directory is the power calculation work environment for the
+`xcelium_baseline` branch. The primary flow is zero-delay Joules Xreplay:
 
-SHM is useful for SimVision debug, but this flow does not rely on Joules
-reading an Xcelium SHM database directly. The default handoff is VCD because it
-is portable and easy to package. The generated VCD is gzip-compressed after the
-Xcelium run; uncompress it before running Joules if your Joules version does not
-accept `.vcd.gz`.
+```text
+RTL power stimulus waveform
++ Genus RTL-to-gate mapping file
++ netlist/fa_top_mapped.v
++ constraints/fa_top_mapped.sdc
++ Liberty files
+-> Joules xreplay -delay_mode zero
+-> power reports
+```
 
-Run from `sim/xcelium_baseline`:
+This power flow does not use SDF. SDF gate simulation remains in the baseline
+directory for timing/back-annotation checks, but power uses zero-delay replay.
+
+## Required Inputs
+
+- `netlist/fa_top_mapped.v`: mapped netlist.
+- `constraints/fa_top_mapped.sdc`: clock constraints for Joules.
+- `power/mapping/fa_top_genus_mapping.rpt`: Genus RTL-to-gate mapping file from
+  the same Genus run as `fa_top_mapped.v`.
+- `power/rtl_wave/fa_top_power_s256_rtl.shm`: RTL waveform from the same RTL
+  snapshot used by Genus. Use `RTL_DIR` if the RTL is not in
+  `../../workspace/RTL`.
+- `JOULES_STD_LIB`: SKY130 hs Liberty file path.
+- `JOULES_SRAM_LIBS`: optional whitespace-separated SRAM Liberty files.
+
+## Run
+
+From `sim/xcelium_baseline`:
+
+```bash
+bash power/scripts/run_rtl_power_activity.sh
+JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
+  bash power/scripts/run_joules_xreplay_zero.sh
+tar -czf fa_top_power_s256_results.tar.gz power/out
+```
+
+The RTL run prints `POWER_WINDOW_START` and `POWER_WINDOW_END` markers in
+`power/logs/rtl_power_s256/xrun_rtl_power.log`. If you want Xreplay to focus on
+that window, pass those times to Joules:
+
+```bash
+JOULES_XREPLAY_START=12345ns \
+JOULES_XREPLAY_END=67890ns \
+JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
+  bash power/scripts/run_joules_xreplay_zero.sh
+```
+
+## Directory Layout
+
+- `scripts/`: user-facing wrappers for RTL activity and Joules Xreplay.
+- `tcl/`: Xcelium/Joules TCL scripts.
+- `mapping/`: same-source Genus RTL-to-gate mapping file.
+- `rtl_wave/`: generated RTL stimulus waveform.
+- `logs/`: tool logs.
+- `out/`: Xreplay output stimulus and Joules reports.
+
+## Fallback VCD Flow
+
+The older gate-level VCD based flow is kept as a fallback:
 
 ```bash
 bash power/run_xcelium_power_activity.sh
 JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
   bash power/run_joules_power.sh
-tar -czf fa_top_power_s256_results.tar.gz power/out
 ```
 
-`run_joules_power.sh` automatically expands the default
-`power/out/activity/fa_top_power_s256.vcd.gz` if the uncompressed VCD is not
-present.
+Prefer Xreplay when the gate-level VCD is too slow or too large.
 
-If the VCD is still too large for the server flow, convert the uncompressed VCD
-to SAIF with the available Cadence utility on that server and point Joules at the
-SAIF with:
+## Alternative RTL VCD
 
 ```bash
-JOULES_ACTIVITY_FILE=/path/to/fa_top_power_s256.saif \
-JOULES_ACTIVITY_FORMAT=saif \
-JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
-  bash power/run_joules_power.sh
+RTL_WAVE_FORMAT=vcd bash power/scripts/run_rtl_power_activity.sh
+JOULES_RTL_STIM=power/rtl_wave/fa_top_power_s256_rtl.vcd \
+JOULES_RTL_STIM_FORMAT=vcd \
+  bash power/scripts/run_joules_xreplay_zero.sh
 ```
 
-Useful environment variables:
+Use RTL VCD only if your Joules/Xreplay installation cannot consume Xcelium SHM.
 
-- `POWER_ACTIVITY_DIR`: where Xcelium writes the VCD.
-- `POWER_VCD`: full VCD path passed into the testbench.
-- `JOULES_STD_LIB`: SKY130 hs Liberty file for the mapped netlist.
-- `JOULES_SRAM_LIBS`: optional whitespace-separated SRAM Liberty files.
-- `JOULES_ACTIVITY_FILE`: uncompressed VCD file used by Joules.
-- `JOULES_ACTIVITY_FORMAT`: `vcd` by default; set to `saif` for a converted
-  SAIF file.
-- `JOULES_OUT_DIR`: Joules report/log directory.
+## Important
+
+The mapping file, RTL waveform, and mapped netlist must be same-source. Do not
+mix old mapping with a regenerated netlist, or a waveform from a different RTL
+snapshot.
