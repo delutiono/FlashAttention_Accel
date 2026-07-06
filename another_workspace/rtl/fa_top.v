@@ -226,19 +226,22 @@ wire signed [95:0] fin_acc_rsp_data;
 
 assign irq = irq_enable && irq_pending;
 assign lowp_int8_mode = (lowp_mode == 2'd1);
-assign effective_score_scale = lowp_int8_mode ?
-    lowp_mul_scale(lowp_mul_scale(score_scale_cfg, lowp_q_scale), lowp_k_scale) :
-    score_scale_cfg;
 
-function [15:0] lowp_mul_scale;
-    input [15:0] a;
-    input [15:0] b;
-    reg [31:0] product;
-    begin
-        product = a * b;
-        lowp_mul_scale = product[31:16];
-    end
-endfunction
+// bonus7: effective score scale with full-precision triple product.
+// score_scale_cfg, lowp_q_scale, lowp_k_scale are all Q0.16.
+// Verilog's self-determined multiplication width is max(L(op1),L(op2)),
+// so $signed(16b)*$signed(16b)*$signed(16b) truncates the intermediate
+// to 32 bits. Force 64-bit context to preserve the full 48-bit product.
+wire signed [63:0] scale_step1;
+wire signed [63:0] scale_triple_product;
+wire [15:0] effective_score_scale_int8;
+assign scale_step1 = $signed({48'd0, score_scale_cfg}) * $signed(lowp_q_scale);
+assign scale_triple_product = scale_step1 * $signed(lowp_k_scale);
+assign effective_score_scale_int8 = scale_triple_product[47:32];  // Q0.48 -> Q0.16
+
+assign effective_score_scale = lowp_int8_mode ?
+    effective_score_scale_int8 :
+    score_scale_cfg;
 
 assign raw_dma_done_valid = dma_eng_done_valid;
 assign raw_dma_done_kind  = dma_eng_done_kind;
