@@ -189,15 +189,20 @@ foreach lib_file $lib_files {
 }
 eval read_libs $lib_files
 
-set lef_files [read_path_list $lef_filelist "LEF filelist"]
-foreach lef_file $lef_files {
-  puts "INFO: LEF=$lef_file"
-}
-if {[llength $lef_files] > 0} {
-  set lef_arg [join $lef_files " "]
-  if {[catch {read_physical -lefs $lef_arg} err]} {
-    puts "WARNING: read_physical -lefs failed or is unsupported in this Genus setup: $err"
+set lef_files {}
+if {$physical_mode} {
+  set lef_files [read_path_list $lef_filelist "LEF filelist"]
+  foreach lef_file $lef_files {
+    puts "INFO: LEF=$lef_file"
   }
+  if {[llength $lef_files] > 0} {
+    set lef_arg [join $lef_files " "]
+    if {[catch {read_physical -lefs $lef_arg} err]} {
+      puts "WARNING: read_physical -lefs failed or is unsupported in this Genus setup: $err"
+    }
+  }
+} else {
+  puts "INFO: PHYSICAL_MODE=0, skipping LEF filelist/read_physical."
 }
 
 set_db init_hdl_search_path [list [file join $workspace_dir RTL]]
@@ -295,9 +300,18 @@ redirect [file join $report_dir hierarchy_final.rpt] {report hierarchy}
 set syn_method_lines {}
 lappend syn_method_lines "SYNTHESIS_METHODOLOGY"
 lappend syn_method_lines "Tool: Genus 25.12"
-lappend syn_method_lines "Physical synthesis: [expr {$physical_mode ? \"YES (syn_opt -spatial)\" : \"NO (logical only)\"}]"
-lappend syn_method_lines "QRC probabilistic extraction: [expr {$physical_mode ? \"ENABLED\" : \"N/A\"}]"
-lappend syn_method_lines "Floorplan prediction: [expr {$physical_mode ? \"predict_floorplan\" : \"N/A\"}]"
+if {$physical_mode} {
+  set physical_summary "YES (syn_opt -spatial)"
+  set qrc_summary "ENABLED"
+  set floorplan_summary "predict_floorplan"
+} else {
+  set physical_summary "NO (logical only)"
+  set qrc_summary "N/A"
+  set floorplan_summary "N/A"
+}
+lappend syn_method_lines "Physical synthesis: $physical_summary"
+lappend syn_method_lines "QRC probabilistic extraction: $qrc_summary"
+lappend syn_method_lines "Floorplan prediction: $floorplan_summary"
 lappend syn_method_lines "SPEF annotation: check main log for 'read_spef statistics'"
 lappend syn_method_lines "Verification: grep 'syn_opt -spatial' in Genus log to confirm execution"
 write_text_report [file join $report_dir syn_methodology.rpt] $syn_method_lines
