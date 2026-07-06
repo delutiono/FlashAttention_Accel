@@ -30,9 +30,6 @@ if ! command -v "$XRUN" >/dev/null 2>&1; then
 fi
 
 rtl_sources=(
-  sky130_sram_0kbytes_1rw1r_64x32_8.v
-  sky130_sram_0kbytes_1rw1r_64x64_8.v
-  sky130_sram_0kbytes_1rw1r_128x16_16.v
   sky130_sram_0kbytes_1rw1r_64x32_8_wrapper.v
   sky130_sram_0kbytes_1rw1r_64x64_8_wrapper.v
   sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v
@@ -85,6 +82,7 @@ common_args=(
   -access +rwc
   -define FUNCTIONAL
   "models/axi_mem_model_128.sv"
+  "models/sram_models_fa_top_gate.v"
   "${src_args[@]}"
   "tb/tb_fa_top_power_s256.sv"
   -top tb_fa_top_power_s256
