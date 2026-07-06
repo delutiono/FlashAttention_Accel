@@ -36,7 +36,7 @@ module axi_lite_regs #(
     output wire [63:0]             v_base_addr,
     output wire [63:0]             o_base_addr,
     output wire [31:0]             stride_bytes,
-    output wire [7:0]              valid_len,
+    output wire [9:0]              valid_len,
     output wire [5:0]              seq_len,
     output wire [31:0]             neg_large,
     output wire [15:0]             score_scale,
@@ -52,7 +52,17 @@ module axi_lite_regs #(
     output wire [31:0]             dropout_seed,
     output wire [15:0]             dropout_prob,
     output wire [2:0]              num_heads,
-    output wire [31:0]             head_stride
+    output wire [31:0]             head_stride,
+    output wire [1:0]              lowp_mode,
+    output wire [5:0]              lowp_block_rows,
+    output wire [63:0]             q_scale_base_addr,
+    output wire [63:0]             k_scale_base_addr,
+    output wire [63:0]             v_scale_base_addr,
+    input  wire [5:0]              active_q_group,
+    input  wire [5:0]              active_kv_tile,
+    output wire [15:0]             lowp_q_scale,
+    output wire [15:0]             lowp_k_scale,
+    output wire [15:0]             lowp_v_scale
 );
 
 localparam [ADDR_WIDTH-1:0] REG_CTRL            = 12'h000;
@@ -79,6 +89,15 @@ localparam [ADDR_WIDTH-1:0] REG_TASK_QUEUE_CTRL = 12'h04C;
     localparam [ADDR_WIDTH-1:0] REG_DROPOUT_PROB    = 12'h054;
     localparam [ADDR_WIDTH-1:0] REG_NUM_HEADS       = 12'h058;
     localparam [ADDR_WIDTH-1:0] REG_HEAD_STRIDE     = 12'h05C;
+localparam [ADDR_WIDTH-1:0] REG_LOWP_CFG        = 12'h060;
+localparam [ADDR_WIDTH-1:0] REG_Q_SCALE_LO      = 12'h064;
+localparam [ADDR_WIDTH-1:0] REG_Q_SCALE_HI      = 12'h068;
+localparam [ADDR_WIDTH-1:0] REG_K_SCALE_LO      = 12'h06C;
+localparam [ADDR_WIDTH-1:0] REG_K_SCALE_HI      = 12'h070;
+localparam [ADDR_WIDTH-1:0] REG_V_SCALE_LO      = 12'h074;
+localparam [ADDR_WIDTH-1:0] REG_V_SCALE_HI      = 12'h078;
+localparam [ADDR_WIDTH-1:0] REG_LOWP_SCALE_ADDR = 12'h07C;
+localparam [ADDR_WIDTH-1:0] REG_LOWP_SCALE_DATA = 12'h080;
 
 reg [ADDR_WIDTH-1:0] awaddr_reg;
 reg                  aw_hold_reg;
@@ -88,7 +107,7 @@ reg [31:0]           k_lo_reg, k_hi_reg;
 reg [31:0]           v_lo_reg, v_hi_reg;
 reg [31:0]           o_lo_reg, o_hi_reg;
 reg [31:0]           stride_reg;
-reg [7:0]            valid_len_reg;
+reg [9:0]            valid_len_reg;
 reg [31:0]           neg_large_reg;
 reg [31:0]           scale_reg;
 reg [5:0]            seq_len_reg;
@@ -119,10 +138,19 @@ reg [31:0]           task_o_lo, task_o_hi;
     reg [15:0]           dropout_prob_reg;
     reg [2:0]            num_heads_reg;
     reg [31:0]           head_stride_reg;
+reg [31:0]           lowp_cfg_reg;
+reg [31:0]           q_scale_lo_reg, q_scale_hi_reg;
+reg [31:0]           k_scale_lo_reg, k_scale_hi_reg;
+reg [31:0]           v_scale_lo_reg, v_scale_hi_reg;
+reg [7:0]            lowp_scale_addr_reg;
+reg [15:0]           q_scale_ram [0:63];
+reg [15:0]           k_scale_ram [0:63];
+reg [15:0]           v_scale_ram [0:63];
 
 wire write_fire;
 wire read_fire;
 integer byte_idx;
+integer scale_idx;
 
 assign s_awready = !aw_hold_reg;
 assign s_wready = aw_hold_reg && !s_bvalid;
@@ -150,6 +178,14 @@ assign task_queue_not_empty = (task_queue_count != 4'd0);
     assign dropout_prob = dropout_prob_reg;
     assign num_heads = num_heads_reg;
     assign head_stride = head_stride_reg;
+assign lowp_mode = lowp_cfg_reg[1:0];
+assign lowp_block_rows = (lowp_cfg_reg[13:8] == 6'd0) ? 6'd8 : lowp_cfg_reg[13:8];
+assign q_scale_base_addr = {q_scale_hi_reg, q_scale_lo_reg};
+assign k_scale_base_addr = {k_scale_hi_reg, k_scale_lo_reg};
+assign v_scale_base_addr = {v_scale_hi_reg, v_scale_lo_reg};
+assign lowp_q_scale = q_scale_ram[active_q_group];
+assign lowp_k_scale = k_scale_ram[active_kv_tile];
+assign lowp_v_scale = v_scale_ram[active_kv_tile];
 
 function [31:0] apply_wstrb;
     input [31:0] old_value;
@@ -183,7 +219,7 @@ always @(posedge clk) begin
         v_lo_reg <= 32'd0; v_hi_reg <= 32'd0;
         o_lo_reg <= 32'd0; o_hi_reg <= 32'd0;
         stride_reg <= 32'd128;
-        valid_len_reg <= 8'd0;
+        valid_len_reg <= 10'd0;
         seq_len_reg <= 6'd32;
         neg_large_reg <= 32'hfff0_0000;
         scale_reg <= 32'h00002000;
@@ -203,6 +239,16 @@ always @(posedge clk) begin
         dropout_prob_reg <= 16'd0;
         num_heads_reg <= 3'd1;
         head_stride_reg <= 32'd0;
+        lowp_cfg_reg <= 32'd0;
+        q_scale_lo_reg <= 32'd0; q_scale_hi_reg <= 32'd0;
+        k_scale_lo_reg <= 32'd0; k_scale_hi_reg <= 32'd0;
+        v_scale_lo_reg <= 32'd0; v_scale_hi_reg <= 32'd0;
+        lowp_scale_addr_reg <= 8'd0;
+        for (scale_idx = 0; scale_idx < 64; scale_idx = scale_idx + 1) begin
+            q_scale_ram[scale_idx] <= 16'hffff;
+            k_scale_ram[scale_idx] <= 16'hffff;
+            v_scale_ram[scale_idx] <= 16'hffff;
+        end
     end else begin
         start_pulse <= 1'b0;
         soft_reset_pulse <= 1'b0;
@@ -256,7 +302,10 @@ always @(posedge clk) begin
                         error_latched_reg <= 1'b0;
                 end
                 REG_CFG: cfg_reg <= apply_wstrb(cfg_reg, s_wdata, s_wstrb);
-                REG_VALID_LEN: if (s_wstrb[0]) valid_len_reg <= s_wdata[7:0];
+                REG_VALID_LEN: begin
+                    if (s_wstrb[0]) valid_len_reg[7:0] <= s_wdata[7:0];
+                    if (s_wstrb[1]) valid_len_reg[9:8] <= s_wdata[9:8];
+                end
                 REG_SEQ_LEN: if (s_wstrb[0]) seq_len_reg <= s_wdata[5:0];
                 REG_Q_LO: q_lo_reg <= apply_wstrb(q_lo_reg, s_wdata, s_wstrb);
                 REG_Q_HI: q_hi_reg <= apply_wstrb(q_hi_reg, s_wdata, s_wstrb);
@@ -296,6 +345,22 @@ always @(posedge clk) begin
                 REG_DROPOUT_PROB: if (s_wstrb[0]) dropout_prob_reg <= s_wdata[15:0];
                 REG_NUM_HEADS: if (s_wstrb[0]) num_heads_reg <= s_wdata[2:0];
                 REG_HEAD_STRIDE: head_stride_reg <= apply_wstrb(head_stride_reg, s_wdata, s_wstrb);
+                REG_LOWP_CFG: lowp_cfg_reg <= apply_wstrb(lowp_cfg_reg, s_wdata, s_wstrb);
+                REG_Q_SCALE_LO: q_scale_lo_reg <= apply_wstrb(q_scale_lo_reg, s_wdata, s_wstrb);
+                REG_Q_SCALE_HI: q_scale_hi_reg <= apply_wstrb(q_scale_hi_reg, s_wdata, s_wstrb);
+                REG_K_SCALE_LO: k_scale_lo_reg <= apply_wstrb(k_scale_lo_reg, s_wdata, s_wstrb);
+                REG_K_SCALE_HI: k_scale_hi_reg <= apply_wstrb(k_scale_hi_reg, s_wdata, s_wstrb);
+                REG_V_SCALE_LO: v_scale_lo_reg <= apply_wstrb(v_scale_lo_reg, s_wdata, s_wstrb);
+                REG_V_SCALE_HI: v_scale_hi_reg <= apply_wstrb(v_scale_hi_reg, s_wdata, s_wstrb);
+                REG_LOWP_SCALE_ADDR: if (s_wstrb[0]) lowp_scale_addr_reg <= s_wdata[7:0];
+                REG_LOWP_SCALE_DATA: if (s_wstrb[0] || s_wstrb[1]) begin
+                    case (lowp_scale_addr_reg[7:6])
+                        2'd0: q_scale_ram[lowp_scale_addr_reg[5:0]] <= s_wdata[15:0];
+                        2'd1: k_scale_ram[lowp_scale_addr_reg[5:0]] <= s_wdata[15:0];
+                        2'd2: v_scale_ram[lowp_scale_addr_reg[5:0]] <= s_wdata[15:0];
+                        default: begin end
+                    endcase
+                end
                 default: begin end
             endcase
             s_bvalid <= 1'b1;
@@ -312,7 +377,7 @@ always @(posedge clk) begin
                 REG_CTRL:            s_rdata <= {29'd0, irq_en_reg, 2'b00};
                 REG_STATUS:          s_rdata <= {29'd0, error_latched_reg, done_latched_reg, task_busy};
                 REG_CFG:             s_rdata <= cfg_reg;
-                REG_VALID_LEN:       s_rdata <= {24'd0, valid_len_reg};
+                REG_VALID_LEN:       s_rdata <= {22'd0, valid_len_reg};
                 REG_SEQ_LEN:         s_rdata <= {26'd0, seq_len_reg};
                 REG_Q_LO:            s_rdata <= q_lo_reg;
                 REG_Q_HI:            s_rdata <= q_hi_reg;
@@ -333,6 +398,22 @@ always @(posedge clk) begin
                 REG_DROPOUT_PROB:    s_rdata <= {16'd0, dropout_prob_reg};
                 REG_NUM_HEADS:       s_rdata <= {29'd0, num_heads_reg};
                 REG_HEAD_STRIDE:     s_rdata <= head_stride_reg;
+                REG_LOWP_CFG:        s_rdata <= lowp_cfg_reg;
+                REG_Q_SCALE_LO:      s_rdata <= q_scale_lo_reg;
+                REG_Q_SCALE_HI:      s_rdata <= q_scale_hi_reg;
+                REG_K_SCALE_LO:      s_rdata <= k_scale_lo_reg;
+                REG_K_SCALE_HI:      s_rdata <= k_scale_hi_reg;
+                REG_V_SCALE_LO:      s_rdata <= v_scale_lo_reg;
+                REG_V_SCALE_HI:      s_rdata <= v_scale_hi_reg;
+                REG_LOWP_SCALE_ADDR: s_rdata <= {24'd0, lowp_scale_addr_reg};
+                REG_LOWP_SCALE_DATA: begin
+                    case (lowp_scale_addr_reg[7:6])
+                        2'd0: s_rdata <= {16'd0, q_scale_ram[lowp_scale_addr_reg[5:0]]};
+                        2'd1: s_rdata <= {16'd0, k_scale_ram[lowp_scale_addr_reg[5:0]]};
+                        2'd2: s_rdata <= {16'd0, v_scale_ram[lowp_scale_addr_reg[5:0]]};
+                        default: s_rdata <= 32'd0;
+                    endcase
+                end
                 default:             s_rdata <= 32'd0;
             endcase
         end else if (s_rvalid && s_rready) begin

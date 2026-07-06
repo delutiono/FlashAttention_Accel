@@ -81,7 +81,7 @@ wire [63:0] v_base_addr;
 wire [63:0] o_base_addr;
 wire [31:0] stride_bytes_cfg;
 wire [5:0]  seq_len_cfg;
-wire [7:0]  valid_len_cfg;
+wire [9:0]  valid_len_cfg;
 wire [31:0] neg_large_cfg;
 wire [15:0] score_scale_cfg;
 wire task_busy;
@@ -103,6 +103,16 @@ wire [31:0] dropout_seed;
 wire [15:0] dropout_prob;
 wire [2:0]  num_heads;
 wire [31:0] head_stride;
+wire [1:0]  lowp_mode;
+wire [5:0]  lowp_block_rows;
+wire [63:0] q_scale_base_addr;
+wire [63:0] k_scale_base_addr;
+wire [63:0] v_scale_base_addr;
+wire lowp_int8_mode;
+wire [15:0] lowp_q_scale;
+wire [15:0] lowp_k_scale;
+wire [15:0] lowp_v_scale;
+wire [15:0] effective_score_scale;
 
 wire pm_busy;
 wire pm_done;
@@ -152,6 +162,11 @@ wire [1:0] strm_done_kind;
 wire strm_done_page;
 wire [7:0] strm_done_tag;
 wire strm_done_error;
+wire raw_dma_done_valid;
+wire [1:0] raw_dma_done_kind;
+wire raw_dma_done_page;
+wire [7:0] raw_dma_done_tag;
+wire raw_dma_done_error;
 
 // Final (muxed) DMA interface signals
 wire dma_rd_valid;
@@ -171,6 +186,11 @@ wire [1:0] dma_done_kind;
 wire dma_done_page;
 wire [7:0] dma_done_tag;
 wire dma_done_error;
+reg rd_done_pending_reg;
+reg [1:0] rd_done_kind_reg;
+reg rd_done_page_reg;
+reg [7:0] rd_done_tag_reg;
+reg rd_done_error_reg;
 
 wire q_rd_ready;
 wire k_rd_ready;
@@ -260,6 +280,7 @@ wire fin_done_valid;
 wire [2:0] fin_done_context;
 wire [2:0] fin_done_row;
 wire fin_error_zero_l;
+wire compute_idle;
 wire fin_acc_req_valid;
 wire fin_acc_req_ready;
 wire [2:0] fin_acc_req_context;
@@ -269,6 +290,20 @@ wire fin_acc_rsp_valid;
 wire signed [95:0] fin_acc_rsp_data;
 
 assign irq = irq_enable && irq_pending;
+assign lowp_int8_mode = (lowp_mode == 2'd1);
+assign effective_score_scale = lowp_int8_mode ?
+    lowp_mul_scale(lowp_mul_scale(score_scale_cfg, lowp_q_scale), lowp_k_scale) :
+    score_scale_cfg;
+
+function [15:0] lowp_mul_scale;
+    input [15:0] a;
+    input [15:0] b;
+    reg [31:0] product;
+    begin
+        product = a * b;
+        lowp_mul_scale = product[31:16];
+    end
+endfunction
 
 assign dma_rd_valid  = stream_en ? strm_rd_valid  : dma_eng_rd_valid;
 assign dma_rd_kind   = stream_en ? strm_rd_kind   : dma_eng_rd_kind;
@@ -281,11 +316,26 @@ assign dma_eng_wr_valid = stream_en ? strm_wr_valid : dma_wr_valid;
 assign dma_eng_wr_data  = stream_en ? strm_wr_data  : dma_wr_data;
 assign dma_eng_wr_strb  = stream_en ? strm_wr_strb  : dma_wr_strb;
 assign dma_eng_wr_last  = stream_en ? strm_wr_last  : dma_wr_last;
-assign dma_done_valid = stream_en ? strm_done_valid : dma_eng_done_valid;
-assign dma_done_kind  = stream_en ? strm_done_kind  : dma_eng_done_kind;
-assign dma_done_page  = stream_en ? strm_done_page  : dma_eng_done_page;
-assign dma_done_tag   = stream_en ? strm_done_tag   : dma_eng_done_tag;
-assign dma_done_error = stream_en ? strm_done_error : dma_eng_done_error;
+assign raw_dma_done_valid = stream_en ? strm_done_valid : dma_eng_done_valid;
+assign raw_dma_done_kind  = stream_en ? strm_done_kind  : dma_eng_done_kind;
+assign raw_dma_done_page  = stream_en ? strm_done_page  : dma_eng_done_page;
+assign raw_dma_done_tag   = stream_en ? strm_done_tag   : dma_eng_done_tag;
+assign raw_dma_done_error = stream_en ? strm_done_error : dma_eng_done_error;
+
+wire rd_adapter_done = ((rd_done_kind_reg == 2'd0) && q_load_done) ||
+                       ((rd_done_kind_reg == 2'd1) && k_load_done) ||
+                       ((rd_done_kind_reg == 2'd2) && v_load_done);
+wire raw_rd_adapter_done = ((raw_dma_done_kind == 2'd0) && q_load_done) ||
+                           ((raw_dma_done_kind == 2'd1) && k_load_done) ||
+                           ((raw_dma_done_kind == 2'd2) && v_load_done);
+
+assign dma_done_valid = rd_done_pending_reg ? rd_adapter_done :
+                        (raw_dma_done_valid &&
+                         ((raw_dma_done_kind == 2'd3) || raw_rd_adapter_done));
+assign dma_done_kind  = rd_done_pending_reg ? rd_done_kind_reg  : raw_dma_done_kind;
+assign dma_done_page  = rd_done_pending_reg ? rd_done_page_reg  : raw_dma_done_page;
+assign dma_done_tag   = rd_done_pending_reg ? rd_done_tag_reg   : raw_dma_done_tag;
+assign dma_done_error = rd_done_pending_reg ? rd_done_error_reg : raw_dma_done_error;
 
 // Read ready: from adapters → to DMA engine or stream adapter
 assign dma_eng_rd_ready = stream_en ? 1'b0 : dma_rd_ready;
@@ -298,6 +348,26 @@ assign dma_rd_ready = ((dma_rd_kind == 2'd0) && q_rd_ready) ||
                       ((dma_rd_kind == 2'd1) && k_rd_ready) ||
                       ((dma_rd_kind == 2'd2) && v_rd_ready);
 assign perf_read_index = (s_axil_araddr[11:0] == 12'h040) ? 5'd0 : s_axil_araddr[6:2];
+
+always @(posedge clk) begin
+    if (!rst_n) begin
+        rd_done_pending_reg <= 1'b0;
+        rd_done_kind_reg <= 2'd0;
+        rd_done_page_reg <= 1'b0;
+        rd_done_tag_reg <= 8'd0;
+        rd_done_error_reg <= 1'b0;
+    end else begin
+        if (rd_done_pending_reg && rd_adapter_done)
+            rd_done_pending_reg <= 1'b0;
+        if (raw_dma_done_valid && (raw_dma_done_kind != 2'd3) && !raw_rd_adapter_done) begin
+            rd_done_pending_reg <= 1'b1;
+            rd_done_kind_reg <= raw_dma_done_kind;
+            rd_done_page_reg <= raw_dma_done_page;
+            rd_done_tag_reg <= raw_dma_done_tag;
+            rd_done_error_reg <= raw_dma_done_error;
+        end
+    end
+end
 
 axi_lite_regs u_regs (
     .clk(clk), .rst_n(rst_n),
@@ -321,7 +391,14 @@ axi_lite_regs u_regs (
     .perf_read_data(perf_read_data),
     .stream_en(stream_en),
     .dropout_en(dropout_en), .dropout_seed(dropout_seed), .dropout_prob(dropout_prob),
-    .num_heads(num_heads), .head_stride(head_stride)
+    .num_heads(num_heads), .head_stride(head_stride),
+    .lowp_mode(lowp_mode), .lowp_block_rows(lowp_block_rows),
+    .q_scale_base_addr(q_scale_base_addr),
+    .k_scale_base_addr(k_scale_base_addr),
+    .v_scale_base_addr(v_scale_base_addr),
+    .active_q_group(active_q_group), .active_kv_tile(active_kv_tile),
+    .lowp_q_scale(lowp_q_scale), .lowp_k_scale(lowp_k_scale),
+    .lowp_v_scale(lowp_v_scale)
 );
 
 task_ctrl u_task (
@@ -361,9 +438,11 @@ page_manager u_page (
     .scheduler_tile_done(sched_tile_done), .scheduler_group_done(sched_group_done),
     .q_load_start(q_load_start), .k_load_start(k_load_start), .v_load_start(v_load_start),
     .o_store_start(o_store_start), .finalize_start(finalize_start),
+    .update_state_idle(compute_idle),
     .task_chain_enable(task_chain_enable), .task_queue_not_empty(task_queue_not_empty),
     .task_dequeue(task_dequeue),
-    .num_heads(num_heads), .head_stride(head_stride)
+    .num_heads(num_heads), .head_stride(head_stride),
+    .lowp_int8_mode(lowp_int8_mode)
 );
 
 dma_engine u_dma (
@@ -411,6 +490,7 @@ axi_stream_data_adapter u_stream (
 
 q_load_store_adapter u_q_adapter (
     .clk(clk), .rst_n(rst_n), .q_load_start(q_load_start), .q_load_page(active_q_page),
+    .lowp_int8_mode(lowp_int8_mode),
     .q_load_done(q_load_done), .q_rd_valid(dma_rd_valid && (dma_rd_kind == 2'd0)),
     .q_rd_ready(q_rd_ready), .q_rd_data(dma_rd_data), .q_rd_last(dma_rd_last),
     .o_store_start(o_store_start), .o_store_page(active_q_page),
@@ -425,7 +505,8 @@ q_load_store_adapter u_q_adapter (
 );
 
 k_load_adapter u_k_adapter (
-    .clk(clk), .rst_n(rst_n), .start(k_load_start), .page(dma_rd_page),
+    .clk(clk), .rst_n(rst_n), .start(k_load_start), .page(pm_cmd_page),
+    .lowp_int8_mode(lowp_int8_mode),
     .busy(), .done(k_load_done), .in_valid(dma_rd_valid && (dma_rd_kind == 2'd1)),
     .in_ready(k_rd_ready), .in_data(dma_rd_data), .in_last(dma_rd_last),
     .k_rw_valid(k_rw_valid), .k_rw_write(), .k_rw_pair(k_rw_pair),
@@ -434,7 +515,8 @@ k_load_adapter u_k_adapter (
 );
 
 v_load_adapter u_v_adapter (
-    .clk(clk), .rst_n(rst_n), .start(v_load_start), .page(dma_rd_page),
+    .clk(clk), .rst_n(rst_n), .start(v_load_start), .page(pm_cmd_page),
+    .lowp_int8_mode(lowp_int8_mode), .lowp_v_scale(lowp_v_scale),
     .busy(), .done(v_load_done), .in_valid(dma_rd_valid && (dma_rd_kind == 2'd2)),
     .in_ready(v_rd_ready), .in_data(dma_rd_data), .in_last(dma_rd_last),
     .v_rw_valid(v_rw_valid), .v_rw_write(), .v_rw_pair(v_rw_pair),
@@ -453,7 +535,7 @@ score_scheduler u_sched (
     .score_valid(score_valid), .score_ready(score_ready), .score_q_page(score_q_page),
     .score_q_row(score_q_row), .score_k_page(score_k_page), .score_k_row(score_k_row),
     .score_v_page(score_v_page), .score_v_row(score_v_row), .score_m_old(score_m_old),
-    .score_scale(score_scale_cfg), .score_user_token(score_user_token),
+    .score_scale(effective_score_scale), .score_user_token(score_user_token),
     .score_context(score_context), .score_last(score_last),
     .complete_valid(complete_valid), .complete_context(complete_context),
     .complete_user_token(complete_user_token), .complete_last(complete_last),
@@ -479,7 +561,7 @@ packed_compute_core u_core (
     .score_valid(score_valid), .score_ready(score_ready), .score_q_page(score_q_page),
     .score_q_row(score_q_row), .score_k_page(score_k_page), .score_k_row(score_k_row),
     .score_v_page(score_v_page), .score_v_row(score_v_row), .score_m_old(score_m_old),
-    .score_scale(score_scale_cfg), .score_user_token(score_user_token),
+    .score_scale(effective_score_scale), .score_user_token(score_user_token),
     .score_context(score_context), .score_last(score_last),
     .score_dropout_en(dropout_en), .score_dropout_seed(dropout_seed),
     .score_dropout_prob(dropout_prob),
@@ -489,7 +571,7 @@ packed_compute_core u_core (
     .fin_acc_req_valid(fin_acc_req_valid), .fin_acc_req_ready(fin_acc_req_ready),
     .fin_acc_req_context(fin_acc_req_context), .fin_acc_req_quarter(fin_acc_req_quarter),
     .fin_acc_req_pair(fin_acc_req_pair), .fin_acc_rsp_valid(fin_acc_rsp_valid),
-    .fin_acc_rsp_data(fin_acc_rsp_data)
+    .fin_acc_rsp_data(fin_acc_rsp_data), .compute_idle(compute_idle)
 );
 
 finalize_cluster u_finalize (

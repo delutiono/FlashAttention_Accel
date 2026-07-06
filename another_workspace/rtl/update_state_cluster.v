@@ -42,7 +42,8 @@ module update_state_cluster #(
     input  wire [1:0]              fin_acc_req_quarter,
     input  wire [2:0]              fin_acc_req_pair,
     output reg                     fin_acc_rsp_valid,
-    output reg signed [95:0]       fin_acc_rsp_data
+    output reg signed [95:0]       fin_acc_rsp_data,
+    output wire                    idle
 );
 
 localparam integer LANES = 32;
@@ -146,6 +147,12 @@ assign half_issue = issue_active_reg;
 assign fin_acc_addr = {fin_acc_req_context, fin_acc_req_quarter[1]};
 assign fin_acc_fire = fin_acc_req_valid && fin_acc_req_ready;
 assign fin_acc_req_ready = !init_active_reg && !issue_active_reg;
+assign idle = !init_active_reg && !issue_active_reg &&
+              (rd_valid_pipe == 2'b00) && !mul_valid_reg && !sum_valid_reg &&
+              (meta_tag_valid_pipe == 2'b00) && !l_mul_valid_reg &&
+              (pending_meta_valid_reg == 8'd0) && !meta_wr_en &&
+              !complete_valid && !fin_acc_rsp_valid &&
+              (fin_req_pipe_valid == 2'b00);
 
 assign acc_rd_addr = half_issue ? {issue_context_reg, issue_half_reg} : fin_acc_addr;
 assign acc_rd_en = half_issue || fin_acc_fire;

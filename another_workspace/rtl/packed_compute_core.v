@@ -6,7 +6,7 @@
 module packed_compute_core (
     input  wire                clk,
     input  wire                rst_n,
-    input  wire [7:0]          valid_len,
+    input  wire [9:0]          valid_len,
     input  wire                q_load_valid,
     input  wire [1:0]          q_load_pair,
     input  wire [4:0]          q_load_addr,
@@ -62,7 +62,8 @@ module packed_compute_core (
     input  wire [1:0]          fin_acc_req_quarter,
     input  wire [2:0]          fin_acc_req_pair,
     output wire                fin_acc_rsp_valid,
-    output wire signed [95:0]  fin_acc_rsp_data
+    output wire signed [95:0]  fin_acc_rsp_data,
+    output wire                compute_idle
 );
 
 localparam integer TOKEN_CTX_LSB = 0;
@@ -88,6 +89,7 @@ wire [15:0] fifo_alpha;
 wire [15:0] fifo_beta;
 wire [17:0] fifo_token;
 wire update_ready;
+wire update_state_idle;
 wire [17:0] update_complete_token;
 reg [3:0] pipeline_reserved_reg;
 reg signed [31:0] issue_m_mem [0:7];
@@ -106,7 +108,7 @@ function [17:0] pack_score_token;
     input v_page;
     input [2:0] v_row;
     input [2:0] ctx;
-    reg [15:0] value;
+    reg [17:0] value;
     begin
         value = 18'd0;
         value[TOKEN_USER_LSB +: 10] = user_token;
@@ -123,6 +125,10 @@ assign score_ready = dot_ready && (reserved_total < 5'd8) && (issue_meta_count_r
 assign score_fire = score_valid && score_ready;
 assign pad_mask_fire = (valid_len != 0) && (score_user_token >= valid_len);
 assign complete_user_token = update_complete_token[TOKEN_USER_LSB +: 10];
+assign compute_idle = update_state_idle && !score_valid && !dot_valid && !exp_valid &&
+                      !fifo_valid && (token_fifo_occupancy == 4'd0) &&
+                      (pipeline_reserved_reg == 4'd0) &&
+                      (issue_meta_count_reg == 4'd0);
 
 always @(posedge clk) begin
     if (!rst_n) begin
@@ -220,7 +226,7 @@ update_state_cluster #(.TOKEN_WIDTH(18)) u_update (
     .fin_acc_req_valid(fin_acc_req_valid), .fin_acc_req_ready(fin_acc_req_ready),
     .fin_acc_req_context(fin_acc_req_context), .fin_acc_req_quarter(fin_acc_req_quarter),
     .fin_acc_req_pair(fin_acc_req_pair), .fin_acc_rsp_valid(fin_acc_rsp_valid),
-    .fin_acc_rsp_data(fin_acc_rsp_data)
+    .fin_acc_rsp_data(fin_acc_rsp_data), .idle(update_state_idle)
 );
 
 endmodule

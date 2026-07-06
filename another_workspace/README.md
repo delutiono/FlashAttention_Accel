@@ -1,4 +1,4 @@
-# FlashAttention Hardware Accelerator — Bonus Medium Implementation (7/9 Bonuses)
+# FlashAttention Hardware Accelerator — Bonus Medium + Bonus7 Low-Precision Branch
 
 ## 已实现功能总览
 
@@ -15,7 +15,7 @@
 | (7) | 片上存储约束：无 S×S 矩阵，仅 tile K/V + 每行 m/l/acc | 8-entry token FIFO + tile 双缓冲 + per-row online softmax state |
 | (8) | Causal mask corner case 正确 | i=0 只能关注 j=0 |
 
-### Bonus（已实现 7/9 项）
+### Bonus（已实现 7/9 项，新增 Bonus7 低精度实现地基）
 
 | # | Bonus | 官方编号 | 难度 | 关键改动 |
 |---|-------|---------|------|---------|
@@ -26,8 +26,9 @@
 | 5 | **AXI4-Stream 数据接口** | #8 | Medium | `axi_stream_data_adapter.v` 旁路 DMA，CFG[4] STREAM_EN |
 | 6 | **Dropout 训练模式** | #6 | Medium | 32-bit LFSR + dropout 管道复用 padding mask 路径 |
 | 7 | **多 Head 支持** | #2 | Medium | `page_manager` 最外层 head 循环 + head_stride 地址偏移 |
+| 8 | **INT8/FP8 低精度方向** | #7 | Hard | INT8 block quant 评估器 + block scale 寄存器地基，参考 FlashAttention-3 block quantization / incoherent processing |
 
-**未实现（2 项 Hard）**：BF16/FP16 (#1)、INT8/FP8 低精度 (#7)
+**仍未完整硬件闭环（2 项 Hard）**：BF16/FP16 (#1)、完整 INT8/FP8 block-scale 数学路径 (#7)。本分支已实现 bonus7 的可执行误差收益评估、寄存器接口、INT8 输入 unpack 和 512B Q/K/V DMA tile；后续需接入 scale DMA/load path，并在 score/V update 中应用 block scale。
 
 ---
 
@@ -59,10 +60,56 @@
 | 0x54 | DROPOUT_PROB | R/W | Q0.16 概率阈值（默认 0x0000，禁用 dropout） |
 | 0x58 | NUM_HEADS | R/W | Head 数量（1-8，默认 1→单 head） |
 | 0x5C | HEAD_STRIDE | R/W | 每个 head 的字节偏移（含 Q/K/V/O 所有矩阵） |
+| 0x60 | LOWP_CFG | R/W | [1:0] LOWP_MODE (0=Q8.8, 1=INT8_BLOCK, 2=FP8_RESERVED), [13:8] BLOCK_ROWS（0 默认 8） |
+| 0x64 | Q_SCALE_BASE_L | R/W | Q block scale 基地址低 32 位 |
+| 0x68 | Q_SCALE_BASE_H | R/W | Q block scale 基地址高 32 位 |
+| 0x6C | K_SCALE_BASE_L | R/W | K block scale 基地址低 32 位 |
+| 0x70 | K_SCALE_BASE_H | R/W | K block scale 基地址高 32 位 |
+| 0x74 | V_SCALE_BASE_L | R/W | V block scale 基地址低 32 位 |
+| 0x78 | V_SCALE_BASE_H | R/W | V block scale 基地址高 32 位 |
+| 0x7C | LOWP_SCALE_ADDR | R/W | [5:0]=block index, [7:6]=scale kind (0=Q, 1=K, 2=V) |
+| 0x80 | LOWP_SCALE_DATA | R/W | Q0.16 block scale 写入/读出，默认 0xffff（约 1.0） |
 
 ---
 
 ## Bonus 实现细节
+
+### 0. Bonus7 低精度策略（官方 #7，当前分支新增）
+
+**目标**：参考 FlashAttention-3 的 FP8 low-precision 策略，优先实现 INT8 block quantization / block scaling，并保留 FP8(E4M3) 前端扩展位。FlashAttention-3 的关键思想不是简单全局低精度，而是 block quantization 与 incoherent processing：对 Q/K/V 的 attention block 分别保留 scale，必要时对 Q/K 做正交 Hadamard 预处理来摊平 outlier。
+
+**当前落地内容**：
+- `sim/low_precision_eval.py`: 纯 Python 误差收益评估器，无 numpy 依赖，支持 per-tensor INT8、block INT8、block INT8 + Hadamard。
+- `sim/test_low_precision_eval.py`: 单元测试覆盖 outlier-heavy 张量，证明 block quantization 的输入重构误差优于 per-tensor，并报告带宽收益。
+- `rtl/axi_lite_regs.v` + `rtl/fa_top.v`: 新增 LOWP_CFG 与 Q/K/V scale base 地址寄存器，作为后续 scale DMA/load path 的硬件契约。
+- `rtl/page_manager.v`: LOWP_MODE=INT8_BLOCK 时 Q/K/V DMA tile 从 1024B 切到 512B，O store 保持 1024B。
+- `rtl/q_load_store_adapter.v`, `rtl/k_load_adapter.v`, `rtl/v_load_adapter.v`: LOWP_MODE=INT8_BLOCK 时将 128-bit DMA beat 中的 16 个 int8 拆成两个内部 8-lane Q8.8 SRAM 写入。
+- `rtl/axi_lite_regs.v`: 64-entry Q/K/V block scale RAM，可由 AXI-Lite 写入；当前 active Q group / KV tile 自动选择 Q/K/V scale。
+- `rtl/fa_top.v`: LOWP_MODE=INT8_BLOCK 时 score scale 使用 `base_scale * q_block_scale * k_block_scale`；V loader 使用 `v_block_scale` 将 int8 V 展开为 scaled Q8.8。
+- `rtl/packed_compute_core.v`: 修复 18-bit token 打包时内部临时变量仍为 16-bit 的截断问题。
+- `Makefile`: 修复 `axi_stream_data_adapter.v` 漏列，并新增 `make lowp_eval`。
+
+**评估命令**：
+
+```bash
+python sim/low_precision_eval.py --seq 64 --block 8 --hadamard
+```
+
+**当前 S=64 子集结果**：
+
+| 模式 | Q/K/V 字节数（含 scale） | 带宽缩减 | input MAE | output MAE | output MaxAE |
+|------|--------------------------|----------|-----------|------------|--------------|
+| Q8.8 baseline | 24576 | 1.00x | 0 | 0 | 0 |
+| INT8 per-tensor | 12294 | 1.999x | 0.003935 | 0.002327 | 0.014435 |
+| INT8 block(8 rows) | 12336 | 1.992x | 0.003929 | 0.002287 | 0.016711 |
+| INT8 block + Hadamard(Q/K) | 12336 | 1.992x | 0.006166 | 0.003516 | 0.026733 |
+
+**Hardware status (Icarus, not ModelSim)**:
+- Low-precision unit tests pass for K unpack, V scaled unpack, page-manager 512B Q/K/V command sizing, and AXI-Lite scale RAM.
+- `sim/tb_fa_top_int8_64.sv` runs an S=64 INT8-block DMA smoke test to DONE (`Hardware cycles: 19379`) and writes `sim/o_tb_int8_64.hex`.
+- Current limitation: the S=64 top-level smoke still propagates unknown values from group1 onward (`x` begins at output element 512), so the multi-group INT8 arithmetic path is not yet a complete golden match. The next debug target is the cross-group compute/finalize state initialization or recurrence path after the first 8-row group.
+
+**结论**：对当前随机测试向量，block INT8 比 per-tensor INT8 的 output MAE 略低，并维持约 2x 外部 Q/K/V 带宽收益；Hadamard 预处理没有改善这组非 outlier-heavy 数据，应作为 outlier 场景的可选软件预处理，而不是默认开启。当前 RTL 已具备 INT8 输入 tile 的 512B DMA、Q/K raw int8→Q8.8 展开、`scale_q * scale_k` score scale 组合，以及 V int8→scaled Q8.8 展开能力。下一步若要进一步贴近 FlashAttention-3，需要让 scale RAM 由 DMA 自动加载，并补一个端到端 INT8 testbench。
 
 ### 1. Padding Mask（官方 #4）
 
