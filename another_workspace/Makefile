@@ -42,7 +42,11 @@ TB_FILE = $(SIM_DIR)/tb_fa_top.sv
 VVP_OUT = $(SIM_DIR)/tb_fa_top.vvp
 SIM_LOG  = $(SIM_DIR)/sim_output.log
 
-.PHONY: compile sim clean
+# INT8 testbench
+TB_INT8 = $(SIM_DIR)/tb_fa_top_int8_64.sv
+VVP_INT8 = $(SIM_DIR)/tb_fa_top_int8_64.vvp
+
+.PHONY: compile sim compile_int8 sim_int8 lowp_eval lowp_tests clean
 
 compile:
 	iverilog -g2012 -o $(VVP_OUT) $(RTL_FILES) $(TB_FILE)
@@ -50,5 +54,26 @@ compile:
 sim: compile
 	vvp $(VVP_OUT) | tee $(SIM_LOG)
 
+compile_int8:
+	iverilog -g2012 -o $(VVP_INT8) $(RTL_FILES) $(TB_INT8)
+
+sim_int8: compile_int8
+	vvp $(VVP_INT8)
+
+lowp_eval:
+	python sim/low_precision_eval.py --seq 64 --block 8 --hadamard
+
+lowp_tests:
+	python sim/test_low_precision_eval.py
+	iverilog -g2012 -o $(SIM_DIR)/tb_lowp_k_load_adapter.vvp $(RTL_DIR)/k_load_adapter.v $(SIM_DIR)/tb_lowp_k_load_adapter.sv
+	vvp $(SIM_DIR)/tb_lowp_k_load_adapter.vvp
+	iverilog -g2012 -o $(SIM_DIR)/tb_lowp_v_load_adapter.vvp $(RTL_DIR)/v_load_adapter.v $(SIM_DIR)/tb_lowp_v_load_adapter.sv
+	vvp $(SIM_DIR)/tb_lowp_v_load_adapter.vvp
+	iverilog -g2012 -o $(SIM_DIR)/tb_lowp_page_manager.vvp $(RTL_DIR)/page_manager.v $(SIM_DIR)/tb_lowp_page_manager.sv
+	vvp $(SIM_DIR)/tb_lowp_page_manager.vvp
+	iverilog -g2012 -o $(SIM_DIR)/tb_lowp_scale_regs.vvp $(RTL_DIR)/axi_lite_regs.v $(SIM_DIR)/tb_lowp_scale_regs.sv
+	vvp $(SIM_DIR)/tb_lowp_scale_regs.vvp
+
 clean:
 	rm -f $(VVP_OUT) $(SIM_LOG) $(SIM_DIR)/o_tb.hex
+	rm -f $(VVP_INT8) $(SIM_DIR)/o_tb_int8_64.hex

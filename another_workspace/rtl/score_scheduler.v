@@ -275,6 +275,12 @@ always @(posedge clk) begin
                         state_reg <= ST_DONE;
                     else begin
                         group_wait_drop_reg <= 1'b1;
+                        for (i = 0; i < 8; i = i + 1) begin
+                            m_mem[i] <= 32'sh8000_0000;
+                            l_mem[i] <= 48'sd0;
+                            pending_reg[i] <= 1'b0;
+                        end
+                        issued_last_reg <= 8'd0;
                         state_reg <= ST_INIT;
                     end
                 end

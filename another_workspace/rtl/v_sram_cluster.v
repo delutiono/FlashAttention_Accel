@@ -145,7 +145,8 @@ assign wide_rd_data7 = wide_page_d2 ? bank_rw_rdata_p1[3] : bank_rw_rdata_p0[3];
 `ifndef SYNTHESIS
 always @(posedge clk) begin
     if (rst_n && wide_rd_en && rw_valid && (wide_rd_addr[5] == rw_addr[5])) begin
-        $display("ERROR: v_sram_cluster same-page load/update port collision");
+        $display("ERROR: v_sram_cluster same-page load/update port collision rd_addr=%0d rw_addr=%0d",
+                 wide_rd_addr, rw_addr);
         $finish;
     end
 end

@@ -6,6 +6,7 @@ module q_load_store_adapter (
     input  wire         rst_n,
     input  wire         q_load_start,
     input  wire         q_load_page,
+    input  wire         lowp_int8_mode,
     output reg          q_load_done,
     input  wire         q_rd_valid,
     output wire         q_rd_ready,
@@ -38,15 +39,28 @@ module q_load_store_adapter (
 );
 
 reg q_load_busy_reg;
+reg [1:0] q_load_done_pending_reg;
 reg [5:0] q_load_count_reg;
+reg       q_load_page_reg;
+reg       lowp_second_half_reg;
+reg [127:0] lowp_data_reg;
 wire q_load_fire = q_rd_valid && q_rd_ready;
 wire store_q_valid;
 wire store_q_write;
 wire [1:0] store_q_pair;
 wire [4:0] store_q_addr;
 
-assign q_rd_ready = q_load_busy_reg;
+assign q_rd_ready = q_load_busy_reg && !lowp_second_half_reg;
 assign fin_ready = !q_load_busy_reg && !o_store_busy;
+
+function [127:0] unpack_int8x8_to_q8_8;
+    input [63:0] bytes;
+    integer i;
+    begin
+        for (i = 0; i < 8; i = i + 1)
+            unpack_int8x8_to_q8_8[i*16 +: 16] = {bytes[i*8 +: 8], 8'd0};
+    end
+endfunction
 
 o_store_adapter u_store (
     .clk(clk), .rst_n(rst_n), .start(o_store_start), .page(o_store_page),
@@ -62,7 +76,11 @@ always @(posedge clk) begin
     if (!rst_n) begin
         q_load_busy_reg <= 1'b0;
         q_load_done <= 1'b0;
+        q_load_done_pending_reg <= 2'b00;
         q_load_count_reg <= 6'd0;
+        q_load_page_reg <= 1'b0;
+        lowp_second_half_reg <= 1'b0;
+        lowp_data_reg <= 128'd0;
         q_rw_valid <= 1'b0;
         q_rw_write <= 1'b0;
         q_rw_pair <= 2'd0;
@@ -70,11 +88,14 @@ always @(posedge clk) begin
         q_rw_wmask <= 16'hffff;
         q_rw_wdata <= 128'd0;
     end else begin
-        q_load_done <= 1'b0;
+        q_load_done <= q_load_done_pending_reg[1];
+        q_load_done_pending_reg <= {q_load_done_pending_reg[0], 1'b0};
         q_rw_valid <= 1'b0;
         if (q_load_start && !q_load_busy_reg) begin
             q_load_busy_reg <= 1'b1;
+            q_load_page_reg <= q_load_page;
             q_load_count_reg <= 6'd0;
+            lowp_second_half_reg <= 1'b0;
         end
 
         // O store reads get highest priority — they have no backpressure
@@ -93,17 +114,36 @@ always @(posedge clk) begin
             q_rw_addr <= {fin_page, fin_row, fin_half};
             q_rw_wmask <= 16'hffff;
             q_rw_wdata <= fin_data;
+        end else if (lowp_second_half_reg) begin
+            q_rw_valid <= 1'b1;
+            q_rw_write <= 1'b1;
+            q_rw_pair <= {q_load_count_reg[0], 1'b1};
+            q_rw_addr <= {q_load_page_reg, q_load_count_reg[4:1]};
+            q_rw_wmask <= 16'hffff;
+            q_rw_wdata <= unpack_int8x8_to_q8_8(lowp_data_reg[127:64]);
+            lowp_second_half_reg <= 1'b0;
+            q_load_count_reg <= q_load_count_reg + 6'd1;
+            if (q_load_count_reg == 6'd31) begin
+                q_load_busy_reg <= 1'b0;
+                q_load_done_pending_reg[0] <= 1'b1;
+            end
         end else if (q_load_fire) begin
             q_rw_valid <= 1'b1;
             q_rw_write <= 1'b1;
-            q_rw_pair <= q_load_count_reg[1:0];
-            q_rw_addr <= {q_load_page, q_load_count_reg[5:3], q_load_count_reg[2]};
+            q_rw_pair <= lowp_int8_mode ? {q_load_count_reg[0], 1'b0} : q_load_count_reg[1:0];
+            q_rw_addr <= lowp_int8_mode ? {q_load_page_reg, q_load_count_reg[4:1]} :
+                                           {q_load_page_reg, q_load_count_reg[5:3], q_load_count_reg[2]};
             q_rw_wmask <= 16'hffff;
-            q_rw_wdata <= q_rd_data;
-            q_load_count_reg <= q_load_count_reg + 6'd1;
-            if (q_load_count_reg == 6'd63) begin
-                q_load_busy_reg <= 1'b0;
-                q_load_done <= 1'b1;
+            q_rw_wdata <= lowp_int8_mode ? unpack_int8x8_to_q8_8(q_rd_data[63:0]) : q_rd_data;
+            if (lowp_int8_mode) begin
+                lowp_data_reg <= q_rd_data;
+                lowp_second_half_reg <= 1'b1;
+            end else begin
+                q_load_count_reg <= q_load_count_reg + 6'd1;
+                if (q_load_count_reg == 6'd63) begin
+                    q_load_busy_reg <= 1'b0;
+                    q_load_done_pending_reg[0] <= 1'b1;
+                end
             end
         end
     end

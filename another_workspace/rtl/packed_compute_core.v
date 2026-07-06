@@ -58,7 +58,8 @@ module packed_compute_core (
     input  wire [1:0]          fin_acc_req_quarter,
     input  wire [2:0]          fin_acc_req_pair,
     output wire                fin_acc_rsp_valid,
-    output wire signed [95:0]  fin_acc_rsp_data
+    output wire signed [95:0]  fin_acc_rsp_data,
+    output wire                compute_idle
 );
 
 localparam integer TOKEN_CTX_LSB = 0;
@@ -84,6 +85,7 @@ wire [15:0] fifo_alpha;
 wire [15:0] fifo_beta;
 wire [15:0] fifo_token;
 wire update_ready;
+wire update_state_idle;
 wire [15:0] update_complete_token;
 reg [3:0] pipeline_reserved_reg;
 reg signed [31:0] issue_m_mem [0:7];
@@ -116,6 +118,10 @@ assign reserved_total = {1'b0, pipeline_reserved_reg} + {1'b0, token_fifo_occupa
 assign score_ready = dot_ready && (reserved_total < 5'd8) && (issue_meta_count_reg < 4'd8);
 assign score_fire = score_valid && score_ready;
 assign complete_user_token = update_complete_token[TOKEN_USER_LSB +: 8];
+assign compute_idle = update_state_idle && !score_valid && !dot_valid && !exp_valid &&
+                      !fifo_valid && (token_fifo_occupancy == 4'd0) &&
+                      (pipeline_reserved_reg == 4'd0) &&
+                      (issue_meta_count_reg == 4'd0);
 
 always @(posedge clk) begin
     if (!rst_n) begin
@@ -208,7 +214,7 @@ update_state_cluster #(.TOKEN_WIDTH(16)) u_update (
     .fin_acc_req_valid(fin_acc_req_valid), .fin_acc_req_ready(fin_acc_req_ready),
     .fin_acc_req_context(fin_acc_req_context), .fin_acc_req_quarter(fin_acc_req_quarter),
     .fin_acc_req_pair(fin_acc_req_pair), .fin_acc_rsp_valid(fin_acc_rsp_valid),
-    .fin_acc_rsp_data(fin_acc_rsp_data)
+    .fin_acc_rsp_data(fin_acc_rsp_data), .idle(update_state_idle)
 );
 
 endmodule
