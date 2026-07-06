@@ -1,0 +1,29 @@
+Stim Id                   : /stim#1
+Stim file                 : /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/rtl_wave/fa_top_power_s256_rtl.shm
+Stim file format          : shm
+Top instance              : /tb_fa_top_power_s256/dut
+Design Top                : /fa_top
+Num frames                : 1
+Duration                  : 1.92664e+06ns
+--------------------------------- Annotation Report --------------------------------
+Object Type         Asserted  UnAsserted  Unconnected  Constant   Total  Asserted%
+------------------------------------------------------------------------------------
+Primary Ports
+  Inputs                 205           0            0         0     205    100.00%
+  Outputs                182         134            0        30     346     57.59%
+  I/O                      0           0            0         0       0        N/A
+Sequential Outputs
+  Memory                4864           0            0         0    4864    100.00%
+  Flop                  8315        7752            1         0   16068     51.74%
+  Latch                    0           0            0         0       0        N/A
+  Arch ICGC                0           0            0         0       0        N/A
+  Inferred ICGC            0           0            0         0       0        N/A
+  Total ICGC               0           0            0         0       0        N/A
+Drivers
+  Driver nets          13384      123348            1         0  136733      9.78%
+  RTL Driver nets      12667      123348            1         0  136016      9.31%
+DFT
+  Input Ports              0           0            0         0       0        N/A
+  Flop Outputs             0           0            0         0       0        N/A
+  Memory Outputs           0           0            0         0       0        N/A
+------------------------------------------------------------------------------------

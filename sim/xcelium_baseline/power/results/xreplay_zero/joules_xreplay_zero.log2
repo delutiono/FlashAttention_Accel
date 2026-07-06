@@ -1,0 +1,712 @@
+Cadence Joules(TM) RTL Power Solution.
+Copyright 2025 Cadence Design Systems, Inc. All rights reserved worldwide.
+Cadence and the Cadence logo are registered trademarks and Joules is a trademark
+of Cadence Design Systems, Inc. in the United States and other countries.
+
+[18:38:31.060353] Configured Lic search path (25.01-s002): 5280@sh02lo01
+
+Version: 25.12-s069_1, built Mon Nov 17 12:49:26 PST 2025
+Options: -files power/tcl/run_fa_top_xreplay_zero.tcl -log /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/joules_xreplay_zero.log
+Date:    Mon Jul 06 18:38:31 2026
+Host:    sh02lo02 (x86_64 w/Linux 4.18.0-477.10.1.el8_8.x86_64) (18cores*36cpus*2physical cpus*Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz 25344KB) (1055765044KB)
+User:    liuqisong
+PID:     1139997 (1139997_71e58103-137c-4cbb-ab14-9449aafbab4d)
+OS:      Red Hat Enterprise Linux 8.4 (Ootpa)
+DISPLAY: :16
+CWD:     /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline
+RTLSCORE_ROOT: /apps/DDI251/25.12.000/JSTUDIO251/tools.lnx86
+
+Checking out license: Joules_RTL_Power
+License checkout complete (0 seconds elapsed).
+Checking out license: Joules_XL
+[18:38:31.171281] Periodic Lic check successful
+[18:38:31.695587] Feature usage summary:
+[18:38:31.695587] Joules_XL
+License checkout complete (0 seconds elapsed).
+
+Finished executable startup (11 seconds elapsed).
+
+Loading tool scripts...
+Finished loading tool scripts (41 seconds elapsed).
+
+#@ Processing -files option
+@joules:root: 1> source power/tcl/run_fa_top_xreplay_zero.tcl
+#@ Begin verbose source ./power/tcl/run_fa_top_xreplay_zero.tcl
+@file(run_fa_top_xreplay_zero.tcl) 13: proc env_or_default ...
+@file(run_fa_top_xreplay_zero.tcl) 20: proc file_list_existing ...
+@file(run_fa_top_xreplay_zero.tcl) 30: proc require_file ...
+@file(run_fa_top_xreplay_zero.tcl) 37: proc write_xreplay_model_startup_file ...
+@file(run_fa_top_xreplay_zero.tcl) 49: proc write_joules_clean_sdc ...
+@file(run_fa_top_xreplay_zero.tcl) 68: set script_dir [file dirname [file normalize [info script]]]
+@file(run_fa_top_xreplay_zero.tcl) 69: set base_dir   [file normalize [file join $script_dir ".." ".."]]
+@file(run_fa_top_xreplay_zero.tcl) 70: set root_dir   [file normalize [file join $base_dir ".." ".."]]
+@file(run_fa_top_xreplay_zero.tcl) 71: set power_dir  [file join $base_dir "power"]
+@file(run_fa_top_xreplay_zero.tcl) 73: set out_dir          [env_or_default JOULES_OUT_DIR [file join $power_dir "out" "joules_xreplay_zero"]]
+@file(run_fa_top_xreplay_zero.tcl) 74: set mapping_file     [env_or_default JOULES_MAPPING_FILE [file join $power_dir "mapping" "fa_top_genus_mapping.rpt"]]
+@file(run_fa_top_xreplay_zero.tcl) 75: set rtl_stim         [env_or_default JOULES_RTL_STIM [file join $power_dir "rtl_wave" "fa_top_power_s256_rtl.shm"]]
+@file(run_fa_top_xreplay_zero.tcl) 76: set rtl_stim_format  [string tolower [env_or_default JOULES_RTL_STIM_FORMAT "shm"]]
+@file(run_fa_top_xreplay_zero.tcl) 77: set xrun_path        [env_or_default JOULES_XRUN_PATH "xrun"]
+@file(run_fa_top_xreplay_zero.tcl) 78: set dut_instance     [env_or_default JOULES_DUT_INSTANCE "tb_fa_top_power_s256.dut"]
+@file(run_fa_top_xreplay_zero.tcl) 79: set xreplay_start    [env_or_default JOULES_XREPLAY_START ""]
+@file(run_fa_top_xreplay_zero.tcl) 80: set xreplay_end      [env_or_default JOULES_XREPLAY_END ""]
+@file(run_fa_top_xreplay_zero.tcl) 81: set replayed_stim    [env_or_default JOULES_REPLAYED_STIM [file join $out_dir "fa_top_power_s256_replayed_zero.vcd"]]
+@file(run_fa_top_xreplay_zero.tcl) 83: set default_std_lib [file normalize [file join $root_dir "genus" "workspace" "LIBS" "sky130_fd_sc_hs__tt_025C_1v80.lib"]]
+@file(run_fa_top_xreplay_zero.tcl) 84: set std_lib [env_or_default JOULES_STD_LIB $default_std_lib]
+@file(run_fa_top_xreplay_zero.tcl) 86: set default_sram_libs [file_list_existing [list \
+  [file join $root_dir "workspace" "LIBS" "sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib"] \
+  [file join $root_dir "workspace" "LIBS" "sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib"] \
+  [file join $root_dir "workspace" "LIBS" "sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib"]]]
+@file(run_fa_top_xreplay_zero.tcl) 90: set sram_libs_env [env_or_default JOULES_SRAM_LIBS ""]
+@file(run_fa_top_xreplay_zero.tcl) 91: if {$sram_libs_env ne ""} {
+  set sram_libs $sram_libs_env
+} else {
+  set sram_libs $default_sram_libs
+}
+@file(run_fa_top_xreplay_zero.tcl) 97: set default_verilog_model_files [list \
+  [file join $base_dir "models" "primitives.v"] \
+  [file join $base_dir "models" "sky130_fd_sc_hs_func_fixed.v"] \
+  [file join $base_dir "models" "sram_models_fa_top_gate.v"]]
+@file(run_fa_top_xreplay_zero.tcl) 101: set verilog_model_files_env [env_or_default JOULES_VERILOG_MODEL_FILES ""]
+@file(run_fa_top_xreplay_zero.tcl) 102: if {$verilog_model_files_env ne ""} {
+  set verilog_model_files $verilog_model_files_env
+} else {
+  set verilog_model_files $default_verilog_model_files
+}
+@file(run_fa_top_xreplay_zero.tcl) 108: set raw_sdc         [file join $base_dir "constraints" "fa_top_mapped.sdc"]
+@file(run_fa_top_xreplay_zero.tcl) 109: set clean_sdc       [file join $out_dir "fa_top_mapped.joules_clean.sdc"]
+@file(run_fa_top_xreplay_zero.tcl) 110: set netlist_file    [file join $base_dir "netlist" "fa_top_mapped.v"]
+@file(run_fa_top_xreplay_zero.tcl) 111: set startup_file    [env_or_default JOULES_VERILOG_MODEL_STARTUP_FILE [file join $out_dir "xreplay_verilog_models.f"]]
+@file(run_fa_top_xreplay_zero.tcl) 112: set use_raw_sdc     [env_or_default JOULES_USE_RAW_SDC "0"]
+@file(run_fa_top_xreplay_zero.tcl) 113: set use_model_files [env_or_default JOULES_USE_VERILOG_MODEL_FILES "0"]
+@file(run_fa_top_xreplay_zero.tcl) 115: file mkdir $out_dir
+@file(run_fa_top_xreplay_zero.tcl) 117: require_file $mapping_file "Genus RTL-to-gate mapping file"
+@file(run_fa_top_xreplay_zero.tcl) 118: require_file $rtl_stim "RTL stimulus waveform"
+@file(run_fa_top_xreplay_zero.tcl) 119: require_file $std_lib "standard-cell Liberty file"
+@file(run_fa_top_xreplay_zero.tcl) 120: require_file $netlist_file "mapped gate netlist"
+@file(run_fa_top_xreplay_zero.tcl) 121: require_file $raw_sdc "mapped SDC"
+@file(run_fa_top_xreplay_zero.tcl) 123: foreach model_file $verilog_model_files {
+  require_file $model_file "Xreplay Verilog simulation model"
+}
+@file(run_fa_top_xreplay_zero.tcl) 126: foreach lib $sram_libs {
+  require_file $lib "SRAM Liberty file"
+}
+@file(run_fa_top_xreplay_zero.tcl) 130: set libs [list $std_lib]
+@file(run_fa_top_xreplay_zero.tcl) 131: foreach lib $sram_libs {
+  lappend libs $lib
+}
+@file(run_fa_top_xreplay_zero.tcl) 135: puts "INFO: Joules base_dir: $base_dir"
+INFO: Joules base_dir: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline
+@file(run_fa_top_xreplay_zero.tcl) 136: puts "INFO: reading Liberty files:"
+INFO: reading Liberty files:
+@file(run_fa_top_xreplay_zero.tcl) 137: foreach lib $libs { puts "INFO:   [file normalize $lib]" }
+INFO:   /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib
+@file(run_fa_top_xreplay_zero.tcl) 138: read_libs {*}$libs
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 832 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+        : Add the look-up table definition, then reload the library.
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 832)
+        : Fix the library cell error and then reload the library.
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 884 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 884)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 890 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 890)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 870 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 870)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 876 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 876)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 949 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 949)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 956 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 956)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 963 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 963)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 970 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 970)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 977 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 977)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 984 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 984)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 991 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 991)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 898 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 898)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 905 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 905)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 912 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 912)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 919 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 919)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 926 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 926)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 933 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 933)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 940 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 940)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 1002 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 1002)
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-517'.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-709'.
+
+  Message Summary for Library all 4 libraries:
+  ********************************************
+  Ignoring the timing group. [LBR-709]: 96732
+  Could not find the look-up table definition. [LBR-517]: 96732
+  Missing library level attribute. [LBR-516]: 3
+  An unsupported construct was detected in this library. [LBR-40]: 7
+  ********************************************
+
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_fd_sc_hs__tt_025C_1v80.lib'.
+        : The nominal operating condition is represented, either by the nominal PVT values specified in the library source (via nom_process,nom_voltage and nom_temperature respectively), or by the default PVT values (1.0,1.0,1.0).
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib'.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+        : Add the missing output pin(s), then reload the library. Else the library cell will be marked as timing model i.e. unusable. Timing_model means that the cell does not have any defined function. If there is no output pin, Genus will mark library cell as unusable i.e. the attribute 'usable' will be marked to 'false' on the libcell. Therefore, the cell is not used for mapping and it will not be picked up from the library for synthesis. If you query the attribute 'unusable_reason' on the libcell; result will be: 'Library cell has no output pins.'Note: The message LBR-9 is only for the logical pins and not for the power_ground pins. Genus will depend upon the output function defined in the pin group (output pin) of the cell, to use it for mapping. The pg_pin will not have any function defined.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+Info: Bucketizing cells in library sky130_fd_sc_hs__tt_025C_1v80
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+        : Non-monotonic wireload models can cause problems during synthesis and/or mapping.  Raising some of the points in the curve to give it a monotonic shape.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Info: Bucketizing cells in library sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C_lib
+Info: Bucketizing cells in library sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C_lib
+Info: Bucketizing cells in library sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C_lib
+  Setting attribute of root '/': 'library' = /home/share/pdk/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/workspace/LIBS/sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib
+@file(run_fa_top_xreplay_zero.tcl) 140: puts "INFO: reading mapped netlist: [file normalize $netlist_file]"
+INFO: reading mapped netlist: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v
+@file(run_fa_top_xreplay_zero.tcl) 141: read_hdl -sv $netlist_file
+@file(run_fa_top_xreplay_zero.tcl) 142: elaborate fa_top
+Info    : Elaborating Design. [ELAB-1]
+        : Elaborating top-level block 'fa_top' from file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v'.
+Warning : Undriven module output port. [ELABUTL-123]
+        : Undriven bits of output port 'o_last' in module 'finalize_cluster' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 17, column 67, hid = 0.
+Warning : Undriven module output port. [ELABUTL-123]
+        : Undriven bits of output port 'done_row' in module 'finalize_cluster' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 20, column 16, hid = 0.
+Warning : Undriven module output port. [ELABUTL-123]
+        : Undriven bits of output port 'complete_token' in module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 40015, column 31, hid = 0.
+Warning : Undriven module output port. [ELABUTL-123]
+        : Undriven bits of output port 'complete_last' in module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 40012, column 65, hid = 0.
+Warning : Undriven module output port. [ELABUTL-123]
+        : Undriven bits of output port 'fin_acc_req_ready' in module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 40013, column 25, hid = 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'req_context' of instance 'u_finalize' of module 'finalize_cluster' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 267644, column 30, hid = 0.
+        : Run check_design to check 'Undriven Port(s)/Pin(s)' section for all undriven module input ports. It is better to double confirm with designer if these undriven ports are expected. During syn_gen the undriven ports are controlled by attribute 'hdl_unconnected_value', the default value is 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'v_load_wmask' of instance 'u_core_u_update' of module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 267660, column 53, hid = 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'update_token' of instance 'u_core_u_update' of module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 267660, column 53, hid = 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'update_last' of instance 'u_core_u_update' of module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/netlist/fa_top_mapped.v' on line 267660, column 53, hid = 0.
+Info    : Done Elaborating Design. [ELAB-3]
+        : Done elaborating 'fa_top'.
+Info: read_netlist command, skipping Auto infer of rtlstim2gate rules
+Info: Design state 'mapped': stitching rtlstim2gate... Done
+# Info: Building RTLScore cache for /fa_top
+# Info: 1. marking memories .. done.
+# Info: 2. marking sequentials .. done.
+# Info: 3. marking macros .. done.
+# Info: 4. caching sequentials, macros, .. done.
+# Info: Cache for /fa_top completed.
+Checking for source RTL...
+Check completed for source RTL.
+Running Unified Mux Engine Tricks...
+Completed Unified Mux Engine Tricks
+
+Stage: post_elab
+-------------------------------------------------------
+| Trick             | Accepts | Rejects | Runtime (s) |
+-------------------------------------------------------
+| ume_constant_bmux |       0 |       0 |        0.01 |
+| ume_merge         |       0 |       0 |        0.01 |
+| ume_ssm           |       0 |       0 |        0.02 |
+| ume_cse           |       0 |       0 |        0.24 |
+| ume_shrink        |       0 |       0 |        0.01 |
+| ume_sweep         |       0 |       0 |        0.01 |
+-------------------------------------------------------
+Starting optimize datapath shifters [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed optimize datapath shifters (accepts: 0, rejects: 0, runtime: 0.008s)
+Starting clip mux common data inputs [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip mux common data inputs (accepts: 0, rejects: 0, runtime: 0.010s)
+Starting clip the non-user hierarchies [v2.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip the non-user hierarchies (accepts: 0, rejects: 0, runtime: 0.012s)
+Starting basic netlist cleanup [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed basic netlist cleanup (accepts: 0, rejects: 0, runtime: 0.009s)
+
+Stage: post_elab
+--------------------------------------------------------------------
+| Transform                      | Accepts | Rejects | Runtime (s) |
+--------------------------------------------------------------------
+| hlo_optimize_datapath_shifters |       0 |       0 |        0.01 |
+| hlo_clip_mux_input             |       0 |       0 |        0.01 |
+| hlo_clip                       |       0 |       0 |        0.01 |
+| hlo_cleanup                    |       0 |       0 |        0.01 |
+--------------------------------------------------------------------
+UM:   flow.cputime  flow.realtime  timing.setup.tns  timing.setup.wns  snapshot
+UM:*                                                                   elaborate
+@file(run_fa_top_xreplay_zero.tcl) 144: if {$use_raw_sdc eq "1"} {
+  set sdc_to_read $raw_sdc
+  puts "INFO: reading raw Genus SDC: [file normalize $sdc_to_read]"
+} else {
+  set skipped [write_joules_clean_sdc $raw_sdc $clean_sdc]
+  set sdc_to_read $clean_sdc
+  puts "INFO: reading Joules-clean SDC: [file normalize $sdc_to_read]"
+  puts "INFO: filtered set_dont_touch lines from SDC: $skipped"
+}
+INFO: reading Joules-clean SDC: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_mapped.joules_clean.sdc
+INFO: filtered set_dont_touch lines from SDC: 37
+@file(run_fa_top_xreplay_zero.tcl) 153: read_sdc $sdc_to_read
+Statistics for commands executed by read_sdc:
+ "create_clock"             - successful      1 , failed      0 (runtime  0.02)
+ "current_design"           - successful      1 , failed      0 (runtime  0.02)
+ "get_clocks"               - successful    550 , failed      0 (runtime  0.14)
+ "get_ports"                - successful    551 , failed      0 (runtime  0.22)
+ "set_clock_gating_check"   - successful      1 , failed      0 (runtime  0.02)
+ "set_input_delay"          - successful    204 , failed      0 (runtime  0.08)
+ "set_output_delay"         - successful    346 , failed      0 (runtime  0.10)
+ "set_units"                - successful      2 , failed      0 (runtime  0.01)
+ "set_wire_load_mode"       - successful      1 , failed      0 (runtime  0.03)
+read_sdc completed in 00:00:01 (hh:mm:ss)
+@file(run_fa_top_xreplay_zero.tcl) 156: if {![info exists ::env(JOULES_VERILOG_MODEL_STARTUP_FILE)] || $::env(JOULES_VERILOG_MODEL_STARTUP_FILE) eq ""} {
+  write_xreplay_model_startup_file $startup_file $verilog_model_files
+} else {
+  require_file $startup_file "user-provided Xreplay Verilog model startup file"
+}
+@file(run_fa_top_xreplay_zero.tcl) 162: set xreplay_cmd [list xreplay \
+  -initial_state_point_value rtlstim \
+  -timescale 1ns/1ps \
+  -map_file $mapping_file \
+  -xrun_path $xrun_path \
+  -rtl_stim $rtl_stim \
+  -stim_format $rtl_stim_format \
+  -dut_instance $dut_instance \
+  -delay_mode zero \
+  -out $replayed_stim \
+  -stim_annotation state]
+@file(run_fa_top_xreplay_zero.tcl) 174: if {$use_model_files eq "1"} {
+  # Fallback mode only.  Default is startup-file mode because -verilog_model_files
+  # caused unresolved base stdcell modules in the uploaded log.
+  lappend xreplay_cmd -verilog_model_files $verilog_model_files
+} else {
+  lappend xreplay_cmd -verilog_model_startup_file $startup_file
+}
+@file(run_fa_top_xreplay_zero.tcl) 182: if {$xreplay_start ne ""} { lappend xreplay_cmd -start $xreplay_start }
+@file(run_fa_top_xreplay_zero.tcl) 183: if {$xreplay_end ne ""}   { lappend xreplay_cmd -end $xreplay_end }
+@file(run_fa_top_xreplay_zero.tcl) 185: puts "INFO: Xreplay Verilog simulation models:"
+INFO: Xreplay Verilog simulation models:
+@file(run_fa_top_xreplay_zero.tcl) 186: foreach model_file $verilog_model_files { puts "INFO:   [file normalize $model_file]" }
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/models/primitives.v
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/models/sky130_fd_sc_hs_func_fixed.v
+INFO:   /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/models/sram_models_fa_top_gate.v
+@file(run_fa_top_xreplay_zero.tcl) 187: puts "INFO: Xreplay model startup file: [file normalize $startup_file]"
+INFO: Xreplay model startup file: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/xreplay_verilog_models.f
+@file(run_fa_top_xreplay_zero.tcl) 188: puts "INFO: running zero-delay Xreplay:"
+INFO: running zero-delay Xreplay:
+@file(run_fa_top_xreplay_zero.tcl) 189: puts "INFO: $xreplay_cmd"
+INFO: xreplay -initial_state_point_value rtlstim -timescale 1ns/1ps -map_file /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/mapping/fa_top_genus_mapping.rpt -xrun_path /apps/XCELIUM2409/24.09.006/tools/bin/64bit/xrun -rtl_stim /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/rtl_wave/fa_top_power_s256_rtl.shm -stim_format shm -dut_instance tb_fa_top_power_s256.dut -delay_mode zero -out /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_power_s256_replayed_zero.vcd -stim_annotation state -verilog_model_startup_file /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/xreplay_verilog_models.f
+@file(run_fa_top_xreplay_zero.tcl) 190: {*}$xreplay_cmd
+Info: Option timescale specified is 1ns/1ps
+Info: rtlstim2gate -map_file /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/mapping/fa_top_genus_mapping.rpt
+Info: Mapping file /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/mapping/fa_top_genus_mapping.rpt provided is of type genus.
+Info: Found 15299 map points in /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/mapping/fa_top_genus_mapping.rpt
+Info: Data is of conformal input file type.
+Warning: Missing u_core_u_update/meta_wr_data_reg[0]/Q of DFF type in the design. Ignoring:   (R) + 6429	 DFF	u_core_u_update/meta_wr_data_reg[0]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[1]/Q of DFF type in the design. Ignoring:   (R) + 6430	 DFF	u_core_u_update/meta_wr_data_reg[1]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[2]/Q of DFF type in the design. Ignoring:   (R) + 6431	 DFF	u_core_u_update/meta_wr_data_reg[2]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[3]/Q of DFF type in the design. Ignoring:   (R) + 6432	 DFF	u_core_u_update/meta_wr_data_reg[3]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[4]/Q of DFF type in the design. Ignoring:   (R) + 6433	 DFF	u_core_u_update/meta_wr_data_reg[4]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[5]/Q of DFF type in the design. Ignoring:   (R) + 6434	 DFF	u_core_u_update/meta_wr_data_reg[5]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[6]/Q of DFF type in the design. Ignoring:   (R) + 6435	 DFF	u_core_u_update/meta_wr_data_reg[6]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[7]/Q of DFF type in the design. Ignoring:   (R) + 6436	 DFF	u_core_u_update/meta_wr_data_reg[7]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[8]/Q of DFF type in the design. Ignoring:   (R) + 6437	 DFF	u_core_u_update/meta_wr_data_reg[8]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[9]/Q of DFF type in the design. Ignoring:   (R) + 6438	 DFF	u_core_u_update/meta_wr_data_reg[9]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[10]/Q of DFF type in the design. Ignoring:   (R) + 6439	 DFF	u_core_u_update/meta_wr_data_reg[10]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[11]/Q of DFF type in the design. Ignoring:   (R) + 6440	 DFF	u_core_u_update/meta_wr_data_reg[11]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[12]/Q of DFF type in the design. Ignoring:   (R) + 6441	 DFF	u_core_u_update/meta_wr_data_reg[12]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[13]/Q of DFF type in the design. Ignoring:   (R) + 6442	 DFF	u_core_u_update/meta_wr_data_reg[13]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[14]/Q of DFF type in the design. Ignoring:   (R) + 6443	 DFF	u_core_u_update/meta_wr_data_reg[14]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[15]/Q of DFF type in the design. Ignoring:   (R) + 6444	 DFF	u_core_u_update/meta_wr_data_reg[15]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[16]/Q of DFF type in the design. Ignoring:   (R) + 6445	 DFF	u_core_u_update/meta_wr_data_reg[16]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[17]/Q of DFF type in the design. Ignoring:   (R) + 6446	 DFF	u_core_u_update/meta_wr_data_reg[17]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[18]/Q of DFF type in the design. Ignoring:   (R) + 6447	 DFF	u_core_u_update/meta_wr_data_reg[18]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[19]/Q of DFF type in the design. Ignoring:   (R) + 6448	 DFF	u_core_u_update/meta_wr_data_reg[19]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[20]/Q of DFF type in the design. Ignoring:   (R) + 6449	 DFF	u_core_u_update/meta_wr_data_reg[20]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[21]/Q of DFF type in the design. Ignoring:   (R) + 6450	 DFF	u_core_u_update/meta_wr_data_reg[21]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[22]/Q of DFF type in the design. Ignoring:   (R) + 6451	 DFF	u_core_u_update/meta_wr_data_reg[22]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[23]/Q of DFF type in the design. Ignoring:   (R) + 6452	 DFF	u_core_u_update/meta_wr_data_reg[23]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[24]/Q of DFF type in the design. Ignoring:   (R) + 6453	 DFF	u_core_u_update/meta_wr_data_reg[24]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[25]/Q of DFF type in the design. Ignoring:   (R) + 6454	 DFF	u_core_u_update/meta_wr_data_reg[25]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[26]/Q of DFF type in the design. Ignoring:   (R) + 6455	 DFF	u_core_u_update/meta_wr_data_reg[26]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[27]/Q of DFF type in the design. Ignoring:   (R) + 6456	 DFF	u_core_u_update/meta_wr_data_reg[27]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[28]/Q of DFF type in the design. Ignoring:   (R) + 6457	 DFF	u_core_u_update/meta_wr_data_reg[28]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[29]/Q of DFF type in the design. Ignoring:   (R) + 6458	 DFF	u_core_u_update/meta_wr_data_reg[29]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[30]/Q of DFF type in the design. Ignoring:   (R) + 6459	 DFF	u_core_u_update/meta_wr_data_reg[30]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[31]/Q of DFF type in the design. Ignoring:   (R) + 6460	 DFF	u_core_u_update/meta_wr_data_reg[31]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[32]/Q of DFF type in the design. Ignoring:   (R) + 6461	 DFF	u_core_u_update/meta_wr_data_reg[32]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[33]/Q of DFF type in the design. Ignoring:   (R) + 6462	 DFF	u_core_u_update/meta_wr_data_reg[33]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[34]/Q of DFF type in the design. Ignoring:   (R) + 6463	 DFF	u_core_u_update/meta_wr_data_reg[34]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[35]/Q of DFF type in the design. Ignoring:   (R) + 6464	 DFF	u_core_u_update/meta_wr_data_reg[35]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[36]/Q of DFF type in the design. Ignoring:   (R) + 6465	 DFF	u_core_u_update/meta_wr_data_reg[36]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[37]/Q of DFF type in the design. Ignoring:   (R) + 6466	 DFF	u_core_u_update/meta_wr_data_reg[37]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[38]/Q of DFF type in the design. Ignoring:   (R) + 6467	 DFF	u_core_u_update/meta_wr_data_reg[38]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[39]/Q of DFF type in the design. Ignoring:   (R) + 6468	 DFF	u_core_u_update/meta_wr_data_reg[39]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[40]/Q of DFF type in the design. Ignoring:   (R) + 6469	 DFF	u_core_u_update/meta_wr_data_reg[40]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[41]/Q of DFF type in the design. Ignoring:   (R) + 6470	 DFF	u_core_u_update/meta_wr_data_reg[41]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[42]/Q of DFF type in the design. Ignoring:   (R) + 6471	 DFF	u_core_u_update/meta_wr_data_reg[42]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[43]/Q of DFF type in the design. Ignoring:   (R) + 6472	 DFF	u_core_u_update/meta_wr_data_reg[43]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[44]/Q of DFF type in the design. Ignoring:   (R) + 6473	 DFF	u_core_u_update/meta_wr_data_reg[44]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[45]/Q of DFF type in the design. Ignoring:   (R) + 6474	 DFF	u_core_u_update/meta_wr_data_reg[45]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[46]/Q of DFF type in the design. Ignoring:   (R) + 6475	 DFF	u_core_u_update/meta_wr_data_reg[46]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[47]/Q of DFF type in the design. Ignoring:   (R) + 6476	 DFF	u_core_u_update/meta_wr_data_reg[47]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[48]/Q of DFF type in the design. Ignoring:   (R) + 6477	 DFF	u_core_u_update/meta_wr_data_reg[48]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[49]/Q of DFF type in the design. Ignoring:   (R) + 6478	 DFF	u_core_u_update/meta_wr_data_reg[49]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[50]/Q of DFF type in the design. Ignoring:   (R) + 6479	 DFF	u_core_u_update/meta_wr_data_reg[50]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[51]/Q of DFF type in the design. Ignoring:   (R) + 6480	 DFF	u_core_u_update/meta_wr_data_reg[51]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[52]/Q of DFF type in the design. Ignoring:   (R) + 6481	 DFF	u_core_u_update/meta_wr_data_reg[52]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[53]/Q of DFF type in the design. Ignoring:   (R) + 6482	 DFF	u_core_u_update/meta_wr_data_reg[53]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[54]/Q of DFF type in the design. Ignoring:   (R) + 6483	 DFF	u_core_u_update/meta_wr_data_reg[54]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[55]/Q of DFF type in the design. Ignoring:   (R) + 6484	 DFF	u_core_u_update/meta_wr_data_reg[55]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[56]/Q of DFF type in the design. Ignoring:   (R) + 6485	 DFF	u_core_u_update/meta_wr_data_reg[56]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[57]/Q of DFF type in the design. Ignoring:   (R) + 6486	 DFF	u_core_u_update/meta_wr_data_reg[57]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[58]/Q of DFF type in the design. Ignoring:   (R) + 6487	 DFF	u_core_u_update/meta_wr_data_reg[58]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[59]/Q of DFF type in the design. Ignoring:   (R) + 6488	 DFF	u_core_u_update/meta_wr_data_reg[59]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[60]/Q of DFF type in the design. Ignoring:   (R) + 6489	 DFF	u_core_u_update/meta_wr_data_reg[60]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[61]/Q of DFF type in the design. Ignoring:   (R) + 6490	 DFF	u_core_u_update/meta_wr_data_reg[61]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[62]/Q of DFF type in the design. Ignoring:   (R) + 6491	 DFF	u_core_u_update/meta_wr_data_reg[62]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[63]/Q of DFF type in the design. Ignoring:   (R) + 6492	 DFF	u_core_u_update/meta_wr_data_reg[63]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[64]/Q of DFF type in the design. Ignoring:   (R) + 6493	 DFF	u_core_u_update/meta_wr_data_reg[64]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[65]/Q of DFF type in the design. Ignoring:   (R) + 6494	 DFF	u_core_u_update/meta_wr_data_reg[65]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[66]/Q of DFF type in the design. Ignoring:   (R) + 6495	 DFF	u_core_u_update/meta_wr_data_reg[66]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[67]/Q of DFF type in the design. Ignoring:   (R) + 6496	 DFF	u_core_u_update/meta_wr_data_reg[67]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[68]/Q of DFF type in the design. Ignoring:   (R) + 6497	 DFF	u_core_u_update/meta_wr_data_reg[68]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[69]/Q of DFF type in the design. Ignoring:   (R) + 6498	 DFF	u_core_u_update/meta_wr_data_reg[69]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[70]/Q of DFF type in the design. Ignoring:   (R) + 6499	 DFF	u_core_u_update/meta_wr_data_reg[70]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[71]/Q of DFF type in the design. Ignoring:   (R) + 6500	 DFF	u_core_u_update/meta_wr_data_reg[71]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[72]/Q of DFF type in the design. Ignoring:   (R) + 6501	 DFF	u_core_u_update/meta_wr_data_reg[72]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[73]/Q of DFF type in the design. Ignoring:   (R) + 6502	 DFF	u_core_u_update/meta_wr_data_reg[73]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[74]/Q of DFF type in the design. Ignoring:   (R) + 6503	 DFF	u_core_u_update/meta_wr_data_reg[74]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[75]/Q of DFF type in the design. Ignoring:   (R) + 6504	 DFF	u_core_u_update/meta_wr_data_reg[75]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[76]/Q of DFF type in the design. Ignoring:   (R) + 6505	 DFF	u_core_u_update/meta_wr_data_reg[76]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[77]/Q of DFF type in the design. Ignoring:   (R) + 6506	 DFF	u_core_u_update/meta_wr_data_reg[77]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[78]/Q of DFF type in the design. Ignoring:   (R) + 6507	 DFF	u_core_u_update/meta_wr_data_reg[78]/Q.
+Warning: Missing u_core_u_update/meta_wr_data_reg[79]/Q of DFF type in the design. Ignoring:   (R) + 6508	 DFF	u_core_u_update/meta_wr_data_reg[79]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[0]/Q of DFF type in the design. Ignoring:   (R) + 8064	 DFF	u_k_adapter_k_rw_data_reg[0]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[1]/Q of DFF type in the design. Ignoring:   (R) + 8065	 DFF	u_k_adapter_k_rw_data_reg[1]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[2]/Q of DFF type in the design. Ignoring:   (R) + 8066	 DFF	u_k_adapter_k_rw_data_reg[2]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[3]/Q of DFF type in the design. Ignoring:   (R) + 8067	 DFF	u_k_adapter_k_rw_data_reg[3]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[4]/Q of DFF type in the design. Ignoring:   (R) + 8068	 DFF	u_k_adapter_k_rw_data_reg[4]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[5]/Q of DFF type in the design. Ignoring:   (R) + 8069	 DFF	u_k_adapter_k_rw_data_reg[5]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[6]/Q of DFF type in the design. Ignoring:   (R) + 8070	 DFF	u_k_adapter_k_rw_data_reg[6]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[7]/Q of DFF type in the design. Ignoring:   (R) + 8071	 DFF	u_k_adapter_k_rw_data_reg[7]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[8]/Q of DFF type in the design. Ignoring:   (R) + 8072	 DFF	u_k_adapter_k_rw_data_reg[8]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[9]/Q of DFF type in the design. Ignoring:   (R) + 8073	 DFF	u_k_adapter_k_rw_data_reg[9]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[10]/Q of DFF type in the design. Ignoring:   (R) + 8074	 DFF	u_k_adapter_k_rw_data_reg[10]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[11]/Q of DFF type in the design. Ignoring:   (R) + 8075	 DFF	u_k_adapter_k_rw_data_reg[11]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[12]/Q of DFF type in the design. Ignoring:   (R) + 8076	 DFF	u_k_adapter_k_rw_data_reg[12]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[13]/Q of DFF type in the design. Ignoring:   (R) + 8077	 DFF	u_k_adapter_k_rw_data_reg[13]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[14]/Q of DFF type in the design. Ignoring:   (R) + 8078	 DFF	u_k_adapter_k_rw_data_reg[14]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[15]/Q of DFF type in the design. Ignoring:   (R) + 8079	 DFF	u_k_adapter_k_rw_data_reg[15]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[16]/Q of DFF type in the design. Ignoring:   (R) + 8080	 DFF	u_k_adapter_k_rw_data_reg[16]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[17]/Q of DFF type in the design. Ignoring:   (R) + 8081	 DFF	u_k_adapter_k_rw_data_reg[17]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[18]/Q of DFF type in the design. Ignoring:   (R) + 8082	 DFF	u_k_adapter_k_rw_data_reg[18]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[19]/Q of DFF type in the design. Ignoring:   (R) + 8083	 DFF	u_k_adapter_k_rw_data_reg[19]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[20]/Q of DFF type in the design. Ignoring:   (R) + 8084	 DFF	u_k_adapter_k_rw_data_reg[20]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[21]/Q of DFF type in the design. Ignoring:   (R) + 8085	 DFF	u_k_adapter_k_rw_data_reg[21]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[22]/Q of DFF type in the design. Ignoring:   (R) + 8086	 DFF	u_k_adapter_k_rw_data_reg[22]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[23]/Q of DFF type in the design. Ignoring:   (R) + 8087	 DFF	u_k_adapter_k_rw_data_reg[23]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[24]/Q of DFF type in the design. Ignoring:   (R) + 8088	 DFF	u_k_adapter_k_rw_data_reg[24]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[25]/Q of DFF type in the design. Ignoring:   (R) + 8089	 DFF	u_k_adapter_k_rw_data_reg[25]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[26]/Q of DFF type in the design. Ignoring:   (R) + 8090	 DFF	u_k_adapter_k_rw_data_reg[26]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[27]/Q of DFF type in the design. Ignoring:   (R) + 8091	 DFF	u_k_adapter_k_rw_data_reg[27]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[28]/Q of DFF type in the design. Ignoring:   (R) + 8092	 DFF	u_k_adapter_k_rw_data_reg[28]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[29]/Q of DFF type in the design. Ignoring:   (R) + 8093	 DFF	u_k_adapter_k_rw_data_reg[29]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[30]/Q of DFF type in the design. Ignoring:   (R) + 8094	 DFF	u_k_adapter_k_rw_data_reg[30]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[31]/Q of DFF type in the design. Ignoring:   (R) + 8095	 DFF	u_k_adapter_k_rw_data_reg[31]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[32]/Q of DFF type in the design. Ignoring:   (R) + 8096	 DFF	u_k_adapter_k_rw_data_reg[32]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[33]/Q of DFF type in the design. Ignoring:   (R) + 8097	 DFF	u_k_adapter_k_rw_data_reg[33]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[34]/Q of DFF type in the design. Ignoring:   (R) + 8098	 DFF	u_k_adapter_k_rw_data_reg[34]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[35]/Q of DFF type in the design. Ignoring:   (R) + 8099	 DFF	u_k_adapter_k_rw_data_reg[35]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[36]/Q of DFF type in the design. Ignoring:   (R) + 8100	 DFF	u_k_adapter_k_rw_data_reg[36]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[37]/Q of DFF type in the design. Ignoring:   (R) + 8101	 DFF	u_k_adapter_k_rw_data_reg[37]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[38]/Q of DFF type in the design. Ignoring:   (R) + 8102	 DFF	u_k_adapter_k_rw_data_reg[38]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[39]/Q of DFF type in the design. Ignoring:   (R) + 8103	 DFF	u_k_adapter_k_rw_data_reg[39]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[40]/Q of DFF type in the design. Ignoring:   (R) + 8104	 DFF	u_k_adapter_k_rw_data_reg[40]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[41]/Q of DFF type in the design. Ignoring:   (R) + 8105	 DFF	u_k_adapter_k_rw_data_reg[41]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[42]/Q of DFF type in the design. Ignoring:   (R) + 8106	 DFF	u_k_adapter_k_rw_data_reg[42]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[43]/Q of DFF type in the design. Ignoring:   (R) + 8107	 DFF	u_k_adapter_k_rw_data_reg[43]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[44]/Q of DFF type in the design. Ignoring:   (R) + 8108	 DFF	u_k_adapter_k_rw_data_reg[44]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[45]/Q of DFF type in the design. Ignoring:   (R) + 8109	 DFF	u_k_adapter_k_rw_data_reg[45]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[46]/Q of DFF type in the design. Ignoring:   (R) + 8110	 DFF	u_k_adapter_k_rw_data_reg[46]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[47]/Q of DFF type in the design. Ignoring:   (R) + 8111	 DFF	u_k_adapter_k_rw_data_reg[47]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[48]/Q of DFF type in the design. Ignoring:   (R) + 8112	 DFF	u_k_adapter_k_rw_data_reg[48]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[49]/Q of DFF type in the design. Ignoring:   (R) + 8113	 DFF	u_k_adapter_k_rw_data_reg[49]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[50]/Q of DFF type in the design. Ignoring:   (R) + 8114	 DFF	u_k_adapter_k_rw_data_reg[50]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[51]/Q of DFF type in the design. Ignoring:   (R) + 8115	 DFF	u_k_adapter_k_rw_data_reg[51]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[52]/Q of DFF type in the design. Ignoring:   (R) + 8116	 DFF	u_k_adapter_k_rw_data_reg[52]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[53]/Q of DFF type in the design. Ignoring:   (R) + 8117	 DFF	u_k_adapter_k_rw_data_reg[53]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[54]/Q of DFF type in the design. Ignoring:   (R) + 8118	 DFF	u_k_adapter_k_rw_data_reg[54]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[55]/Q of DFF type in the design. Ignoring:   (R) + 8119	 DFF	u_k_adapter_k_rw_data_reg[55]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[56]/Q of DFF type in the design. Ignoring:   (R) + 8120	 DFF	u_k_adapter_k_rw_data_reg[56]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[57]/Q of DFF type in the design. Ignoring:   (R) + 8121	 DFF	u_k_adapter_k_rw_data_reg[57]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[58]/Q of DFF type in the design. Ignoring:   (R) + 8122	 DFF	u_k_adapter_k_rw_data_reg[58]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[59]/Q of DFF type in the design. Ignoring:   (R) + 8123	 DFF	u_k_adapter_k_rw_data_reg[59]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[60]/Q of DFF type in the design. Ignoring:   (R) + 8124	 DFF	u_k_adapter_k_rw_data_reg[60]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[61]/Q of DFF type in the design. Ignoring:   (R) + 8125	 DFF	u_k_adapter_k_rw_data_reg[61]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[62]/Q of DFF type in the design. Ignoring:   (R) + 8126	 DFF	u_k_adapter_k_rw_data_reg[62]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[63]/Q of DFF type in the design. Ignoring:   (R) + 8127	 DFF	u_k_adapter_k_rw_data_reg[63]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[64]/Q of DFF type in the design. Ignoring:   (R) + 8128	 DFF	u_k_adapter_k_rw_data_reg[64]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[65]/Q of DFF type in the design. Ignoring:   (R) + 8129	 DFF	u_k_adapter_k_rw_data_reg[65]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[66]/Q of DFF type in the design. Ignoring:   (R) + 8130	 DFF	u_k_adapter_k_rw_data_reg[66]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[67]/Q of DFF type in the design. Ignoring:   (R) + 8131	 DFF	u_k_adapter_k_rw_data_reg[67]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[68]/Q of DFF type in the design. Ignoring:   (R) + 8132	 DFF	u_k_adapter_k_rw_data_reg[68]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[69]/Q of DFF type in the design. Ignoring:   (R) + 8133	 DFF	u_k_adapter_k_rw_data_reg[69]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[70]/Q of DFF type in the design. Ignoring:   (R) + 8134	 DFF	u_k_adapter_k_rw_data_reg[70]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[71]/Q of DFF type in the design. Ignoring:   (R) + 8135	 DFF	u_k_adapter_k_rw_data_reg[71]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[72]/Q of DFF type in the design. Ignoring:   (R) + 8136	 DFF	u_k_adapter_k_rw_data_reg[72]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[73]/Q of DFF type in the design. Ignoring:   (R) + 8137	 DFF	u_k_adapter_k_rw_data_reg[73]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[74]/Q of DFF type in the design. Ignoring:   (R) + 8138	 DFF	u_k_adapter_k_rw_data_reg[74]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[75]/Q of DFF type in the design. Ignoring:   (R) + 8139	 DFF	u_k_adapter_k_rw_data_reg[75]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[76]/Q of DFF type in the design. Ignoring:   (R) + 8140	 DFF	u_k_adapter_k_rw_data_reg[76]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[77]/Q of DFF type in the design. Ignoring:   (R) + 8141	 DFF	u_k_adapter_k_rw_data_reg[77]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[78]/Q of DFF type in the design. Ignoring:   (R) + 8142	 DFF	u_k_adapter_k_rw_data_reg[78]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[79]/Q of DFF type in the design. Ignoring:   (R) + 8143	 DFF	u_k_adapter_k_rw_data_reg[79]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[80]/Q of DFF type in the design. Ignoring:   (R) + 8144	 DFF	u_k_adapter_k_rw_data_reg[80]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[81]/Q of DFF type in the design. Ignoring:   (R) + 8145	 DFF	u_k_adapter_k_rw_data_reg[81]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[82]/Q of DFF type in the design. Ignoring:   (R) + 8146	 DFF	u_k_adapter_k_rw_data_reg[82]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[83]/Q of DFF type in the design. Ignoring:   (R) + 8147	 DFF	u_k_adapter_k_rw_data_reg[83]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[84]/Q of DFF type in the design. Ignoring:   (R) + 8148	 DFF	u_k_adapter_k_rw_data_reg[84]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[85]/Q of DFF type in the design. Ignoring:   (R) + 8149	 DFF	u_k_adapter_k_rw_data_reg[85]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[86]/Q of DFF type in the design. Ignoring:   (R) + 8150	 DFF	u_k_adapter_k_rw_data_reg[86]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[87]/Q of DFF type in the design. Ignoring:   (R) + 8151	 DFF	u_k_adapter_k_rw_data_reg[87]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[88]/Q of DFF type in the design. Ignoring:   (R) + 8152	 DFF	u_k_adapter_k_rw_data_reg[88]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[89]/Q of DFF type in the design. Ignoring:   (R) + 8153	 DFF	u_k_adapter_k_rw_data_reg[89]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[90]/Q of DFF type in the design. Ignoring:   (R) + 8154	 DFF	u_k_adapter_k_rw_data_reg[90]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[91]/Q of DFF type in the design. Ignoring:   (R) + 8155	 DFF	u_k_adapter_k_rw_data_reg[91]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[92]/Q of DFF type in the design. Ignoring:   (R) + 8156	 DFF	u_k_adapter_k_rw_data_reg[92]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[93]/Q of DFF type in the design. Ignoring:   (R) + 8157	 DFF	u_k_adapter_k_rw_data_reg[93]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[94]/Q of DFF type in the design. Ignoring:   (R) + 8158	 DFF	u_k_adapter_k_rw_data_reg[94]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[95]/Q of DFF type in the design. Ignoring:   (R) + 8159	 DFF	u_k_adapter_k_rw_data_reg[95]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[96]/Q of DFF type in the design. Ignoring:   (R) + 8160	 DFF	u_k_adapter_k_rw_data_reg[96]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[97]/Q of DFF type in the design. Ignoring:   (R) + 8161	 DFF	u_k_adapter_k_rw_data_reg[97]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[98]/Q of DFF type in the design. Ignoring:   (R) + 8162	 DFF	u_k_adapter_k_rw_data_reg[98]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[99]/Q of DFF type in the design. Ignoring:   (R) + 8163	 DFF	u_k_adapter_k_rw_data_reg[99]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[100]/Q of DFF type in the design. Ignoring:   (R) + 8164	 DFF	u_k_adapter_k_rw_data_reg[100]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[101]/Q of DFF type in the design. Ignoring:   (R) + 8165	 DFF	u_k_adapter_k_rw_data_reg[101]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[102]/Q of DFF type in the design. Ignoring:   (R) + 8166	 DFF	u_k_adapter_k_rw_data_reg[102]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[103]/Q of DFF type in the design. Ignoring:   (R) + 8167	 DFF	u_k_adapter_k_rw_data_reg[103]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[104]/Q of DFF type in the design. Ignoring:   (R) + 8168	 DFF	u_k_adapter_k_rw_data_reg[104]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[105]/Q of DFF type in the design. Ignoring:   (R) + 8169	 DFF	u_k_adapter_k_rw_data_reg[105]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[106]/Q of DFF type in the design. Ignoring:   (R) + 8170	 DFF	u_k_adapter_k_rw_data_reg[106]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[107]/Q of DFF type in the design. Ignoring:   (R) + 8171	 DFF	u_k_adapter_k_rw_data_reg[107]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[108]/Q of DFF type in the design. Ignoring:   (R) + 8172	 DFF	u_k_adapter_k_rw_data_reg[108]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[109]/Q of DFF type in the design. Ignoring:   (R) + 8173	 DFF	u_k_adapter_k_rw_data_reg[109]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[110]/Q of DFF type in the design. Ignoring:   (R) + 8174	 DFF	u_k_adapter_k_rw_data_reg[110]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[111]/Q of DFF type in the design. Ignoring:   (R) + 8175	 DFF	u_k_adapter_k_rw_data_reg[111]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[112]/Q of DFF type in the design. Ignoring:   (R) + 8176	 DFF	u_k_adapter_k_rw_data_reg[112]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[113]/Q of DFF type in the design. Ignoring:   (R) + 8177	 DFF	u_k_adapter_k_rw_data_reg[113]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[114]/Q of DFF type in the design. Ignoring:   (R) + 8178	 DFF	u_k_adapter_k_rw_data_reg[114]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[115]/Q of DFF type in the design. Ignoring:   (R) + 8179	 DFF	u_k_adapter_k_rw_data_reg[115]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[116]/Q of DFF type in the design. Ignoring:   (R) + 8180	 DFF	u_k_adapter_k_rw_data_reg[116]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[117]/Q of DFF type in the design. Ignoring:   (R) + 8181	 DFF	u_k_adapter_k_rw_data_reg[117]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[118]/Q of DFF type in the design. Ignoring:   (R) + 8182	 DFF	u_k_adapter_k_rw_data_reg[118]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[119]/Q of DFF type in the design. Ignoring:   (R) + 8183	 DFF	u_k_adapter_k_rw_data_reg[119]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[120]/Q of DFF type in the design. Ignoring:   (R) + 8184	 DFF	u_k_adapter_k_rw_data_reg[120]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[121]/Q of DFF type in the design. Ignoring:   (R) + 8185	 DFF	u_k_adapter_k_rw_data_reg[121]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[122]/Q of DFF type in the design. Ignoring:   (R) + 8186	 DFF	u_k_adapter_k_rw_data_reg[122]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[123]/Q of DFF type in the design. Ignoring:   (R) + 8187	 DFF	u_k_adapter_k_rw_data_reg[123]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[124]/Q of DFF type in the design. Ignoring:   (R) + 8188	 DFF	u_k_adapter_k_rw_data_reg[124]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[125]/Q of DFF type in the design. Ignoring:   (R) + 8189	 DFF	u_k_adapter_k_rw_data_reg[125]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[126]/Q of DFF type in the design. Ignoring:   (R) + 8190	 DFF	u_k_adapter_k_rw_data_reg[126]/Q.
+Warning: Missing u_k_adapter_k_rw_data_reg[127]/Q of DFF type in the design. Ignoring:   (R) + 8191	 DFF	u_k_adapter_k_rw_data_reg[127]/Q.
+Info   : Summary of Conformal mapping report file: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/joules_work/conformal.map_file.WdGh
+             Total lines     : 45899
+             Valid lines(G+R): 30598
+             Existing data   : Flops(0), Nets(0), Bbox(0)
+             Added map data  : Flops(17841), Nets(551), Bbox(73)
+             Ignored map data: Flops(208), Nets(0), Bbox(0)
+XReplay Note: gen_dut_instance option is set to joules_testbench.joules_top_inst
+XReplay Note: Leaf pins are written in intermediate shm
+XReplay Note: Started the generation of intermediate shm
+Info   : STIM-0001 [StimInfo] write_stimulus effective options
+       : -file :
+       : /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/rtl_wave/fa_top_power_s256_rtl.shm
+       : -dut_instance : tb_fa_top_power_s256.dut
+       : -format : shm
+       : -allow_n_nets : 1
+       : -rtl_stimulus: 1
+       : -output_file_format : shm
+       : -output_file_name :
+       : /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/joules_work/joules_stimulus.shm
+       : -initial_state_point_value: rtlstim
+Info   : STIM-0001 Design top is fa_top
+Info   : STIM-0001 Started reading input stimulus file
+       : /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/rtl_wave/fa_top_power_s256_rtl.shm
+Info   : STIM-0001 Found top instance /tb_fa_top_power_s256/dut
+Info   : STIM-0001 [StimInfo] Design Hierarchy Parsing Progress Report :   0%Info   : STIM-0001 Found top instance /tb_fa_top_power_s256/dut
+   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+Info   : STIM-0002 [StimInfo] Finished design hierarchy parsing.
+Info   : STIM-0010 [StimInfo] Total number of frames '1'
+Info   : STIM-0001 [StimInfo] Value Change Section Parsing Progress Report :   0%   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+
+Info   : Intermediate SHM Writing Progress Report :   0%   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+Info   : STIM-0012 [StimInfo] Simulation start = 0 ps, end = 1926645000 ps.
+Info   : STIM-0002 Finished processing value changes, started storage.
+Info   : STIM-0038 [StimInfo] MDA nets annotation is 30.34% (3359/11068 nets)
+       : are asserted.
+Info   : STUI-0099 Output file '/home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/joules_work/stim_annotation_report.rpt' is generated by 'report_sdb_annotation'.
+Info   : STIM-0038 MDA nets annotation is 30.34% (3359/11068 nets) are asserted.
+------------------------------ Annotation Report -----------------------------
+Object Type    Asserted  UnAsserted  Unconnected  Constant  Total  Asserted%
+------------------------------------------------------------------------------
+Primary Ports
+  Inputs            205           0            0         0    205    100.00%
+  I/O                 0           0            0         0      0        N/A
+Outputs
+  Memory           4864           0            0         0   4864    100.00%
+  Flop             8315        7752            1         0  16068     51.74%
+  Latch               0           0            0         0      0        N/A
+  BBox                0           0            0         0      0        N/A
+------------------------------------------------------------------------------
+Info   : STIM-0001 Written file
+       : /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/joules_work/joules_stimulus.shm
+Info   : STIM-0013 [StimInfo] Completed successfully.
+       : Info=13, Warn=0, Error=0, Fatal=0
+XReplay Note: Generation of intermediate shm has completed successfully
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-81'.
+XReplay Note: Using auto detected clocks:
+    joules_testbench.joules_top_inst.clk
+XReplay Note: Successfully generated the intermediate files needed for replay
+XReplay Note: Successfully completed the Xcelium based replay.
+XReplay Note: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_power_s256_replayed_zero.vcd replay file generated successfully.
+XReplay Note: Use below command to read Xreplay generated stimulus file
+XReplay Note: Command: read_stimulus -file /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_power_s256_replayed_zero.vcd -dut_instance joules_testbench.joules_top_inst -disable_rtlstim2gate -allow_n_nets -format vcd
+Run time of each step of the Xcelium based replay(sec):
++---------+---------+---------+
+| Process | Capture | Replay  |
++---------+---------+---------+
+| JOULES  | 455.537 | 3329.03 |
++---------+---------+---------+
+@file(run_fa_top_xreplay_zero.tcl) 192: compute_power
+Info   : PWRA-0001 [PwrInfo] compute_power effective options
+       : -mode : vectorless
+Info   : ACTP-0001 [ACTPInfo] Timing initialization started
+Info   : ACTP-0001 Timing initialization ended
+Info   : PWRA-0002 [PwrInfo] Started 'vectorless' power computation.
+Info   : ACTP-0001 Activity propagation started for stim#0 netlist fa_top
+Info   : ACTP-0009 [ACTPInfo] Activity Propagation Progress Report :   0%   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+Info   : ACTP-0001 Activity propagation ended for stim#0
+Info   : PWRA-0009 [PwrInfo] Power Computation Progress Report :   0%   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+Info   : CTGN-0001 [CTGInfo] Clock tree CT#0 created.
+Info   : PWRA-0001 CT#0 clock tree seq clock pins are marked as ideal
+Info   : PWRA-0009 [PwrInfo] Clock tree Power Computation Progress Report :   0%   1%   2%   3%   4%   5%   6%   7%   8%   9%  10%  11%  12%  13%  14%  15%  16%  17%  18%  19%  20%  21%  22%  23%  24%  25%  26%  27%  28%  29%  30%  31%  32%  33%  34%  35%  36%  37%  38%  39%  40%  41%  42%  43%  44%  45%  46%  47%  48%  49%  50%  51%  52%  53%  54%  55%  56%  57%  58%  59%  60%  61%  62%  63%  64%  65%  66%  67%  68%  69%  70%  71%  72%  73%  74%  75%  76%  77%  78%  79%  80%  81%  82%  83%  84%  85%  86%  87%  88%  89%  90%  91%  92%  93%  94%  95%  96%  97%  98%  99% 100%
+Info   : PWRA-0002 Finished power computation.
+Info   : PWRA-0007 [PwrInfo] Completed successfully.
+       : Info=9, Warn=0, Error=0, Fatal=0
+@file(run_fa_top_xreplay_zero.tcl) 193: report_power -out [file join $out_dir "fa_top_power_s256_xreplay_zero.rpt"]
+Output file: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_power_s256_xreplay_zero.rpt
+@file(run_fa_top_xreplay_zero.tcl) 194: if {[catch {report_power -by_hierarchy -out [file join $out_dir "fa_top_power_s256_xreplay_zero_by_hierarchy.rpt"]} err]} {
+  puts "WARN: hierarchical report_power command failed: $err"
+}
+Output file: /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero/fa_top_power_s256_xreplay_zero_by_hierarchy.rpt
+@file(run_fa_top_xreplay_zero.tcl) 198: puts "INFO: zero-delay Xreplay power reports written under $out_dir"
+INFO: zero-delay Xreplay power reports written under /home/liuqisong/Desktop/fa_top_xreplay_power_bundle_20260706_v2_lf/sim/xcelium_baseline/power/out/joules_xreplay_zero
+#@ End verbose source ./power/tcl/run_fa_top_xreplay_zero.tcl
+WARNING: This version of the tool is 230 days old.
+@joules:root: 2> exit
+
+Lic Summary:
+[19:44:55.416304] Cdslmd servers: sh02lo01
+[19:44:55.416321] Feature usage summary:
+[19:44:55.416322] Joules_XL
+Normal exit.

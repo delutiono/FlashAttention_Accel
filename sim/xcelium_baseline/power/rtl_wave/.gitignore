@@ -1,2 +1,4 @@
 *
 !.gitignore
+!fa_top_power_s256_rtl.shm/
+!fa_top_power_s256_rtl.shm/**

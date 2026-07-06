@@ -58,6 +58,24 @@ JOULES_STD_LIB=/path/to/sky130_fd_sc_hs__tt_025C_1v80.lib \
 - `rtl_wave/`: generated RTL stimulus waveform.
 - `logs/`: tool logs.
 - `out/`: Xreplay output stimulus and Joules reports.
+- `results/xreplay_zero/`: committed baseline power reports and key logs.
+
+## Committed Xreplay Result
+
+The committed zero-delay Xreplay baseline result is archived in
+`power/results/xreplay_zero/`.
+
+```text
+Total Power = 288.462 mW
+Leakage     =   0.133 mW
+Internal    = 281.292 mW
+Switching   =   7.038 mW
+```
+
+The calculation used the committed RTL activity waveform
+`power/rtl_wave/fa_top_power_s256_rtl.shm` and the same-source Genus mapping
+file `power/mapping/fa_top_genus_mapping.rpt`. The full gate replay VCD is not
+committed because it is a large intermediate artifact.
 
 ## Fallback VCD Flow
 
