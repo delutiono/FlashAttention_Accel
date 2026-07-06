@@ -308,7 +308,7 @@ axi_lite_regs u_regs (
     .q_scale_base_addr(q_scale_base_addr),
     .k_scale_base_addr(k_scale_base_addr),
     .v_scale_base_addr(v_scale_base_addr),
-    .active_q_group(active_q_group), .active_kv_tile(active_kv_tile),
+    .active_q_group({1'b0, active_q_group}), .active_kv_tile({1'b0, active_kv_tile}),
     .lowp_q_scale(lowp_q_scale), .lowp_k_scale(lowp_k_scale),
     .lowp_v_scale(lowp_v_scale),
     .task_busy(task_busy),
