@@ -94,6 +94,7 @@ always @(posedge clk) begin
         case (state_reg)
             ST_IDLE: begin
                 m_axi_arvalid <= 1'b0;
+                beat_in_burst_reg <= 8'd0;
                 if (cmd_valid) begin
                     addr_reg <= cmd_base_addr;
                     beats_left_reg <= cmd_beats;

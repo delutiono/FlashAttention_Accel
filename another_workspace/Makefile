@@ -12,6 +12,7 @@ RTL_FILES = \
 	$(RTL_DIR)/page_manager.v \
 	$(RTL_DIR)/score_scheduler.v \
 	$(RTL_DIR)/dma_engine.v \
+	$(RTL_DIR)/dma_cmd_queue.v \
 	$(RTL_DIR)/dma_read_master.v \
 	$(RTL_DIR)/dma_write_master.v \
 	$(RTL_DIR)/q_load_store_adapter.v \
@@ -21,6 +22,7 @@ RTL_FILES = \
 	$(RTL_DIR)/packed_compute_core.v \
 	$(RTL_DIR)/dot_frontend.v \
 	$(RTL_DIR)/qk_sram_cluster.v \
+	$(RTL_DIR)/axi_stream_data_adapter.v \
 	$(RTL_DIR)/v_sram_cluster.v \
 	$(RTL_DIR)/acc_sram_cluster.v \
 	$(RTL_DIR)/meta_sram_cluster.v \

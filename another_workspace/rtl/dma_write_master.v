@@ -49,6 +49,7 @@ reg [4:0] burst_beats_reg;
 reg [3:0] beat_in_burst_reg;
 reg [ADDR_WIDTH-1:0] addr_reg;
 reg [TAG_WIDTH-1:0] tag_reg;
+reg        m_axi_wlast_reg;
 
 wire [15:0] cmd_beats = {4'd0, cmd_bytes[15:4]};
 wire [ADDR_WIDTH-1:0] next_addr =
@@ -77,7 +78,7 @@ assign wr_ready = (state_reg == ST_W) && m_axi_wready;
 assign m_axi_wvalid = (state_reg == ST_W) && wr_valid;
 assign m_axi_wdata = wr_data;
 assign m_axi_wstrb = wr_strb;
-assign m_axi_wlast = ({1'b0, beat_in_burst_reg} == burst_beats_reg - 5'd1);
+assign m_axi_wlast = m_axi_wlast_reg;
 assign m_axi_bready = (state_reg == ST_B);
 
 always @(posedge clk) begin
@@ -94,11 +95,13 @@ always @(posedge clk) begin
         done_valid <= 1'b0;
         done_tag <= {TAG_WIDTH{1'b0}};
         error <= 1'b0;
+        m_axi_wlast_reg <= 1'b0;
     end else begin
         done_valid <= 1'b0;
         case (state_reg)
             ST_IDLE: begin
                 if (cmd_valid) begin
+                    beat_in_burst_reg <= 4'd0;
                     addr_reg <= cmd_base_addr;
                     beats_left_reg <= cmd_beats;
                     burst_beats_reg <= select_burst_beats(cmd_base_addr, cmd_beats);
@@ -111,6 +114,7 @@ always @(posedge clk) begin
                 beat_in_burst_reg <= 4'd0;
                 m_axi_awvalid <= 1'b1;
                 m_axi_awaddr <= addr_reg;
+                m_axi_wlast_reg <= (burst_beats_reg == 5'd1);
                 m_axi_awlen <= {3'd0, burst_beats_reg} - 8'd1;
                 if (m_axi_awvalid && m_axi_awready) begin
                     m_axi_awvalid <= 1'b0;
@@ -120,6 +124,7 @@ always @(posedge clk) begin
             ST_W: begin
                 if (wr_valid && m_axi_wready) begin
                     beat_in_burst_reg <= beat_in_burst_reg + 4'd1;
+                    m_axi_wlast_reg <= (beat_in_burst_reg == (burst_beats_reg - 5'd2));
                     beats_left_reg <= beats_left_reg - 16'd1;
                     if (m_axi_wlast) begin
                         state_reg <= ST_B;

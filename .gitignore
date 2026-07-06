@@ -10,3 +10,4 @@ __pycache__/
 # Local simulator work libraries
 work_tmp/
 work_lint/
+*.Zone.Identifier

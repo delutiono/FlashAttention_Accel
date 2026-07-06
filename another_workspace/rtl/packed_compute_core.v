@@ -106,7 +106,7 @@ function [17:0] pack_score_token;
     input v_page;
     input [2:0] v_row;
     input [2:0] ctx;
-    reg [15:0] value;
+    reg [17:0] value;
     begin
         value = 18'd0;
         value[TOKEN_USER_LSB +: 10] = user_token;

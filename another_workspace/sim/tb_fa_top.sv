@@ -96,6 +96,35 @@ module tb_fa_top;
   );
 
   // =============================================================
+  //  X-propag assertion: detect beat_in_burst_reg X in dma_write_master
+  // =============================================================
+  wire [4:0] beat_in_burst_sig = u_dut.u_dma.u_write.beat_in_burst_reg;
+  wire       wlast_sig         = u_dut.u_dma.u_write.m_axi_wlast_reg;
+
+  always @(posedge clk) begin
+    if (rst_n) begin
+      if (^beat_in_burst_sig === 1'bx) begin
+        $display("[%0t] ASSERT FAIL: beat_in_burst_reg has X! value=%b", $time, beat_in_burst_sig);
+        $finish;
+      end
+      if (^wlast_sig === 1'bx) begin
+        $display("[%0t] ASSERT FAIL: m_axi_wlast_reg has X! value=%b", $time, wlast_sig);
+        $finish;
+      end
+    end
+  end
+
+  // Check m_axi_wlast output never X
+  always @(posedge clk) begin
+    if (rst_n && m_axi_wvalid) begin
+      if (^m_axi_wlast === 1'bx) begin
+        $display("[%0t] ASSERT FAIL: m_axi_wlast is X while wvalid=1!", $time);
+        $finish;
+      end
+    end
+  end
+
+  // =============================================================
   //  Clock & reset
   // =============================================================
   initial begin
