@@ -1,0 +1,1854 @@
+TMPDIR is being set to /tmp/genus_temp_1310611_12215666-1611-4896-93a6-022a3ef667c9_sh02lo01_hujinzhao_IPv9k5
+Cadence Genus(TM) Synthesis Solution.
+Copyright 2025 Cadence Design Systems, Inc. All rights reserved worldwide.
+Cadence and the Cadence logo are registered trademarks and Genus is a trademark
+of Cadence Design Systems, Inc. in the United States and other countries.
+
+[21:50:10.060233] Configured Lic search path (25.01-s002): 5280@sh02lo01
+
+Version: 25.12-s067_1, built Sun Nov 16 21:10:10 PST 2025
+Options: -batch -files /home/hujinzhao/pro/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl 
+Date:    Thu Jul 02 21:50:10 2026
+Host:    sh02lo01 (x86_64 w/Linux 4.18.0-477.10.1.el8_8.x86_64) (18cores*36cpus*2physical cpus*Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz 25344KB) (1056000372KB)
+PID:     1310611
+OS:      Red Hat Enterprise Linux 8.8 (Ootpa)
+
+Checking out license: Genus_Synthesis
+[21:50:10.072602] Periodic Lic check successful
+[21:50:10.596905] Feature usage summary:
+[21:50:10.596906] Genus_Synthesis  
+License checkout complete (0 seconds elapsed).
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+
+
+
+Finished executable startup (13 seconds elapsed).
+
+Loading tool scripts...
+Finished loading tool scripts (59 seconds elapsed).
+
+#@ Processing -files option
+@genus:root: 1> source /home/hujinzhao/pro/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+#@ Begin verbose source /home/hujinzhao/pro/genus_bs1/SYN/run_fa_accel_sky130_sram.tcl
+@file(run_fa_accel_sky130_sram.tcl) 1: set STAGE syn
+@file(run_fa_accel_sky130_sram.tcl) 2: set DEFAULT_TOP fa_top
+@file(run_fa_accel_sky130_sram.tcl) 4: proc require_file ...
+@file(run_fa_accel_sky130_sram.tcl) 12: proc env_or_default ...
+@file(run_fa_accel_sky130_sram.tcl) 19: proc require_dir ...
+@file(run_fa_accel_sky130_sram.tcl) 27: proc read_path_list ...
+@file(run_fa_accel_sky130_sram.tcl) 48: proc write_text_report ...
+@file(run_fa_accel_sky130_sram.tcl) 56: set script_dir [file dirname [info script]]
+@file(run_fa_accel_sky130_sram.tcl) 57: set bundle_root [env_or_default GENUS_PROJECT_ROOT [file join $script_dir ..]]
+@file(run_fa_accel_sky130_sram.tcl) 58: set workspace_dir [env_or_default GENUS_WORKSPACE_DIR [file join $bundle_root workspace]]
+@file(run_fa_accel_sky130_sram.tcl) 59: set results_root [env_or_default GENUS_RESULTS_DIR [file join $bundle_root results]]
+@file(run_fa_accel_sky130_sram.tcl) 60: set bundle_root [require_dir $bundle_root "Genus project root"]
+@file(run_fa_accel_sky130_sram.tcl) 61: set workspace_dir [require_dir $workspace_dir "Genus workspace directory"]
+@file(run_fa_accel_sky130_sram.tcl) 62: set filelist_dir [file join $workspace_dir filelists]
+@file(run_fa_accel_sky130_sram.tcl) 63: set constraint_dir [file join $workspace_dir constraints]
+@file(run_fa_accel_sky130_sram.tcl) 65: set top $DEFAULT_TOP
+@file(run_fa_accel_sky130_sram.tcl) 66: if {[info exists ::env(TOP)] && $::env(TOP) ne ""} {
+  set top $::env(TOP)
+}
+@file(run_fa_accel_sky130_sram.tcl) 70: set physical_mode 1
+@file(run_fa_accel_sky130_sram.tcl) 71: if {[info exists ::env(GENUS_PHYSICAL)] && $::env(GENUS_PHYSICAL) eq "0"} {
+  set physical_mode 0
+}
+@file(run_fa_accel_sky130_sram.tcl) 75: set read_sram_behav_rtl 0
+@file(run_fa_accel_sky130_sram.tcl) 76: if {[info exists ::env(READ_SRAM_BEHAV_RTL)] && $::env(READ_SRAM_BEHAV_RTL) ne "0"} {
+  set read_sram_behav_rtl 1
+}
+@file(run_fa_accel_sky130_sram.tcl) 80: set report_dir [file join $results_root reports $top]
+@file(run_fa_accel_sky130_sram.tcl) 81: set output_dir [file join $results_root outputs $top]
+@file(run_fa_accel_sky130_sram.tcl) 82: set log_dir [file join $results_root logs]
+@file(run_fa_accel_sky130_sram.tcl) 83: file mkdir $report_dir
+@file(run_fa_accel_sky130_sram.tcl) 84: file mkdir $output_dir
+@file(run_fa_accel_sky130_sram.tcl) 85: file mkdir $log_dir
+@file(run_fa_accel_sky130_sram.tcl) 87: set rtl_filelist [env_or_default RTL_FILELIST [file join $filelist_dir rtl.f]]
+@file(run_fa_accel_sky130_sram.tcl) 88: set sram_behav_filelist [env_or_default SRAM_BEHAV_RTL_FILELIST [file join $filelist_dir sram_macro_verilog.f]]
+@file(run_fa_accel_sky130_sram.tcl) 89: set lib_filelist [env_or_default LIB_FILELIST [file join $filelist_dir libs_tt.f]]
+@file(run_fa_accel_sky130_sram.tcl) 90: set lef_filelist [env_or_default LEF_FILELIST [file join $filelist_dir lefs.f]]
+@file(run_fa_accel_sky130_sram.tcl) 91: set sdc_file [env_or_default SDC_FILE [file join $constraint_dir timing_300m.sdc]]
+@file(run_fa_accel_sky130_sram.tcl) 93: puts "INFO: STAGE=$STAGE"
+INFO: STAGE=syn
+@file(run_fa_accel_sky130_sram.tcl) 94: puts "INFO: TOP=$top"
+INFO: TOP=fa_top
+@file(run_fa_accel_sky130_sram.tcl) 95: puts "INFO: PROJECT_ROOT=$bundle_root"
+INFO: PROJECT_ROOT=/home/hujinzhao/pro/genus_bs1
+@file(run_fa_accel_sky130_sram.tcl) 96: puts "INFO: WORKSPACE_DIR=$workspace_dir"
+INFO: WORKSPACE_DIR=/home/hujinzhao/pro/genus_bs1/workspace
+@file(run_fa_accel_sky130_sram.tcl) 97: puts "INFO: RESULTS_DIR=$results_root"
+INFO: RESULTS_DIR=/home/hujinzhao/pro/genus_bs1/results
+@file(run_fa_accel_sky130_sram.tcl) 98: puts "INFO: PHYSICAL_MODE=$physical_mode"
+INFO: PHYSICAL_MODE=1
+@file(run_fa_accel_sky130_sram.tcl) 99: puts "INFO: READ_SRAM_BEHAV_RTL=$read_sram_behav_rtl"
+INFO: READ_SRAM_BEHAV_RTL=0
+@file(run_fa_accel_sky130_sram.tcl) 101: set lib_files [read_path_list $lib_filelist "Liberty filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 102: foreach lib_file $lib_files {
+  puts "INFO: LIB=$lib_file"
+}
+INFO: LIB=/home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib
+INFO: LIB=/home/hujinzhao/pro/genus_bs1/workspace/LIBS/sky130_sram_0kbytes_1rw1r_32x64_8_TT_1p8V_25C.lib
+INFO: LIB=/home/hujinzhao/pro/genus_bs1/workspace/LIBS/sky130_sram_0kbytes_1rw1r_48x16_8_TT_1p8V_25C.lib
+@file(run_fa_accel_sky130_sram.tcl) 105: eval read_libs $lib_files
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 832 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+        : Add the look-up table definition, then reload the library.
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 832)
+        : Fix the library cell error and then reload the library.
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 884 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 884)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 890 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 890)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 870 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 870)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 876 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 876)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 949 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 949)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 956 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 956)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 963 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 963)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 970 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 970)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 977 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 977)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 984 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 984)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 991 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 991)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 898 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 898)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 905 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 905)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 912 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 912)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 919 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 919)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 926 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 926)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 933 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 933)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 940 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa
+  Message Summary for Library all 3 libraries:
+  ********************************************
+0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 940)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 1002 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 1002)
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-517'.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-709'.
+  Ignoring the timing group. [LBR-709]: 96732
+  Could not find the look-up table definition. [LBR-517]: 96732
+  Missing library level attribute. [LBR-516]: 2
+  An unsupported construct was detected in this library. [LBR-40]: 5
+  ********************************************
+ 
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_fd_sc_hs__tt_025C_1v80.lib'.
+        : The nominal operating condition is represented, either by the nominal PVT values specified in the library source (via nom_process,nom_voltage and nom_temperature respectively), or by the default PVT values (1.0,1.0,1.0).
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_32x64_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_48x16_8_TT_1p8V_25C.lib'.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+        : Add the missing output pin(s), then reload the library. Else the library cell will be marked as timing model i.e. unusable. Timing_model means that the cell does not have any defined function. If there is no output pin, Genus will mark library cell as unusable i.e. the attribute 'usable' will be marked to 'false' on the libcell. Therefore, the cell is not used for mapping and it will not be picked up from the library for synthesis. If you query the attribute 'unusable_reason' on the libcell; result will be: 'Library cell has no output pins.'Note: The message LBR-9 is only for the logical pins and not for the power_ground pins. Genus will depend upon the output function defined in the pin group (output pin) of the cell, to use it for mapping. The pg_pin will not have any function defined.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+@file(run_fa_accel_sky130_sram.tcl) 107: set lef_files [read_path_list $lef_filelist "LEF filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 108: foreach lef_file $lef_files {
+  puts "INFO: LEF=$lef_file"
+}
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_fd_sc_hs__nom.tlef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_fd_sc_hs.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_32x64_8.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_48x16_8.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_64x32_8.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_128x16_16.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs1/workspace/LEFS/sky130_sram_0kbytes_1rw1r_64x64_8.lef
+@file(run_fa_accel_sky130_sram.tcl) 111: if {[llength $lef_files] > 0} {
+  set lef_arg [join $lef_files " "]
+  if {[catch {read_physical -lefs $lef_arg} err]} {
+    puts "WARNING: read_physical -lefs failed or is unsupported in this Genus setup: $err"
+  }
+}
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR' has no resistance value.
+        : If this is the expected behavior, this message can be ignored.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_C' has no resistance value.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'PHYS-129'.
+
+  According to lef_library, there are total 6 routing layers [ V(3) / H(3) ]
+
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.14, 1.6) of 'WIDTH' for layers 'met2' and 'met5' is too large.
+        : Check the consistency of the parameters, and see if you can ignore this message or you're using different LEF file with wrong parameters.
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.0285, 12.8) of 'RPERSQ' for layers 'met5' and 'li1' is too large.
+Warning : The value of the wire parameter is too big. [PHYS-13]
+        : The 'RPERSQ: 12.8' of layer 'li1' is much bigger than others.
+        : Check the consistency of the specified wire parameter.
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.14, 1.6) of 'MINSPACING' for layers 'met2' and 'met5' is too large.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_1' is marked as GROUND in LEF file.
+        : Overriding lib value with LEF value. To use .lib as golden do: '::legacy::set_attribute use_power_ground_pin_from_lef false'.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21boi_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21boi_1' is marked as POWER in LEF file.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'PHYS-128'.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__diode_2 cannot be found in library.
+        : Ensure that the proper library files are available and have been imported.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_4 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_8 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_4 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_8 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tap_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tap_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapmet1_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvgnd2_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvgnd_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvpwrvgnd_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_sram_0kbytes_1rw1r_64x32_8 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_sram_0kbytes_1rw1r_128x16_16 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_sram_0kbytes_1rw1r_64x64_8 cannot be found in library.
+@file(run_fa_accel_sky130_sram.tcl) 118: set_db init_hdl_search_path [list [file join $workspace_dir RTL]]
+  Setting attribute of root '/': 'init_hdl_search_path' = /home/hujinzhao/pro/genus_bs1/workspace/RTL
+@file(run_fa_accel_sky130_sram.tcl) 119: set_db hdl_language sv
+  Setting attribute of root '/': 'hdl_language' = sv
+@file(run_fa_accel_sky130_sram.tcl) 120: catch {set_db hdl_track_filename_row_col true}
+Info   : Enabled hdl_track_filename_row_col attribute.
+       : Setting this attribute to 'true' can have an impact on the run time. Use this attribute only when filename, line number, and column information are needed in reports.
+  Setting attribute of root '/': 'hdl_track_filename_row_col' = true
+@file(run_fa_accel_sky130_sram.tcl) 121: if {[catch {set_db hdl_resolve_instance_with_libcell true} err]} {
+  puts "WARNING: hdl_resolve_instance_with_libcell not accepted: $err"
+}
+  Setting attribute of root '/': 'hdl_resolve_instance_with_libcell' = true
+@file(run_fa_accel_sky130_sram.tcl) 124: puts "INFO: Defining SYNTHESIS for Genus RTL read so SRAM wrappers use unparameterized macro instances."
+INFO: Defining SYNTHESIS for Genus RTL read so SRAM wrappers use unparameterized macro instances.
+@file(run_fa_accel_sky130_sram.tcl) 126: if {$read_sram_behav_rtl} {
+  set sram_behav_files [read_path_list $sram_behav_filelist "SRAM behavioral Verilog filelist"]
+  foreach src $sram_behav_files {
+    puts "INFO: SRAM_BEHAV_RTL=$src"
+  }
+  eval read_hdl -sv $sram_behav_files
+} else {
+  puts "INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances."
+}
+INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances.
+@file(run_fa_accel_sky130_sram.tcl) 136: set rtl_files [read_path_list $rtl_filelist "RTL filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 137: foreach src $rtl_files {
+  puts "INFO: RTL=$src"
+}
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/fa_top.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/dot_frontend.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/packed_compute_core.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_scheduler.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_pipe.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/output_norm_pipe.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/reciprocal_approx.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/finalize_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/update_state_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/update_token_fifo.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/axi_lite_regs.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/task_ctrl.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/dma_engine.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/dma_cmd_queue.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/dma_read_master.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/dma_write_master.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/q_load_store_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/qk_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/v_load_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/k_load_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/o_store_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/v_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/acc_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/meta_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/page_manager.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/perf_counters.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_64x32_8_wrapper.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_64x64_8_wrapper.v
+@file(run_fa_accel_sky130_sram.tcl) 140: eval read_hdl -sv -define SYNTHESIS $rtl_files
+function signed [33:0] sum_four_products;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/dot_frontend.v' on line 109, column 15.
+        : Use the 'automatic' keyword for declaring functions and tasks.
+function [15:0] pack_score_token;
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/packed_compute_core.v' on line 97, column 10.
+function signed [48:0] round_shift16;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_pipe.v' on line 48, column 15.
+function [15:0] bank0_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 10, column 10.
+function [15:0] bank1_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 141, column 10.
+function [15:0] bank2_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 272, column 10.
+function [15:0] bank3_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 403, column 10.
+function [15:0] bank4_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 534, column 10.
+function [15:0] bank5_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 665, column 10.
+function [15:0] bank6_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 796, column 10.
+function [15:0] bank7_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 927, column 10.
+function [15:0] bank8_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1058, column 10.
+function [15:0] bank9_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1189, column 10.
+function [15:0] bank10_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1320, column 10.
+function [15:0] bank11_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1451, column 10.
+function [15:0] bank12_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1582, column 10.
+function [15:0] bank13_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1713, column 10.
+function [15:0] bank14_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1844, column 10.
+function [15:0] bank15_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1975, column 10.
+function signed [SHIFTED_WIDTH-1:0] round_shift_product;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/output_norm_pipe.v' on line 53, column 15.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'VLOGPT-692'.
+@file(run_fa_accel_sky130_sram.tcl) 142: elaborate $top
+  Libraries have 305 usable logic and 62 usable sequential lib-cells.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+        : Non-monotonic wireload models can cause problems during synthesis and/or mapping.  Raising some of the points in the curve to give it a monotonic shape.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Info    : Elaborating Design. [ELAB-1]
+        : Elaborating top-level block 'fa_top' from file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/fa_top.v'.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'dma_write_master_ADDR_WIDTH64_DATA_WIDTH128_TAG_WIDTH8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/dma_write_master.v' on line 99.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_scheduler' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_scheduler.v' on line 155.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'issued_last_reg' in module 'score_scheduler' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_scheduler.v' on line 160.
+        : Genus removes the flip-flop or latch inferred for an unused signal or variable. To preserve the flip-flop or latch, set the hdl_preserve_unused_registers attribute to true or use a pragma in the RTL.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank0_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 10.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank1_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 141.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank2_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 272.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank3_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 403.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank4_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 534.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank5_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 665.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank6_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 796.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank7_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 927.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank8_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1058.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank9_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1189.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank10_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1320.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank11_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1451.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank12_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1582.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank13_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1713.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank14_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1844.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank15_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 1975.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/score_exp_banked_rom.v' on line 2146.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr1' (4) of instance 'u_lane_0' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 29.
+        : This may cause simulation mismatches between the original and synthesized designs.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr0' (4) of instance 'u_lane_0' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 29.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr1' (4) of instance 'u_lane_1' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 49.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr0' (4) of instance 'u_lane_1' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 49.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr1' (4) of instance 'u_lane_2' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 69.
+Warning : Connected signal is wider than libpin. [CDFG-466]
+        : Signal width (6) does not match width of input port 'addr0' (4) of instance 'u_lane_2' of libcell 'sky130_sram_0kbytes_1rw1r_48x16_8' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 69.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'pending_meta_valid_reg' in module 'update_state_cluster_TOKEN_WIDTH16' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/update_state_cluster.v' on line 440.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'overflow_reg' in module 'reciprocal_approx_TOKEN_WIDTH3' in file '/home/hujinzhao/pro/genus_bs1/workspace/RTL/reciprocal_approx.v' on line 92.
+Info    : Done Elaborating Design. [ELAB-3]
+        : Done elaborating 'fa_top'.
+Checking for source RTL...
+Check completed for source RTL.
+Running Unified Mux Engine Tricks...
+Completed Unified Mux Engine Tricks
+
+Stage: post_elab
+-------------------------------------------------------
+| Trick             | Accepts | Rejects | Runtime (s) | 
+-------------------------------------------------------
+| ume_constant_bmux |       0 |       0 |        0.00 | 
+| ume_merge         |       0 |       0 |        0.00 | 
+| ume_ssm           |       0 |       0 |        0.04 | 
+| ume_cse           |       1 |       0 |        1.01 | 
+| ume_shrink        |       6 |       0 |        0.02 | 
+| ume_sweep         |       0 |       0 |        0.01 | 
+| ume_constant_bmux |       0 |       0 |        0.00 | 
+| ume_merge         |       0 |       0 |        0.00 | 
+| ume_ssm           |       0 |       0 |        0.03 | 
+| ume_cse           |       0 |       0 |        0.75 | 
+| ume_shrink        |       0 |       0 |        0.01 | 
+| ume_sweep         |       0 |       0 |        0.01 | 
+-------------------------------------------------------
+Starting optimize datapath shifters [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed optimize datapath shifters (accepts: 0, rejects: 0, runtime: 0.004s)
+Starting clip mux common data inputs [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip mux common data inputs (accepts: 5, rejects: 0, runtime: 0.011s)
+Starting clip the non-user hierarchies [v2.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip the non-user hierarchies (accepts: 0, rejects: 0, runtime: 0.004s)
+Starting basic netlist cleanup [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed basic netlist cleanup (accepts: 0, rejects: 0, runtime: 0.004s)
+
+Stage: post_elab
+--------------------------------------------------------------------
+| Transform                      | Accepts | Rejects | Runtime (s) | 
+--------------------------------------------------------------------
+| hlo_optimize_datapath_shifters |       0 |       0 |        0.00 | 
+| hlo_clip_mux_input             |       5 |       0 |        0.01 | 
+| hlo_clip                       |       0 |       0 |        0.00 | 
+| hlo_cleanup                    |       0 |       0 |        0.00 | 
+--------------------------------------------------------------------
+UM:   flow.cputime  flow.realtime  timing.setup.tns  timing.setup.wns  snapshot
+UM:*                                                                   elaborate
+@file(run_fa_accel_sky130_sram.tcl) 144: set sram_refs [list \
+  sky130_sram_0kbytes_1rw1r_32x64_8]
+@file(run_fa_accel_sky130_sram.tcl) 146: set sram_report_lines {}
+@file(run_fa_accel_sky130_sram.tcl) 147: set total_sram_insts 0
+@file(run_fa_accel_sky130_sram.tcl) 148: foreach ref $sram_refs {
+  set insts [get_cells -hier -filter "ref_name == $ref"]
+  set count [sizeof_collection $insts]
+  lappend sram_report_lines "$ref $count"
+  puts "INFO: SRAM_COUNT $ref = $count"
+  if {$count > 0} {
+    catch {set_db $insts .preserve true}
+    catch {set_db $insts .dont_touch true}
+    set total_sram_insts [expr {$total_sram_insts + $count}]
+  }
+}
+INFO: SRAM_COUNT sky130_sram_0kbytes_1rw1r_32x64_8 = 48
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'preserve' = true
+  Setting attribute of inst 'u_hi': 'preserve' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+  Setting attribute of inst 'u_lo': 'dont_touch' = true
+  Setting attribute of inst 'u_hi': 'dont_touch' = true
+@file(run_fa_accel_sky130_sram.tcl) 159: lappend sram_report_lines "TOTAL $total_sram_insts"
+@file(run_fa_accel_sky130_sram.tcl) 160: write_text_report [file join $report_dir sram_macro_instances.rpt] $sram_report_lines
+@file(run_fa_accel_sky130_sram.tcl) 161: if {$total_sram_insts == 0} {
+  error "No SRAM macro instances were found after elaboration; check Liberty names and wrapper RTL."
+}
+@file(run_fa_accel_sky130_sram.tcl) 165: read_sdc [require_file $sdc_file "timing SDC"]
+Statistics for commands executed by read_sdc:
+ "all_inputs"               - successful      1 , failed      0 (runtime  0.00)
+ "all_outputs"              - successful      1 , failed      0 (runtime  0.00)
+ "create_clock"             - successful      1 , failed      0 (runtime  0.01)
+ "get_ports"                - successful      2 , failed      0 (runtime  0.01)
+ "remove_from_collection"   - successful      1 , failed      0 (runtime  0.00)
+ "set_input_delay"          - successful      1 , failed      0 (runtime  0.01)
+ "set_output_delay"         - successful      1 , failed      0 (runtime  0.00)
+read_sdc completed in 00:00:01 (hh:mm:ss)
+@file(run_fa_accel_sky130_sram.tcl) 167: redirect [file join $report_dir check_design_pre.rpt] {check_design}
+@file(run_fa_accel_sky130_sram.tcl) 168: redirect [file join $report_dir hierarchy_pre.rpt] {report hierarchy}
+@file(run_fa_accel_sky130_sram.tcl) 169: if {[catch {redirect [file join $report_dir timing_lint_pre.rpt] {report timing -lint}} err]} {
+  puts "WARNING: optional timing lint report failed: $err"
+}
+@file(run_fa_accel_sky130_sram.tcl) 172: if {[catch {redirect [file join $report_dir unmapped_pre.rpt] {report unmapped}} err]} {
+  puts "WARNING: optional unmapped pre-synth report failed: $err"
+}
+WARNING: optional unmapped pre-synth report failed: Failed on 'report unmapped'
+@file(run_fa_accel_sky130_sram.tcl) 176: if {$physical_mode} {
+  puts "INFO: Creating floorplan for physical-aware synthesis..."
+  if {[catch {create_floorplan -core_utilization 0.70 -core_offset 10} err]} {
+    puts "WARNING: create_floorplan failed: $err"
+    puts "WARNING: Falling back to logical-only synthesis."
+    syn_generic
+    redirect [file join $report_dir qor_generic.rpt] {report qor}
+    syn_map
+    redirect [file join $report_dir qor_mapped.rpt] {report qor}
+    syn_opt
+  } else {
+    puts "INFO: Floorplan created. Running physical-aware synthesis."
+    if {[catch {syn_generic -physical} err]} {
+      puts "WARNING: syn_generic -physical failed; retrying syn_generic: $err"
+      syn_generic
+    }
+    redirect [file join $report_dir qor_generic.rpt] {report qor}
+    if {[catch {syn_map -physical} err]} {
+      puts "WARNING: syn_map -physical failed; retrying syn_map: $err"
+      syn_map
+    }
+    redirect [file join $report_dir qor_mapped.rpt] {report qor}
+    if {[catch {syn_opt -spatial} err]} {
+      puts "WARNING: syn_opt -spatial failed; retrying syn_opt: $err"
+      syn_opt
+    }
+  }
+} else {
+  puts "INFO: Running logical synthesis stages."
+  syn_generic
+  redirect [file join $report_dir qor_generic.rpt] {report qor}
+  syn_map
+  redirect [file join $report_dir qor_mapped.rpt] {report qor}
+  syn_opt
+}
+INFO: Creating floorplan for physical-aware synthesis...
+Error   : An invalid option was specified. [TUI-204] [create_floorplan]
+        : An option named '-core_utilization' could not be found.
+        : Run 'command_name -help' to check all valid options. To correct the option and rerun the command.
+  create_floorplan: specify design floorplan 
+
+Usage: create_floorplan [-core_margin_by <string>]
+           [-die_size_by_io_height <string>] [-flip <string>]
+           [-floorplan_origin <string>] [-match_to_site] [-no_resize]
+           [-no_snap_to_grid] [-overlap_same_site_row]
+           [ -box_size <float>+ |
+             -core_size <float>+ |
+             -die_size <float>+ |
+             -core_density_size <float>+ |
+             -stdcell_density_size <float>+ |
+             -keep_shape_density <float> ]
+           [ -site <string> |
+             -site_only <string> ]
+
+    [-core_margin_by <string>]:
+        core margin to io or die <io|die> 
+    [-die_size_by_io_height <string>]:
+        use max or min io height for inital die size <min|max> 
+    [-flip <string>]:
+        to flip rows <n|s|f> 
+    [-floorplan_origin <string>]:
+        set fplan origin at center or llcorner 
+    [-match_to_site]:
+        floorplan boxes is multiple times of io site or core site's width 
+    [-no_resize]:
+        check if need do floorplan if everthing is same 
+    [-no_snap_to_grid]:
+        do not change input floorplan boxes 
+    [-overlap_same_site_row]:
+        allow same site row overlapping 
+    -box_size <float>+:
+        specify all 2 boxes of floorplan <die_box core_box> 
+    -core_size <float>+:
+        by core size and core to edge <w h left bottom right top> 
+    -die_size <float>+:
+        by DIE size and core to edge <w h left bottom right top> 
+    -core_density_size <float>+:
+        by aspectratio, density and core to edge <aspectratio [rowdensity [left 
+        bottom right top]]> 
+    -stdcell_density_size <float>+:
+        by aspectratio, density and core to edge <aspectratio rowdensity left 
+        bottom right top> 
+    -keep_shape_density <float>:
+        target utilization after resize 
+    -site <string>:
+        default tech site name 
+    -site_only <string>:
+        default tech site name, create row for the site 
+WARNING: create_floorplan failed: 1
+WARNING: Falling back to logical-only synthesis.
+stamp 'PBS_Generic-Start' being created for table 'pbs_debug'
+
+  Total Time (Wall) |  Stage Time (Wall)  |   % (Wall)   |    Date - Time     |  Memory   | Stage
+--------------------+---------------------+--------------+--------------------+-----------+----------------------
+ 00:01:35(00:02:04) |  00:00:00(00:00:00) |   0.0(  0.0) |   21:52:20 (Jul02) |   1.66 GB | PBS_Generic-Start
+--------------------+---------------------+--------------+--------------------+-----------+----------------------
+Number of threads: 8 * 1   (id: pbs_debug, time_info v1.57)
+Info: (*N*) indicates data that was populated from previously saved time_info database
+Info: CPU time includes time of parent + longest thread
+Info    : Deleting instances not driving any primary outputs. [GLO-34]
+        : Deleting 1942 sequential instances.
+        : Optimizations such as constant propagation or redundancy removal could change the connections so a hierarchical instance does not drive any primary outputs anymore. To see the list of deleted hierarchical instances, set the 'information_level' attribute to 2 or above. If the message is truncated set the message attribute 'truncate' to false to see the complete list. To prevent this optimization, set the 'delete_unloaded_insts' root/subdesign attribute to 'false' or 'preserve' instance attribute to 'true'.
+Info    : Deleting instances not driving any primary outputs. [GLO-34]
+        : Deleting 17 hierarchical instances.
+
+Stage: pre_early_cg
+-----------------------------------------------
+| Transform | Accepts | Rejects | Runtime (s) | 
+-----------------------------------------------
+-----------------------------------------------
+Mapping ChipWare ICG instances in fa_top
+Found 0 unmapped ChipWare ICG instances
+Mapped 0 of 0 ChipWare ICG instances
+##Generic Timing Info: typical gate delay  114.5 ps   std_slew:   16.0 ps   std_load:  4.8 fF  for library domain _default_
+Starting mux data reorder optimization [v1.0] (stage: pre_to_gen_setup, startdef: fa_top, recur: true)
+Completed mux data reorder optimization (accepts: 0, rejects: 0, runtime: 0.006s)
+
+Stage: pre_to_gen_setup
+-----------------------------------------------------
+| Transform       | Accepts | Rejects | Runtime (s) | 
+-----------------------------------------------------
+| hlo_mux_reorder |       0 |       0 |        0.01 | 
+-----------------------------------------------------
+Running DP early constant propagation (netlist fa_top)...
+Running DP early redundancy removal
+Completed DP early redundancy removal on fa_top (runtime = 1.3s)
+Multi-threaded constant propagation [4|0] ...
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/prefetch_expect_tag_reg_reg[5]'. The constant is '0'.
+        : To prevent this optimization, set 'optimize_constant_feedback_seqs' root attribute to 'false'. The instance attribute 'optimize_constant_feedback_seq' controls this optimization. 
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_tag_reg[5]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[15]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[14]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[13]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[12]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[11]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[10]'. The constant is '1'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[9]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[8]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[7]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[6]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[5]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/cmd_bytes_reg[4]'. The constant is '0'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_page/expect_tag_reg_reg[5]'. The constant is '0'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[4]'.
+        : To prevent this optimization, set the 'optimize_constant_0_flops' root attribute to 'false' or 'optimize_constant_0_seq' instance attribute to 'false'. You can also see the complete list of deleted sequential with command "report sequential -deleted" (on Reason "constant0").
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_page/cmd_bytes_reg[10]'.
+        : To prevent this optimization, set the 'optimize_constant_1_flops' root attribute to 'false' or 'optimize_constant_1_seq' instance attribute to 'false'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_bytes_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/cmd_tag_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/expect_tag_reg_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_page/prefetch_expect_tag_reg_reg[5]'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_dma/u_read/tag_reg_reg[5]'. The constant is '0'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_dma/u_read/tag_reg_reg[5]'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_dma/u_write/tag_reg_reg[5]'. The constant is '0'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_dma/u_write/tag_reg_reg[5]'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[15]'. The constant is '1'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[14]'. The constant is '1'.
+Info    : Replacing the synchronous part of an always feeding back flip-flop with a logic constant. [GLO-45]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[13]'. The constant is '1'.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'GLO-45'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 1. [GLO-13]
+        : The instance is 'u_q_adapter/q_rw_wmask_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank1_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank1_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank2_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank2_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank2_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank3_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank3_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank3_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank3_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank3_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank4_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank5_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank6_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank7_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank8_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank9_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank10_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank11_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank12_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank13_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank14_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_score_exp/u_exp_rom/bank15_data_s0_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_addr_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[80]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[81]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[82]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[83]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[84]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[85]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[86]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[87]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[88]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[89]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[90]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[91]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[92]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[93]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[94]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[95]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[96]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[97]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[98]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[99]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[100]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[101]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[102]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[103]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[104]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[105]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[106]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[107]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[108]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[109]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[110]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[111]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[112]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[113]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[114]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[115]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[116]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[117]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[118]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[119]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[120]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[121]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[122]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[123]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[124]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[125]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[126]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_update/meta_wr_data_reg[127]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[16]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[17]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[18]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[19]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[20]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[21]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[22]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[23]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[24]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[25]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[26]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[27]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[28]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[29]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[30]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[31]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[32]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[33]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[34]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[35]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[36]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[37]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[38]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[39]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[40]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[41]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[42]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[43]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[44]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[45]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[46]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[47]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[48]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[49]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[50]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[51]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[52]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[53]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[54]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[55]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[56]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[57]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[58]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[59]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[60]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[61]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[62]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_perf/update_quarter_count_reg[63]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_regs/s_bresp_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_regs/s_bresp_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_regs/s_rresp_reg[0]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_regs/s_rresp_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_dma/u_read/done_tag_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_dma/u_write/done_tag_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[1]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[3]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[4]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[5]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[6]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[7]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[8]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[9]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[10]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[11]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[12]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[13]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[14]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[15]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[16]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[17]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[18]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[19]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[20]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[21]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[22]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[23]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[24]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[25]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[26]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[27]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[28]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[29]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[30]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[31]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[32]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[33]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[34]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[35]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[36]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[37]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[38]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[39]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[40]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[41]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[42]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[43]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[44]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[45]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[46]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[47]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[48]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[49]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[50]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[51]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[52]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[53]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[54]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[55]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[56]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[57]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[58]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/u_recip/dividend_reg_reg[59]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/rw_read_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/rw_read_d2_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[0].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[1].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[2].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[3].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[4].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[5].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[6].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[7].u_bank/rw_rvalid_d1_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[0].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[1].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[2].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[3].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[4].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[5].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[6].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_core/u_dot/u_k_sram/g_bank[7].u_bank/rw_rvalid_reg'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_finalize/pack_slot_reg_reg[2]'.
+Info    : Replacing a flip-flop with a logic constant 0. [GLO-12]
+        : The instance is 'u_dma/u_read/burst_beats_reg_reg[7]'.
+...done running DP early constant propagation (85 seconds CPU time, 136 seconds wall time, netlist fa_top).
+Info    : Deleting instances not driving any primary outputs. [GLO-34]
+        : Deleting 991 sequential instances.
+Info    : Deleting instances not driving any primary outputs. [GLO-34]
+        : Deleting 18 hierarchical instances.
+Current PLE settings:
+
+Aspect ratio        : 1.000
+Shrink factor       : 1.000
+Scale of res/length : 1.000
+Scale of cap/length : 1.000
+Net derating factor : 1.000
+Thermal factor      : 1.000
+Via Resistance      : 0.000 ohm (from default)
+Site size           : 3.810 um (from lef [tech+cell])
+
+                                   Capacitance  
+  Layer                             / Length         Data source:
+Name        Direction Utilization  (pF/micron)       lef_library
+------------------------------------------------
+li1             V         0.00        0.000088  
+met1            H         1.00        0.000085  
+met2            V         1.00        0.000078  
+met3            H         1.00        0.000086  
+met4            V         1.00        0.000076  
+met5            H         1.00        0.000088  
+
+                                    Resistance   
+  Layer                              / Length         Data source:
+Name        Direction Utilization  (ohm/micron)       lef_library
+-------------------------------------------------
+li1             V         0.00        75.294118  
+met1            H         1.00         0.892857  
+met2            V         1.00         0.892857  
+met3            H         1.00         0.156667  
+met4            V         1.00         0.156667  
+met5            H         1.00         0.017812  
+
+                                        Area     
+  Layer                               / Length        Data source:
+Name        Direction Utilization     (micron)        lef_library
+-------------------------------------------------
+li1             V         0.00         0.170000  
+met1            H         1.00         0.140000  
+met2            V         1.00         0.140000  
+met3            H         1.00         0.300000  
+met4            V         1.00         0.300000  
+met5            H         1.00         1.600000  
+
+Info    : Synthesizing. [SYNTH-1]
+        : Synthesizing 'fa_top' to generic gates using 'medium' effort.
+Running Synthesis Turbo Flow Version 4.
+Info    : Enabling Partition Based Synthesis. [PBS-1]
+        : Starting distributed generic optimization.
+Info    : Attempting to launch a super-threading server. [ST-120]
+        : Attempting to Launch server 1 of 8.
+        : The tool is entering super-threading mode and is launching a CPU server process.  This is enabled by the root attribute 'super_thread_servers' or 'auto_super_thread'.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_0' is forked process '1320405' on this host.
+        : The tool is entering super-threading mode and has established a connection with a CPU server process.  This is enabled by the root attributes 'super_thread_servers' or 'auto_super_thread'.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_1' is forked process '1321068' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_2' is forked process '1321080' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_3' is forked process '1321090' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_4' is forked process '1321094' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_5' is forked process '1321098' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_6' is forked process '1321102' on this host.
+Info    : Connection established with super-threading server. [ST-110]
+        : The server 'localhost_1_7' is forked process '1321113' on this host.
+Start partitioning.  Summary: MEM {curr: 2.9G, peak: 3.1G, phys curr: 1.7G, phys peak: 1.9G}
+Start partitioning design fa_top for generic optimization.
+Total generic instances for partitioning: 546575
+	Generic partition 0: size 47919
+	Generic partition 1: size 82041
+	Generic partition 2: size 416615
+Done partitioning.  Summary: RT {elapsed: 0s, ST: 1s}, MEM {curr: 2.9G, peak: 3.1G, phys curr: 1.7G, phys peak: 1.9G}
+Start creating partition netlists.  Summary: MEM {curr: 2.9G, peak: 3.1G, phys curr: 1.7G, phys peak: 1.9G}
+Done creating partition netlists.  Summary: RT {elapsed: 15s, ST: 7s}, MEM {curr: 2.9G, peak: 3.1G, phys curr: 2.2G, phys peak: 2.2G}
+Start budgeting timing for partitions.  Summary: MEM {curr: 2.9G, peak: 3.1G, phys curr: 2.2G, phys peak: 2.2G}
+Done budgeting timing for partitions.  Summary: RT {elapsed: 51s, ST: 41s}, MEM {curr: 3.6G, peak: 3.6G, phys curr: 2.9G, phys peak: 2.9G}
+Start deriving partition netlists.  Summary: MEM {curr: 3.6G, peak: 3.6G, phys curr: 2.9G, phys peak: 2.9G}
+The inst 'pbs_genopt_0' is selected as pbs candidate. The instance cnt is: '47919'.
+The inst 'pbs_genopt_1' is selected as pbs candidate. The instance cnt is: '82041'.
+The inst 'pbs_genopt_2' is selected as pbs candidate. The instance cnt is: '416615'.
+Done deriving partition netlists.  Summary: RT {elapsed: 63s, ST: 48s}, MEM {curr: 3.7G, peak: 3.7G, phys curr: 2.9G, phys peak: 2.9G}
+Wait for super-thread servers to finish loading libraries.
+Start super thread servers forking.  Summary: MEM {curr: 3.2G, peak: 3.7G, phys curr: 2.9G, phys peak: 2.9G}
+Done super thread servers forking.  Summary: RT {elapsed: 0s, ST: 0s}, MEM {curr: 3.2G, peak: 3.7G, phys curr: 2.9G, phys peak: 2.9G}
+        Distributing super-thread jobs: {pbs_genopt_2 ./.pbs_sh02lo01_1310611/pbs_genopt_2.etf} {pbs_genopt_1 ./.pbs_sh02lo01_1310611/pbs_genopt_1.etf} {pbs_genopt_0 ./.pbs_sh02lo01_1310611/pbs_genopt_0.etf}
+          Sending 'pbs_genopt_2 ./.pbs_sh02lo01_1310611/pbs_genopt_2.etf' to server 'localhost_1_2'...
+            Sent 'pbs_genopt_2 ./.pbs_sh02lo01_1310611/pbs_genopt_2.etf' to server 'localhost_1_2'.
+          Sending 'pbs_genopt_1 ./.pbs_sh02lo01_1310611/pbs_genopt_1.etf' to server 'localhost_1_4'...
+            Sent 'pbs_genopt_1 ./.pbs_sh02lo01_1310611/pbs_genopt_1.etf' to server 'localhost_1_4'.
+          Sending 'pbs_genopt_0 ./.pbs_sh02lo01_1310611/pbs_genopt_0.etf' to server 'localhost_1_0'...
+            Sent 'pbs_genopt_0 ./.pbs_sh02lo01_1310611/pbs_genopt_0.etf' to server 'localhost_1_0'.
+          Received 'pbs_genopt_1 ./.pbs_sh02lo01_1310611/pbs_genopt_1.etf' from server 'localhost_1_4'. (509933 ms elapsed)
+          Received 'pbs_genopt_0 ./.pbs_sh02lo01_1310611/pbs_genopt_0.etf' from server 'localhost_1_0'. (740235 ms elapsed)
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Read_DB - Elapsed_Time 1.00, CPU_Time 1.00
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Generic - Elapsed_Time 724.00, CPU_Time 502.99
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Prop_Const - Elapsed_Time 7.00, CPU_Time 5.00
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Gobble - Elapsed_Time 0.00, CPU_Time 0.00
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Report - Elapsed_Time 0.00, CPU_Time 0.00
+       Start - Partition: pbs_genopt_0 Slack: 799.2 TNS: 0.0 Cell-Count: 47918 Cell-Area: 690792 
+Init-Memory: 2586.41
+       Done  - Partition: pbs_genopt_0 Slack: 799.2 TNS: 0.0 Cell-Count: 32578 Cell-Area: 542847 
+Peak-Memory: 3020.72 Elapsed: 732
+       Partition:  pbs_genopt_0 - PBS_Generic_Opt-Distributed_Write_DB - Elapsed_Time 7.00, CPU_Time 4.99
+       pbs_genopt_0 - PBS_Generic_Opt-Assembly - Elapsed_Time 3, CPU_Time 2.0
+       Partition:  pbs_genopt_0 - Runtime taken by the partition - Elapsed_Time 739.00, CPU_Time 513.98
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Read_DB - Elapsed_Time 1.00, CPU_Time 1.00
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Generic - Elapsed_Time 487.00, CPU_Time 332.74
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Prop_Const - Elapsed_Time 3.00, CPU_Time 3.00
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Gobble - Elapsed_Time 0.00, CPU_Time 0.00
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Report - Elapsed_Time 0.00, CPU_Time 0.00
+       Start - Partition: pbs_genopt_1 Slack: 412.0 TNS: 0.0 Cell-Count: 82041 Cell-Area: 4295038 
+Init-Memory: 2586.41
+       Done  - Partition: pbs_genopt_1 Slack: 412.0 TNS: 0.0 Cell-Count: 76380 Cell-Area: 4112872 
+Peak-Memory: 3550.92 Elapsed: 491
+       Partition:  pbs_genopt_1 - PBS_Generic_Opt-Distributed_Write_DB - Elapsed_Time 17.00, CPU_Time 10.99
+       pbs_genopt_1 - PBS_Generic_Opt-Assembly - Elapsed_Time 7, CPU_Time 4.0
+       Partition:  pbs_genopt_1 - Runtime taken by the partition - Elapsed_Time 508.00, CPU_Time 347.73

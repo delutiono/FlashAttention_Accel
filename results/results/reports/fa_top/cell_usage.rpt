@@ -1,0 +1,59 @@
+Cannot find subcommand: cell_usage
+  report: generate one of various reports
+Usage: report subcommand [-h]
+
+  The 'subcommand' can be one of the following:
+area                             - prints an area report
+boundary_opto                    - reports boundary optimization summary
+case_analysis                    - prints a case_analysis report
+cdn_loop_breaker                 - reports the cdn_loop_breaker instances
+cell_delay_calculation           - reports how the cell delay of a libcell instance is calculated
+clock_groups                     - prints a clock groups report
+clocks                           - prints a clock report
+congestion                       - reports congestion summary
+datapath                         - prints a datapath resources report
+dedicated_clock_remapping_report - prints remap_to_dedicated_clock_library report
+design_rules                     - prints design rule violations
+dft_chains                       - reports DFT scan chains
+dft_clock_domain_info            - reports DFT clock domain information with OPCG inserted logic
+dft_core_wrapper                 - reports the IEEE 1500 core wrapper segments inserted for ports and pins
+dft_registers                    - reports DFT status of registers
+dft_setup                        - reports DFT setup for scan
+dft_violations                   - reports DFT rule violations
+dont_touch                       - prints a dont_touch report
+gates                            - prints a gates report
+hierarchy                        - prints a hierarchy report
+instance                         - prints an instance report
+low_power_intent                 - prints Power Intent report
+memory                           - prints a memory usage report
+memory_cells                     - print memory cells in the library
+messages                         - prints a summary of error messages that have been issued
+min_pulse_width                  - prints min pulse width violations
+mode                             - prints a mode report
+module                           - prints a module report
+multibit_inferencing             - prints a multibit inferencing report
+net_cap_calculation              - reports how the capacitance of the net is calculated
+net_delay_calculation            - reports how the net delay is calculated
+net_res_calculation              - reports how the resistance of the net is calculated
+nets                             - prints a nets report
+opcg_equivalents                 - reports the scan cell to OPCG cell equivalent mappings for cells specified using the 'set_opcg_equivalent' command
+ple                              - reports physical layout estimation data
+port                             - prints a port report
+power                            - prints a power report
+power_intent                     - prints Power Intent report
+power_intent_instances           - prints Low Power cells report
+property                         - list all the properties
+proto                            - reports prototype synthesis information
+qor                              - prints a QOR report
+report_delay_calculation         - reports how the net and cell delay is calculated
+report_instance_library          - report libraries for instances
+report_ungroup_modules           - report ungrouped modules and instances
+scan_compressibility             - reports the scan compressibility of the design having previously run the 'analyze_scan_compressibility' command
+sequential                       - prints a sequential instance report
+slew_calculation                 - reports how the slew on the driver pin of a libcell instance is calculated
+summary                          - prints an area, timing, and design rules report
+test_power                       - estimates the average scan power in shift and capture modes during test
+timing                           - prints a timing report
+units                            - reports units
+utilization                      - reports how floorplan utilization is calculated
+yield                            - prints a yield report

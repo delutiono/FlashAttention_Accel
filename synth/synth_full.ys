@@ -1,0 +1,46 @@
+# Yosys full synthesis — complete top-level for Innovus physical synthesis
+# Requires: 64GB RAM machine, sky130 HS PDK files in working directory
+# Run: yosys synth/synth_full.ys
+
+# Read all RTL
+read_verilog -sv -I rtl_yosys \
+  rtl_yosys/fa_defines.vh \
+  rtl_yosys/fa_exp_approx.sv \
+  rtl_yosys/fa_recip_approx.sv \
+  rtl_yosys/fa_dot_pe.sv \
+  rtl_yosys/fa_out_quant.sv \
+  rtl_yosys/fa_regfile.sv \
+  rtl_yosys/fa_q_buffer.sv \
+  rtl_yosys/fa_kv_buffer.sv \
+  rtl_yosys/fa_softmax_online.sv \
+  rtl_yosys/fa_scheduler.sv \
+  rtl_yosys/fa_dma_rd.sv \
+  rtl_yosys/fa_dma_wr.sv \
+  rtl_yosys/fa_accel_top.sv
+
+# Hierarchy check
+hierarchy -check -top fa_accel_top
+
+# Generic synthesis
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+
+# ABC technology mapping to sky130 HS standard cells
+read_liberty -lib sky130_fd_sc_hs__tt_025C_1v80_slim.lib
+dfflibmap -liberty sky130_fd_sc_hs__tt_025C_1v80_slim.lib
+abc -liberty sky130_fd_sc_hs__tt_025C_1v80_slim.lib
+opt
+
+# Reports
+stat
+stat -width
+
+# Write sky130-mapped netlist for Innovus
+write_verilog -noattr -noexpr \
+  synth/fa_accel_top_netlist_full.v

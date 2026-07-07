@@ -1,0 +1,701 @@
+TMPDIR is being set to /tmp/genus_temp_1099392_d741636b-70a1-4266-8604-3f65f7f797e1_sh02lo01_hujinzhao_6j3fOZ
+Cadence Genus(TM) Synthesis Solution.
+Copyright 2025 Cadence Design Systems, Inc. All rights reserved worldwide.
+Cadence and the Cadence logo are registered trademarks and Genus is a trademark
+of Cadence Design Systems, Inc. in the United States and other countries.
+
+[09:16:42.060337] Configured Lic search path (25.01-s002): 5280@sh02lo01
+
+Version: 25.12-s067_1, built Sun Nov 16 21:10:10 PST 2025
+Options: -batch -files /home/hujinzhao/pro/genus_bs2/SYN/run_fa_accel_sky130_sram.tcl 
+Date:    Sat Jul 04 09:16:42 2026
+Host:    sh02lo01 (x86_64 w/Linux 4.18.0-477.10.1.el8_8.x86_64) (18cores*36cpus*2physical cpus*Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz 25344KB) (1056000372KB)
+PID:     1099392
+OS:      Red Hat Enterprise Linux 8.8 (Ootpa)
+
+Checking out license: Genus_Synthesis
+[09:16:42.159098] Periodic Lic check successful
+[09:16:42.683403] Feature usage summary:
+[09:16:42.683403] Genus_Synthesis  
+License checkout complete (0 seconds elapsed).
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+
+
+
+Finished executable startup (9 seconds elapsed).
+
+Loading tool scripts...
+Finished loading tool scripts (34 seconds elapsed).
+
+#@ Processing -files option
+@genus:root: 1> source /home/hujinzhao/pro/genus_bs2/SYN/run_fa_accel_sky130_sram.tcl
+#@ Begin verbose source /home/hujinzhao/pro/genus_bs2/SYN/run_fa_accel_sky130_sram.tcl
+@file(run_fa_accel_sky130_sram.tcl) 1: set STAGE syn
+@file(run_fa_accel_sky130_sram.tcl) 2: set DEFAULT_TOP fa_top
+@file(run_fa_accel_sky130_sram.tcl) 4: proc require_file ...
+@file(run_fa_accel_sky130_sram.tcl) 12: proc env_or_default ...
+@file(run_fa_accel_sky130_sram.tcl) 19: proc require_dir ...
+@file(run_fa_accel_sky130_sram.tcl) 27: proc read_path_list ...
+@file(run_fa_accel_sky130_sram.tcl) 48: proc write_text_report ...
+@file(run_fa_accel_sky130_sram.tcl) 56: proc env_flag ...
+@file(run_fa_accel_sky130_sram.tcl) 63: proc env_value ...
+@file(run_fa_accel_sky130_sram.tcl) 70: proc run_physical_command ...
+@file(run_fa_accel_sky130_sram.tcl) 82: proc configure_multicpu ...
+@file(run_fa_accel_sky130_sram.tcl) 98: proc configure_physical_context ...
+@file(run_fa_accel_sky130_sram.tcl) 136: set script_dir [file dirname [info script]]
+@file(run_fa_accel_sky130_sram.tcl) 137: set bundle_root [env_or_default GENUS_PROJECT_ROOT [file join $script_dir ..]]
+@file(run_fa_accel_sky130_sram.tcl) 138: set workspace_dir [env_or_default GENUS_WORKSPACE_DIR [file join $bundle_root workspace]]
+@file(run_fa_accel_sky130_sram.tcl) 139: set results_root [env_or_default GENUS_RESULTS_DIR [file join $bundle_root results]]
+@file(run_fa_accel_sky130_sram.tcl) 140: set bundle_root [require_dir $bundle_root "Genus project root"]
+@file(run_fa_accel_sky130_sram.tcl) 141: set workspace_dir [require_dir $workspace_dir "Genus workspace directory"]
+@file(run_fa_accel_sky130_sram.tcl) 142: set filelist_dir [file join $workspace_dir filelists]
+@file(run_fa_accel_sky130_sram.tcl) 143: set constraint_dir [file join $workspace_dir constraints]
+@file(run_fa_accel_sky130_sram.tcl) 145: set top $DEFAULT_TOP
+@file(run_fa_accel_sky130_sram.tcl) 146: if {[info exists ::env(TOP)] && $::env(TOP) ne ""} {
+  set top $::env(TOP)
+}
+@file(run_fa_accel_sky130_sram.tcl) 150: set physical_mode 1
+@file(run_fa_accel_sky130_sram.tcl) 151: if {[info exists ::env(GENUS_PHYSICAL)] && $::env(GENUS_PHYSICAL) eq "0"} {
+  set physical_mode 0
+}
+@file(run_fa_accel_sky130_sram.tcl) 155: set allow_physical_fallback [env_flag GENUS_ALLOW_PHYSICAL_FALLBACK 0]
+@file(run_fa_accel_sky130_sram.tcl) 157: set read_sram_behav_rtl 0
+@file(run_fa_accel_sky130_sram.tcl) 158: if {[info exists ::env(READ_SRAM_BEHAV_RTL)] && $::env(READ_SRAM_BEHAV_RTL) ne "0"} {
+  set read_sram_behav_rtl 1
+}
+@file(run_fa_accel_sky130_sram.tcl) 162: set report_dir [file join $results_root reports $top]
+@file(run_fa_accel_sky130_sram.tcl) 163: set output_dir [file join $results_root outputs $top]
+@file(run_fa_accel_sky130_sram.tcl) 164: set log_dir [file join $results_root logs]
+@file(run_fa_accel_sky130_sram.tcl) 165: file mkdir $report_dir
+@file(run_fa_accel_sky130_sram.tcl) 166: file mkdir $output_dir
+@file(run_fa_accel_sky130_sram.tcl) 167: file mkdir $log_dir
+@file(run_fa_accel_sky130_sram.tcl) 169: set rtl_filelist [env_or_default RTL_FILELIST [file join $filelist_dir rtl.f]]
+@file(run_fa_accel_sky130_sram.tcl) 170: set sram_behav_filelist [env_or_default SRAM_BEHAV_RTL_FILELIST [file join $filelist_dir sram_macro_verilog.f]]
+@file(run_fa_accel_sky130_sram.tcl) 171: set lib_filelist [env_or_default LIB_FILELIST [file join $filelist_dir libs_tt.f]]
+@file(run_fa_accel_sky130_sram.tcl) 172: set lef_filelist [env_or_default LEF_FILELIST [file join $filelist_dir lefs.f]]
+@file(run_fa_accel_sky130_sram.tcl) 173: set sdc_file [env_or_default SDC_FILE [file join $constraint_dir timing_200m.sdc]]
+@file(run_fa_accel_sky130_sram.tcl) 175: puts "INFO: STAGE=$STAGE"
+INFO: STAGE=syn
+@file(run_fa_accel_sky130_sram.tcl) 176: puts "INFO: TOP=$top"
+INFO: TOP=fa_top
+@file(run_fa_accel_sky130_sram.tcl) 177: puts "INFO: PROJECT_ROOT=$bundle_root"
+INFO: PROJECT_ROOT=/home/hujinzhao/pro/genus_bs2
+@file(run_fa_accel_sky130_sram.tcl) 178: puts "INFO: WORKSPACE_DIR=$workspace_dir"
+INFO: WORKSPACE_DIR=/home/hujinzhao/pro/genus_bs2/workspace
+@file(run_fa_accel_sky130_sram.tcl) 179: puts "INFO: RESULTS_DIR=$results_root"
+INFO: RESULTS_DIR=/home/hujinzhao/pro/genus_bs2/results
+@file(run_fa_accel_sky130_sram.tcl) 180: puts "INFO: PHYSICAL_MODE=$physical_mode"
+INFO: PHYSICAL_MODE=1
+@file(run_fa_accel_sky130_sram.tcl) 181: puts "INFO: READ_SRAM_BEHAV_RTL=$read_sram_behav_rtl"
+INFO: READ_SRAM_BEHAV_RTL=0
+@file(run_fa_accel_sky130_sram.tcl) 182: puts "INFO: GENUS_ALLOW_PHYSICAL_FALLBACK=$allow_physical_fallback"
+INFO: GENUS_ALLOW_PHYSICAL_FALLBACK=0
+@file(run_fa_accel_sky130_sram.tcl) 184: configure_multicpu
+INFO: GENUS_THREADS=8
+  Setting attribute of root '/': 'max_cpus_per_server' = 8
+INFO: Applied multi-CPU command: set_db max_cpus_per_server 8
+  Setting attribute of root '/': 'auto_super_thread' = true
+INFO: Applied multi-CPU command: set_db auto_super_thread true
+  Setting attribute of root '/': 'super_thread_servers' = localhost 8
+INFO: Applied multi-CPU command: set_db super_thread_servers {localhost 8}
+@file(run_fa_accel_sky130_sram.tcl) 186: set lib_files [read_path_list $lib_filelist "Liberty filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 187: foreach lib_file $lib_files {
+  puts "INFO: LIB=$lib_file"
+}
+INFO: LIB=/home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib
+INFO: LIB=/home/hujinzhao/pro/genus_bs2/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib
+INFO: LIB=/home/hujinzhao/pro/genus_bs2/workspace/LIBS/sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib
+INFO: LIB=/home/hujinzhao/pro/genus_bs2/workspace/LIBS/sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib
+@file(run_fa_accel_sky130_sram.tcl) 190: eval read_libs $lib_files
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 832 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+        : Add the look-up table definition, then reload the library.
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 832)
+        : Fix the library cell error and then reload the library.
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 884 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 884)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 890 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 890)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 870 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 870)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_ovrf' used in group 'vector' on line 876 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_ovrf' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_ovrf' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 876)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 949 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 949)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 956 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 956)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 963 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 963)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 970 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 970)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 977 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 977)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 984 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 984)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 991 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 991)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 898 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 898)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 905 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 905)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 912 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 912)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 919 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 919)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 926 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 926)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 933 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 933)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_pnlh' used in group 'vector' on line 940 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The vector group 'ccsn_pnlh' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for vector group 'ccsn_pnlh' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa
+  Message Summary for Library all 4 libraries:
+  ********************************************
+0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 940)
+Error   : Could not find the look-up table definition. [LBR-517]
+        : Template name 'ccsn_dc' used in group 'dc_current' on line 1002 is not defined in the library. To fix this issue, define the missing template in the library. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib)
+Warning : Ignoring the timing group. [LBR-709]
+        : The dc_current group 'ccsn_dc' is being ignored due to errors in this group. This group will be excluded for any further library checks. Refer to the previous messages issued for dc_current group 'ccsn_dc' to find the details of the issues in this group. (File /home/share/pdk/ciel/sky130/versions/e8294524e5f67c533c5d0c3afa0bcc5b2a5fa066/sky130A/libs.ref/sky130_fd_sc_hs/lib/sky130_fd_sc_hs__tt_025C_1v80.lib, Line 1002)
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-517'.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'LBR-709'.
+  Ignoring the timing group. [LBR-709]: 96732
+  Could not find the look-up table definition. [LBR-517]: 96732
+  Missing library level attribute. [LBR-516]: 3
+  An unsupported construct was detected in this library. [LBR-40]: 7
+  ********************************************
+ 
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_fd_sc_hs__tt_025C_1v80.lib'.
+        : The nominal operating condition is represented, either by the nominal PVT values specified in the library source (via nom_process,nom_voltage and nom_temperature respectively), or by the default PVT values (1.0,1.0,1.0).
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_64x32_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_64x64_8_TT_1p8V_25C.lib'.
+Info    : Created nominal operating condition. [LBR-412]
+        : Operating condition '_nominal_' was created for the PVT values (1.000000, 1.800000, 25.000000) in library 'sky130_sram_0kbytes_1rw1r_128x16_16_TT_1p8V_25C.lib'.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+        : Add the missing output pin(s), then reload the library. Else the library cell will be marked as timing model i.e. unusable. Timing_model means that the cell does not have any defined function. If there is no output pin, Genus will mark library cell as unusable i.e. the attribute 'usable' will be marked to 'false' on the libcell. Therefore, the cell is not used for mapping and it will not be picked up from the library for synthesis. If you query the attribute 'unusable_reason' on the libcell; result will be: 'Library cell has no output pins.'Note: The message LBR-9 is only for the logical pins and not for the power_ground pins. Genus will depend upon the output function defined in the pin group (output pin) of the cell, to use it for mapping. The pg_pin will not have any function defined.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_4' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+Warning : Library cell has no output pins defined. [LBR-9]
+        : Library cell 'sky130_fd_sc_hs__decap_8' must have an output pin.
+@file(run_fa_accel_sky130_sram.tcl) 192: set lef_files [read_path_list $lef_filelist "LEF filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 193: foreach lef_file $lef_files {
+  puts "INFO: LEF=$lef_file"
+}
+INFO: LEF=/home/hujinzhao/pro/genus_bs2/workspace/LEFS/sky130_fd_sc_hs__nom.tlef
+INFO: LEF=/home/hujinzhao/pro/genus_bs2/workspace/LEFS/sky130_fd_sc_hs.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs2/workspace/LEFS/sky130_sram_0kbytes_1rw1r_64x32_8.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs2/workspace/LEFS/sky130_sram_0kbytes_1rw1r_128x16_16.lef
+INFO: LEF=/home/hujinzhao/pro/genus_bs2/workspace/LEFS/sky130_sram_0kbytes_1rw1r_64x64_8.lef
+@file(run_fa_accel_sky130_sram.tcl) 196: if {[llength $lef_files] > 0} {
+  set lef_arg [join $lef_files " "]
+  if {[catch {read_physical -lefs $lef_arg} err]} {
+    puts "WARNING: read_physical -lefs failed or is unsupported in this Genus setup: $err"
+  }
+}
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR' has no resistance value.
+        : If this is the expected behavior, this message can be ignored.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'L1M1_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M1M2_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M2M3_PR_C' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_R' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_M' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_MR' has no resistance value.
+Info    : Via with no resistance will have a value of '0.0' assigned for resistance value. [PHYS-129]
+        : Via 'M3M4_PR_C' has no resistance value.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'PHYS-129'.
+
+  According to lef_library, there are total 6 routing layers [ V(3) / H(3) ]
+
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.14, 1.6) of 'WIDTH' for layers 'met2' and 'met5' is too large.
+        : Check the consistency of the parameters, and see if you can ignore this message or you're using different LEF file with wrong parameters.
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.0285, 12.8) of 'RPERSQ' for layers 'met5' and 'li1' is too large.
+Warning : The value of the wire parameter is too big. [PHYS-13]
+        : The 'RPERSQ: 12.8' of layer 'li1' is much bigger than others.
+        : Check the consistency of the specified wire parameter.
+Warning : The variant range of wire parameters is too large. An example of wire parameters are, a WIDTH for layer, PITCH for layer, MINSPACING for layers, etc. [PHYS-12]
+        : The variant range (0.14, 1.6) of 'MINSPACING' for layers 'met2' and 'met5' is too large.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_1' is marked as GROUND in LEF file.
+        : Overriding lib value with LEF value. To use .lib as golden do: '::legacy::set_attribute use_power_ground_pin_from_lef false'.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2o_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2o_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a2bb2oi_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a2bb2oi_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_1' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_2' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_2' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21bo_4' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21bo_4' is marked as POWER in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VNB' of library cell 'sky130_fd_sc_hs__a21boi_1' is marked as GROUND in LEF file.
+Warning : Library cell pin 'use' attribute is inconsistent between lib and LEF. [PHYS-128]
+        : Pin 'VPB' of library cell 'sky130_fd_sc_hs__a21boi_1' is marked as POWER in LEF file.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'PHYS-128'.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__diode_2 cannot be found in library.
+        : Ensure that the proper library files are available and have been imported.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_4 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_8 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_4 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__fill_diode_8 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tap_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tap_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapmet1_2 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvgnd2_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvgnd_1 cannot be found in library.
+Warning : Physical cell not defined in library. [PHYS-279]
+        : The physical (LEF) cell sky130_fd_sc_hs__tapvpwrvgnd_1 cannot be found in library.
+@file(run_fa_accel_sky130_sram.tcl) 203: set_db init_hdl_search_path [list [file join $workspace_dir RTL]]
+  Setting attribute of root '/': 'init_hdl_search_path' = /home/hujinzhao/pro/genus_bs2/workspace/RTL
+@file(run_fa_accel_sky130_sram.tcl) 204: set_db hdl_language sv
+  Setting attribute of root '/': 'hdl_language' = sv
+@file(run_fa_accel_sky130_sram.tcl) 205: catch {set_db hdl_track_filename_row_col true}
+Info   : Enabled hdl_track_filename_row_col attribute.
+       : Setting this attribute to 'true' can have an impact on the run time. Use this attribute only when filename, line number, and column information are needed in reports.
+  Setting attribute of root '/': 'hdl_track_filename_row_col' = true
+@file(run_fa_accel_sky130_sram.tcl) 206: if {[catch {set_db hdl_resolve_instance_with_libcell true} err]} {
+  puts "WARNING: hdl_resolve_instance_with_libcell not accepted: $err"
+}
+  Setting attribute of root '/': 'hdl_resolve_instance_with_libcell' = true
+@file(run_fa_accel_sky130_sram.tcl) 209: puts "INFO: Defining SYNTHESIS for Genus RTL read so SRAM wrappers use unparameterized macro instances."
+INFO: Defining SYNTHESIS for Genus RTL read so SRAM wrappers use unparameterized macro instances.
+@file(run_fa_accel_sky130_sram.tcl) 211: if {$read_sram_behav_rtl} {
+  set sram_behav_files [read_path_list $sram_behav_filelist "SRAM behavioral Verilog filelist"]
+  foreach src $sram_behav_files {
+    puts "INFO: SRAM_BEHAV_RTL=$src"
+  }
+  eval read_hdl -sv $sram_behav_files
+} else {
+  puts "INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances."
+}
+INFO: SRAM behavioral Verilog is packaged but not read by default; Liberty cells resolve SRAM macro instances.
+@file(run_fa_accel_sky130_sram.tcl) 221: set rtl_files [read_path_list $rtl_filelist "RTL filelist"]
+@file(run_fa_accel_sky130_sram.tcl) 222: foreach src $rtl_files {
+  puts "INFO: RTL=$src"
+}
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/dot_frontend.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/packed_compute_core.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_scheduler.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_pipe.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/output_norm_pipe.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/reciprocal_approx.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/finalize_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/update_state_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/update_token_fifo.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/axi_lite_regs.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/task_ctrl.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/dma_engine.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/dma_cmd_queue.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/dma_read_master.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/dma_write_master.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/q_load_store_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/qk_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/v_load_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/k_load_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/o_store_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/v_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/acc_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/meta_sram_cluster.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/page_manager.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/perf_counters.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/axi_stream_data_adapter.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/sky130_sram_0kbytes_1rw1r_64x32_8_wrapper.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v
+INFO: RTL=/home/hujinzhao/pro/genus_bs2/workspace/RTL/sky130_sram_0kbytes_1rw1r_64x64_8_wrapper.v
+@file(run_fa_accel_sky130_sram.tcl) 225: eval read_hdl -sv -define SYNTHESIS $rtl_files
+function signed [33:0] sum_four_products;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/dot_frontend.v' on line 109, column 15.
+        : Use the 'automatic' keyword for declaring functions and tasks.
+function [17:0] pack_score_token;
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/packed_compute_core.v' on line 103, column 10.
+function signed [48:0] round_shift16;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_pipe.v' on line 58, column 15.
+function [15:0] bank0_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 10, column 10.
+function [15:0] bank1_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 141, column 10.
+function [15:0] bank2_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 272, column 10.
+function [15:0] bank3_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 403, column 10.
+function [15:0] bank4_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 534, column 10.
+function [15:0] bank5_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 665, column 10.
+function [15:0] bank6_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 796, column 10.
+function [15:0] bank7_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 927, column 10.
+function [15:0] bank8_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1058, column 10.
+function [15:0] bank9_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1189, column 10.
+function [15:0] bank10_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1320, column 10.
+function [15:0] bank11_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1451, column 10.
+function [15:0] bank12_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1582, column 10.
+function [15:0] bank13_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1713, column 10.
+function [15:0] bank14_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1844, column 10.
+function [15:0] bank15_lookup; input [6:0] addr; begin case (addr)
+         |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1975, column 10.
+function signed [SHIFTED_WIDTH-1:0] round_shift_product;
+              |
+Warning : Usage of non-static tasks or functions might result in simulation-synthesis mismatch. [VLOGPT-692]
+        : in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/output_norm_pipe.v' on line 53, column 15.
+Warning : Maximum message print count reached. [MESG-11]
+        : Maximum print count of '20' reached for message 'VLOGPT-692'.
+@file(run_fa_accel_sky130_sram.tcl) 227: elaborate $top
+  Libraries have 305 usable logic and 62 usable sequential lib-cells.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+        : Non-monotonic wireload models can cause problems during synthesis and/or mapping.  Raising some of the points in the curve to give it a monotonic shape.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Huge' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Large' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Medium' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Warning : Non-monotonic wireload model found. [LBR-81]
+        : 'Length' table in wireload model 'Small' is non-monotonic.
+Info    : Elaborating Design. [ELAB-1]
+        : Elaborating top-level block 'fa_top' from file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v'.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'dma_write_master_ADDR_WIDTH64_DATA_WIDTH128_TAG_WIDTH8' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/dma_write_master.v' on line 99.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_scheduler' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_scheduler.v' on line 156.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'issued_last_reg' in module 'score_scheduler' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_scheduler.v' on line 161.
+        : Genus removes the flip-flop or latch inferred for an unused signal or variable. To preserve the flip-flop or latch, set the hdl_preserve_unused_registers attribute to true or use a pragma in the RTL.
+Warning : In legacy_ui mode, Genus creates a blackbox as description for a module is not found. Black boxes represent unresolved references in the design and are usually not expected. Another possible reason is, some libraries are not read and the tool could not get the content for some macros or lib_cells. [CDFG-428]
+        : A blackbox was created for instance 'u_lo' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/sky130_sram_0kbytes_1rw1r_64x32_8_wrapper.v' on line 26.
+        : Check the kind of module a black box is. If it is a lib_cell or a macro, check why the corresponding .lib was not read in. This could be either due to a missing or faulty file or due to an incomplete init_lib_search_path attribute value making restricting access to the missing file. If it is a module of your design, verify whether the path to this module is a part of the files you read or else check that the init_hdl_search_path attribute is not missing some paths.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank0_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 10.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank1_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 141.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank2_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 272.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank3_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 403.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank4_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 534.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank5_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 665.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank6_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 796.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank7_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 927.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank8_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1058.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank9_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1189.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank10_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1320.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank11_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1451.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank12_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1582.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank13_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1713.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank14_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1844.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom_bank15_lookup_score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 1975.
+Warning : Unreachable statements for case item. [CDFG-472]
+        : Case item 'default' in module 'score_exp_banked_rom' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/score_exp_banked_rom.v' on line 2146.
+Warning : In legacy_ui mode, Genus creates a blackbox as description for a module is not found. Black boxes represent unresolved references in the design and are usually not expected. Another possible reason is, some libraries are not read and the tool could not get the content for some macros or lib_cells. [CDFG-428]
+        : A blackbox was created for instance 'u_lane_0' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/sky130_sram_0kbytes_1rw1r_128x16_16_timed_wrapper.v' on line 29.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'pending_meta_valid_reg' in module 'update_state_cluster_TOKEN_WIDTH18' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/update_state_cluster.v' on line 439.
+Warning : Removing unused register. [CDFG-508]
+        : Removing unused flip-flop register 'overflow_reg' in module 'reciprocal_approx_TOKEN_WIDTH3' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/reciprocal_approx.v' on line 92.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'wr_valid' of instance 'u_stream' of module 'axi_stream_data_adapter' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 392, column 34, hid = 0.
+        : Run check_design to check 'Undriven Port(s)/Pin(s)' section for all undriven module input ports. It is better to double confirm with designer if these undriven ports are expected. During syn_gen the undriven ports are controlled by attribute 'hdl_unconnected_value', the default value is 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'wr_data' of instance 'u_stream' of module 'axi_stream_data_adapter' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 392, column 34, hid = 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'wr_strb' of instance 'u_stream' of module 'axi_stream_data_adapter' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 392, column 34, hid = 0.
+Warning : Undriven module input port. [ELABUTL-127]
+        : Undriven bits of port 'wr_last' of instance 'u_stream' of module 'axi_stream_data_adapter' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 392, column 34, hid = 0.
+Warning : Undriven signal detected. [ELABUTL-125]
+        : Undriven bits of signal 'strm_wr_valid' in module 'fa_top' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 280, column 27, hid = 0.
+        : The undriven signal handling can be controlled by setting the attribute 'hdl_unconnected_value' before syn_generic command.
+Warning : Undriven signal detected. [ELABUTL-125]
+        : Undriven bits of signal 'strm_wr_data' in module 'fa_top' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 281, column 27, hid = 0.
+Warning : Undriven signal detected. [ELABUTL-125]
+        : Undriven bits of signal 'strm_wr_strb' in module 'fa_top' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 282, column 27, hid = 0.
+Warning : Undriven signal detected. [ELABUTL-125]
+        : Undriven bits of signal 'strm_wr_last' in module 'fa_top' in file '/home/hujinzhao/pro/genus_bs2/workspace/RTL/fa_top.v' on line 283, column 27, hid = 0.
+Warning : Signal or variable has multiple drivers. [CDFG2G-622]
+        : 'strm_wr_ready' in module 'fa_top'.
+        : This may cause simulation mismatches between the original and synthesized designs.
+Info    : Done Elaborating Design. [ELAB-3]
+        : Done elaborating 'fa_top'.
+Warning : Black-boxes are represented as unresolved references in the design. [TUI-273]
+        : Cannot resolve reference to 'sky130_sram_0kbytes_1rw1r_32x64_8'.
+        : Run check_design to get all unresolved instance. To resolve the reference, either load a technology library containing the cell by appending to the 'library' attribute, or read in the hdl file containing the module before performing elaboration. As the design is incomplete, synthesis results may not correspond to the entire design.
+Warning : Black-boxes are represented as unresolved references in the design. [TUI-273]
+        : Cannot resolve reference to 'sky130_sram_0kbytes_1rw1r_48x16_8'.
+Checking for source RTL...
+Check completed for source RTL.
+Running Unified Mux Engine Tricks...
+Completed Unified Mux Engine Tricks
+
+Stage: post_elab
+-------------------------------------------------------
+| Trick             | Accepts | Rejects | Runtime (s) | 
+-------------------------------------------------------
+| ume_constant_bmux |       0 |       0 |        0.00 | 
+| ume_merge         |       0 |       0 |        0.00 | 
+| ume_ssm           |       0 |       0 |        0.03 | 
+| ume_cse           |       1 |       0 |        0.82 | 
+| ume_shrink        |       4 |       0 |        0.01 | 
+| ume_sweep         |       0 |       0 |        0.01 | 
+| ume_constant_bmux |       0 |       0 |        0.00 | 
+| ume_merge         |       0 |       0 |        0.00 | 
+| ume_ssm           |       0 |       0 |        0.03 | 
+| ume_cse           |       0 |       0 |        0.55 | 
+| ume_shrink        |       0 |       0 |        0.01 | 
+| ume_sweep         |       0 |       0 |        0.01 | 
+-------------------------------------------------------
+Starting optimize datapath shifters [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed optimize datapath shifters (accepts: 0, rejects: 0, runtime: 0.004s)
+Starting clip mux common data inputs [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip mux common data inputs (accepts: 1, rejects: 0, runtime: 0.009s)
+Starting clip the non-user hierarchies [v2.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed clip the non-user hierarchies (accepts: 2, rejects: 0, runtime: 0.116s)
+Starting basic netlist cleanup [v1.0] (stage: post_elab, startdef: fa_top, recur: true)
+Completed basic netlist cleanup (accepts: 0, rejects: 0, runtime: 0.004s)
+
+Stage: post_elab
+--------------------------------------------------------------------
+| Transform                      | Accepts | Rejects | Runtime (s) | 
+--------------------------------------------------------------------
+| hlo_optimize_datapath_shifters |       0 |       0 |        0.00 | 
+| hlo_clip_mux_input             |       1 |       0 |        0.01 | 
+| hlo_clip                       |       2 |       0 |        0.12 | 
+| hlo_cleanup                    |       0 |       0 |        0.00 | 
+--------------------------------------------------------------------
+UM:   flow.cputime  flow.realtime  timing.setup.tns  timing.setup.wns  snapshot
+UM:*                                                                   elaborate
+@file(run_fa_accel_sky130_sram.tcl) 229: set sram_refs [list \
+  sky130_sram_0kbytes_1rw1r_64x32_8 \
+  sky130_sram_0kbytes_1rw1r_64x64_8 \
+  sky130_sram_0kbytes_1rw1r_128x16_16]
+@file(run_fa_accel_sky130_sram.tcl) 233: set sram_report_lines {}
+@file(run_fa_accel_sky130_sram.tcl) 234: set total_sram_insts 0
+@file(run_fa_accel_sky130_sram.tcl) 235: foreach ref $sram_refs {
+  set insts [get_cells -hier -filter "ref_name == $ref"]
+  set count [sizeof_collection $insts]
+  lappend sram_report_lines "$ref $count"
+  puts "INFO: SRAM_COUNT $ref = $count"
+  if {$count > 0} {
+    catch {set_db $insts .preserve true}
+    catch {set_db $insts .dont_touch true}
+    set total_sram_insts [expr {$total_sram_insts + $count}]
+  }
+}
+Warning : Could not find requested search value. [SDC-208] [get_cells]
+        : The 'get_cells' command  cannot find any cells for the filter expression 'ref_name == sky130_sram_0kbytes_1rw1r_64x32_8'
+        : Use get_* commands to find the objects along with a wild card entry in the name of the object to check if the object is existing with different naming style.
+INFO: SRAM_COUNT sky130_sram_0kbytes_1rw1r_64x32_8 = 0
+Warning : Could not find requested search value. [SDC-208] [get_cells]
+        : The 'get_cells' command  cannot find any cells for the filter expression 'ref_name == sky130_sram_0kbytes_1rw1r_64x64_8'
+INFO: SRAM_COUNT sky130_sram_0kbytes_1rw1r_64x64_8 = 0
+Warning : Could not find requested search value. [SDC-208] [get_cells]
+        : The 'get_cells' command  cannot find any cells for the filter expression 'ref_name == sky130_sram_0kbytes_1rw1r_128x16_16'
+INFO: SRAM_COUNT sky130_sram_0kbytes_1rw1r_128x16_16 = 0
+@file(run_fa_accel_sky130_sram.tcl) 246: lappend sram_report_lines "TOTAL $total_sram_insts"
+@file(run_fa_accel_sky130_sram.tcl) 247: write_text_report [file join $report_dir sram_macro_instances.rpt] $sram_report_lines
+@file(run_fa_accel_sky130_sram.tcl) 248: if {$total_sram_insts == 0} {
+  error "No SRAM macro instances were found after elaboration; check Liberty names and wrapper RTL."
+}
+#@ End verbose source /home/hujinzhao/pro/genus_bs2/SYN/run_fa_accel_sky130_sram.tcl
+No SRAM macro instances were found after elaboration; check Liberty names and wrapper RTL.
+Encountered problems processing file: /home/hujinzhao/pro/genus_bs2/SYN/run_fa_accel_sky130_sram.tcl
+
+Lic Summary:
+[09:17:45.222890] Cdslmd servers: sh02lo01
+[09:17:45.222906] Feature usage summary:
+[09:17:45.222907] Genus_Synthesis  
+Normal exit.

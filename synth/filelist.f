@@ -1,0 +1,13 @@
+../rtl/fa_pkg.sv
+../rtl/fa_regfile.sv
+../rtl/fa_scheduler.sv
+../rtl/fa_dot_pe.sv
+../rtl/fa_exp_approx.sv
+../rtl/fa_recip_approx.sv
+../rtl/fa_softmax_online.sv
+../rtl/fa_out_quant.sv
+../rtl/fa_dma_rd.sv
+../rtl/fa_dma_wr.sv
+../rtl/fa_q_buffer.sv
+../rtl/fa_kv_buffer.sv
+../rtl/fa_accel_top.sv
