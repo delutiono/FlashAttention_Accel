@@ -12,3 +12,9 @@
 /results/outputs/fa_accel_top/fa_accel_top_mapped.v
 /results/outputs/fa_accel_top/fa_accel_top.db
 /workspace/LIBS/sky130_fd_sc_hs__tt_025C_1v80.lib
+
+# Local workspaces, extracted bundles, and scratch directories that are not part
+# of the reproducible baseline deliverable.
+/another_workspace/
+/artifacts/
+/sim/xcelium_baseline/power/joules/
