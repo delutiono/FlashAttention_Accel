@@ -18,7 +18,7 @@ module tb_lowp_page_manager;
 
   page_manager dut (
     .clk(clk), .rst_n(rst_n), .start(start), .run_enable(run_enable),
-    .num_groups(6'd32), .busy(), .done(), .error(),
+    .busy(), .done(), .error(),
     .cmd_valid(cmd_valid), .cmd_ready(cmd_ready), .cmd_kind(cmd_kind),
     .cmd_page(cmd_page), .cmd_base_addr(cmd_base_addr),
     .cmd_bytes(cmd_bytes), .cmd_tag(cmd_tag),
@@ -31,8 +31,6 @@ module tb_lowp_page_manager;
     .scheduler_tile_done(1'b0), .scheduler_group_done(1'b0),
     .q_load_start(), .k_load_start(), .v_load_start(),
     .o_store_start(), .finalize_start(), .update_state_idle(1'b1),
-    .task_chain_enable(1'b0), .task_queue_not_empty(1'b0),
-    .task_dequeue(), .num_heads(3'd1), .head_stride(32'd0),
     .lowp_int8_mode(1'b1)
   );
 

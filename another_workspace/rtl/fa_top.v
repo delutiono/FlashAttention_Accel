@@ -75,6 +75,7 @@ wire [15:0] lowp_q_scale;
 wire [15:0] lowp_k_scale;
 wire [15:0] lowp_v_scale;
 wire [15:0] effective_score_scale;
+wire [15:0] lowp_v_scale_timed;
 wire task_busy;
 wire task_done_pulse;
 wire task_error;
@@ -227,21 +228,63 @@ wire signed [95:0] fin_acc_rsp_data;
 assign irq = irq_enable && irq_pending;
 assign lowp_int8_mode = (lowp_mode == 2'd1);
 
-// bonus7: effective score scale with full-precision triple product.
-// score_scale_cfg, lowp_q_scale, lowp_k_scale are all Q0.16.
-// Verilog's self-determined multiplication width is max(L(op1),L(op2)),
-// so $signed(16b)*$signed(16b)*$signed(16b) truncates the intermediate
-// to 32 bits. Force 64-bit context to preserve the full 48-bit product.
-wire signed [63:0] scale_step1;
-wire signed [63:0] scale_triple_product;
-wire [15:0] effective_score_scale_int8;
-assign scale_step1 = $signed({48'd0, score_scale_cfg}) * $signed(lowp_q_scale);
-assign scale_triple_product = scale_step1 * $signed(lowp_k_scale);
-assign effective_score_scale_int8 = scale_triple_product[47:32];  // Q0.48 -> Q0.16
+// bonus7 timing: precompute the INT8 block scale ahead of score issue.
+// All three inputs are unsigned Q0.16; the final triple product is Q0.48.
+reg        lowp_int8_mode_s0_reg;
+reg        lowp_int8_mode_s1_reg;
+reg        lowp_int8_mode_s2_reg;
+reg [15:0] score_scale_s0_reg;
+reg [15:0] score_scale_s1_reg;
+reg [15:0] score_scale_s2_reg;
+reg [15:0] lowp_q_scale_s0_reg;
+reg [15:0] lowp_k_scale_s0_reg;
+reg [15:0] lowp_v_scale_reg;
+reg [15:0] scale_k_s1_reg;
+reg [31:0] scale_q_product_s1_reg;
+reg [47:0] scale_triple_product_s2_reg;
+reg [15:0] effective_score_scale_reg;
 
-assign effective_score_scale = lowp_int8_mode ?
-    effective_score_scale_int8 :
-    score_scale_cfg;
+assign effective_score_scale = effective_score_scale_reg;
+assign lowp_v_scale_timed = lowp_v_scale_reg;
+
+always @(posedge clk) begin
+    if (!rst_n) begin
+        lowp_int8_mode_s0_reg <= 1'b0;
+        lowp_int8_mode_s1_reg <= 1'b0;
+        lowp_int8_mode_s2_reg <= 1'b0;
+        score_scale_s0_reg <= 16'h2000;
+        score_scale_s1_reg <= 16'h2000;
+        score_scale_s2_reg <= 16'h2000;
+        lowp_q_scale_s0_reg <= 16'hffff;
+        lowp_k_scale_s0_reg <= 16'hffff;
+        lowp_v_scale_reg <= 16'hffff;
+        scale_k_s1_reg <= 16'hffff;
+        scale_q_product_s1_reg <= 32'd0;
+        scale_triple_product_s2_reg <= 48'd0;
+        effective_score_scale_reg <= 16'h2000;
+    end else begin
+        lowp_int8_mode_s0_reg <= lowp_int8_mode;
+        score_scale_s0_reg <= score_scale_cfg;
+        lowp_q_scale_s0_reg <= lowp_q_scale;
+        lowp_k_scale_s0_reg <= lowp_k_scale;
+        lowp_v_scale_reg <= lowp_v_scale;
+
+        lowp_int8_mode_s1_reg <= lowp_int8_mode_s0_reg;
+        score_scale_s1_reg <= score_scale_s0_reg;
+        scale_k_s1_reg <= lowp_k_scale_s0_reg;
+        scale_q_product_s1_reg <=
+            {16'd0, score_scale_s0_reg} * {16'd0, lowp_q_scale_s0_reg};
+
+        lowp_int8_mode_s2_reg <= lowp_int8_mode_s1_reg;
+        score_scale_s2_reg <= score_scale_s1_reg;
+        scale_triple_product_s2_reg <=
+            {16'd0, scale_q_product_s1_reg} * {32'd0, scale_k_s1_reg};
+
+        effective_score_scale_reg <= lowp_int8_mode_s2_reg ?
+            scale_triple_product_s2_reg[47:32] :
+            score_scale_s2_reg;
+    end
+end
 
 assign raw_dma_done_valid = dma_eng_done_valid;
 assign raw_dma_done_kind  = dma_eng_done_kind;
@@ -409,7 +452,7 @@ v_load_adapter u_v_adapter (
     .v_rw_valid(v_rw_valid), .v_rw_write(), .v_rw_pair(v_rw_pair),
     .v_rw_addr(v_rw_addr), .v_rw_wmask(v_rw_wmask), .v_rw_data(v_rw_data),
     .error(v_load_error),
-    .lowp_int8_mode(lowp_int8_mode), .lowp_v_scale(lowp_v_scale)
+    .lowp_int8_mode(lowp_int8_mode), .lowp_v_scale(lowp_v_scale_timed)
 );
 
 score_scheduler u_sched (
