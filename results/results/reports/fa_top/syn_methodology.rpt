@@ -1,0 +1,7 @@
+SYNTHESIS_METHODOLOGY
+Tool: Genus 25.12
+Physical synthesis: YES (syn_opt -spatial)
+QRC probabilistic extraction: ENABLED
+Floorplan prediction: predict_floorplan
+SPEF annotation: check main log for 'read_spef statistics'
+Verification: grep 'syn_opt -spatial' in Genus log to confirm execution
